@@ -14,7 +14,7 @@ Usage
 	// database column that contains the language keys (default: "lanugage")
 	$GLOBALS['TL_DCA']['table']['config']['langColumn'] = 'language_dc';
 	// database column that contains the reference id (default: "pid")
-	$GLOBALS['TL_DCA']['table']['config'][pigColumn'] = 'pid';
+	$GLOBALS['TL_DCA']['table']['config'][pidColumn'] = 'pid';
 	// fallback language - if none is given then there will be another language "fallback" selectable from the dropdown
 	$GLOBALS['TL_DCA']['table']['config']['fallbackLang'] = 'de';
 	
