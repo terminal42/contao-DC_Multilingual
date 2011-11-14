@@ -444,26 +444,29 @@ class DC_Multilingual extends DC_Table
 		{
 			$arrAvailableLanguages = $this->Database->prepare("SELECT {$this->strLangColumn} FROM " . $this->strTable . " WHERE pid=?")->execute($this->intId)->fetchEach($this->strLangColumn);
 			$arrLanguageLabels = $this->getLanguages();
-			$available = '';
+			$available = ($this->strFallbackLang) ? '' : '<option value="">' . $GLOBALS['TL_LANG']['MSC']['defaultLanguage'] . '</option>';
 			$undefined = '';
 
 			foreach ($this->arrLanguages as $language)
 			{
+				$value = ($this->strFallbackLang == $language) ? '' : $language;
+				$label = ($this->strFallbackLang == $language) ? ($arrLanguageLabels[$language] . ' (' . $GLOBALS['TL_LANG']['MSC']['defaultLanguage'] . ')') : $arrLanguageLabels[$language];
+				
 				if (in_array($language, $arrAvailableLanguages))
 				{
 					if ($_SESSION['BE_DATA']['language'][$this->strTable][$this->intId] == $language)
 					{
-						$available .= '<option value="' . $language . '" selected="selected">' . $arrLanguageLabels[$language] .'</option>';
+						$available .= '<option value="' . $value . '" selected="selected">' . $label .'</option>';
 						$_SESSION['TL_INFO'] = array($GLOBALS['TL_LANG']['MSC']['editingLanguage']);
 					}
 					else
 					{
-						$available .= '<option value="' . $language . '">' . $arrLanguageLabels[$language] . '</option>';
+						$available .= '<option value="' . $value . '">' . $label . '</option>';
 					}
 				}
 				else
 				{
-					$undefined .= '<option value="' . $language . '">' . $arrLanguageLabels[$language] . ' ('.$GLOBALS['TL_LANG']['MSC']['undefinedLanguage'].')' . '</option>';
+					$undefined .= '<option value="' . $value . '">' . $label . ' ('.$GLOBALS['TL_LANG']['MSC']['undefinedLanguage'].')' . '</option>';
 				}
 			}
 			
@@ -474,7 +477,7 @@ class DC_Multilingual extends DC_Table
 <input type="hidden" name="FORM_SUBMIT" value="tl_language">
 <input type="hidden" name="REQUEST_TOKEN" value="'.REQUEST_TOKEN.'">
 <select name="language" class="tl_select' . (strlen($_SESSION['BE_DATA']['language'][$this->strTable][$this->intId]) ? ' active' : '') . '">
-	<option value="">' . $GLOBALS['TL_LANG']['MSC']['defaultLanguage'] . '</option>'.$available.$undefined.'
+'.$available.$undefined.'
 </select>
 <input type="submit" name="editLanguage" class="tl_submit" value="'.specialchars($GLOBALS['TL_LANG']['MSC']['editLanguage']).'">
 <input type="submit" name="deleteLanguage" class="tl_submit" value="'.specialchars($GLOBALS['TL_LANG']['MSC']['deleteLanguage']).'" onclick="return confirm(\'' . $GLOBALS['TL_LANG']['MSC']['deleteLanguageConfirm'] . '\')">

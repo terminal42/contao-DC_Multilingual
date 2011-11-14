@@ -34,7 +34,7 @@
 $GLOBALS['TL_DCA']['tl_user']['config']['dataContainer'] = 'Multilingual';
 $GLOBALS['TL_DCA']['tl_user']['config']['languages'] = array('de', 'en');
 $GLOBALS['TL_DCA']['tl_user']['config']['langColumn'] = 'language_dc';
-//$GLOBALS['TL_DCA']['tl_news']['config']['fallbackLang'] = 'de';
+$GLOBALS['TL_DCA']['tl_user']['config']['fallbackLang'] = 'de';
 
 
 
