@@ -284,7 +284,7 @@ class DC_Multilingual extends DC_Table
 					$translatableFor = $GLOBALS['TL_DCA'][$this->strTable]['fields'][$vv]['eval']['translatableFor'];
 
 					// if editing the fallback or the field should be shown for all languages, we don't unset anything at all
-					if ($this->strCurrentLang == $this->strFallbackLang || $translatableFor[0] == '*')
+					if ($this->strCurrentLang == '' || $translatableFor[0] == '*')
 					{
 						continue;
 					}
