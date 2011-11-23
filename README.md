@@ -11,7 +11,7 @@ Usage
 	$GLOBALS['TL_DCA']['table']['config']['dataContainer'] = 'Multilingual';
 	// languages you want to provide for translation
 	$GLOBALS['TL_DCA']['table']['config']['languages'] = array('de', 'en');
-	// database column that contains the language keys (default: "lanugage")
+	// database column that contains the language keys (default: "language")
 	$GLOBALS['TL_DCA']['table']['config']['langColumn'] = 'language_dc';
 	// database column that contains the reference id (default: "pid")
 	$GLOBALS['TL_DCA']['table']['config'][pidColumn'] = 'pid';
