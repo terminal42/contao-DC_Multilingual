@@ -675,4 +675,54 @@ window.addEvent(\'domready\', function() {
 
 		return parent::showAll();
 	}
+	
+	
+	/**
+	 * Get all languages
+	 * @return array
+	 */
+	public function getLanguages()
+	{
+		return $this->arrLanguages;
+	}
+	
+	
+	/**
+	 * Get the fallback language
+	 * @return string
+	 */
+	public function getFallbackLanguage()
+	{
+		return $this->strFallbackLang;
+	}
+	
+	
+	/**
+	 * Get the current language
+	 * @return string
+	 */
+	public function getCurrentLanguage()
+	{
+		return $this->strCurrentLang;
+	}
+	
+	
+	/**
+	 * Get the language column
+	 * @return string
+	 */
+	public function getLanguageColumn()
+	{
+		return $this->strLangColumn;
+	}
+	
+	
+	/**
+	 * Get the parent reference column
+	 * @return string
+	 */
+	public function getPidColumn()
+	{
+		return $this->strPidColumn;
+	}
 }
