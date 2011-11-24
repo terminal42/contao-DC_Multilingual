@@ -681,7 +681,7 @@ window.addEvent(\'domready\', function() {
 	 * Get all languages
 	 * @return array
 	 */
-	public function getLanguages()
+	public function getAllowedLanguages()
 	{
 		return $this->arrLanguages;
 	}
