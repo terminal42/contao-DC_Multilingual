@@ -442,7 +442,7 @@ class DC_Multilingual extends DC_Table
 		// Check languages
 		if (is_array($this->arrLanguages) && count($this->arrLanguages))
 		{
-			$arrAvailableLanguages = $this->Database->prepare("SELECT {$this->strLangColumn} FROM " . $this->strTable . " WHERE pid=?")->execute($this->intId)->fetchEach($this->strLangColumn);
+			$arrAvailableLanguages = $this->Database->prepare("SELECT {$this->strLangColumn} FROM " . $this->strTable . " WHERE {$this->strPidColumn}=?")->execute($this->intId)->fetchEach($this->strLangColumn);
 			$arrLanguageLabels = $this->getLanguages();
 			$available = ($this->strFallbackLang) ? '' : '<option value="">' . $GLOBALS['TL_LANG']['MSC']['defaultLanguage'] . '</option>';
 			$undefined = '';
