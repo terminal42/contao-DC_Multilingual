@@ -464,6 +464,11 @@ class DC_Multilingual extends DC_Table
 						$available .= '<option value="' . $value . '">' . $label . '</option>';
 					}
 				}
+				// fallback is never an available language but is always defined
+				elseif($this->strCurrentLang = '')
+				{
+					$available .= '<option value="' . $value . '">' . $label . '</option>';
+				}
 				else
 				{
 					$undefined .= '<option value="' . $value . '">' . $label . ' ('.$GLOBALS['TL_LANG']['MSC']['undefinedLanguage'].')' . '</option>';
