@@ -452,7 +452,8 @@ class DC_Multilingual extends DC_Table
 				$value = ($this->strFallbackLang == $language) ? '' : $language;
 				$label = ($this->strFallbackLang == $language) ? ($arrLanguageLabels[$language] . ' (' . $GLOBALS['TL_LANG']['MSC']['defaultLanguage'] . ')') : $arrLanguageLabels[$language];
 				
-				if (in_array($language, $arrAvailableLanguages))
+				// show the languages that are already translated (fallback is always "translated")
+				if (in_array($language, $arrAvailableLanguages) || ($language == $this->strFallbackLang))
 				{
 					if ($_SESSION['BE_DATA']['language'][$this->strTable][$this->intId] == $language)
 					{
@@ -463,11 +464,6 @@ class DC_Multilingual extends DC_Table
 					{
 						$available .= '<option value="' . $value . '">' . $label . '</option>';
 					}
-				}
-				// fallback is never an available language but is always defined
-				elseif($this->strCurrentLang = '')
-				{
-					$available .= '<option value="' . $value . '">' . $label . '</option>';
 				}
 				else
 				{
