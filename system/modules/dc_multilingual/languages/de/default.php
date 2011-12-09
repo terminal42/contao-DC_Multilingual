@@ -38,6 +38,6 @@
 $GLOBALS['TL_LANG']['MSC']['editLanguage'] = 'Bearbeiten';
 $GLOBALS['TL_LANG']['MSC']['deleteLanguage'] = 'Löschen';
 $GLOBALS['TL_LANG']['MSC']['defaultLanguage'] = 'Fallback-Sprache';
-$GLOBALS['TL_LANG']['MSC']['editingLanguage'] = 'ACHTUNG: Sie bearbeiten die sprachspezifischen Daten dieses Produkts!';
+$GLOBALS['TL_LANG']['MSC']['editingLanguage'] = 'ACHTUNG: Sie bearbeiten einen sprachspezifischen Datensatz!';
 $GLOBALS['TL_LANG']['MSC']['deleteLanguageConfirm'] = 'Soll diese Sprache wirklich gelöscht werden? Hierfür gibt es keine Rückgängig-Funktion!';
 $GLOBALS['TL_LANG']['MSC']['undefinedLanguage'] = 'undefiniert';

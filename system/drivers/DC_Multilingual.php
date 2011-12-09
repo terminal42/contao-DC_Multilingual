@@ -477,7 +477,7 @@ class DC_Multilingual extends DC_Table
 <div class="tl_formbody" style="margin-left:5px;float:left;">
 <input type="hidden" name="FORM_SUBMIT" value="tl_language">
 <input type="hidden" name="REQUEST_TOKEN" value="'.REQUEST_TOKEN.'">
-<select name="language" class="tl_select' . (strlen($_SESSION['BE_DATA']['language'][$this->strTable][$this->intId]) ? ' active' : '') . '">
+<select name="language" class="tl_select' . (strlen($_SESSION['BE_DATA']['language'][$this->strTable][$this->intId]) ? ' active' : '') . '" style="width:160px">
 '.$available.$undefined.'
 </select>
 <input type="submit" name="editLanguage" class="tl_submit" value="'.specialchars($GLOBALS['TL_LANG']['MSC']['editLanguage']).'">
