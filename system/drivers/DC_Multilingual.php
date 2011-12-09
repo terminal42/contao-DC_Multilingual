@@ -676,6 +676,18 @@ window.addEvent(\'domready\', function() {
 
 		return parent::showAll();
 	}
+
+
+	/**
+	 * List all records of the current table as tree and return them as HTML string
+	 * @return string
+	 */
+	public function treeView()
+	{
+		$this->root = $this->Database->query("SELECT id FROM $this->strTable WHERE {$this->strLangColumn}='' AND id IN(" . implode(',', $this->root) . ")")->fetchEach('id');
+
+		return parent::treeView();
+	}
 	
 	
 	/**
