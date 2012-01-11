@@ -432,9 +432,9 @@ class DC_Multilingual extends DC_Table
 <div class="tl_formbody">
 <input type="hidden" name="FORM_SUBMIT" value="tl_version">
 <input type="hidden" name="REQUEST_TOKEN" value="'.REQUEST_TOKEN.'">
+<input type="submit" name="showVersion" id="showVersion" class="tl_submit" value="'.specialchars($GLOBALS['TL_LANG']['MSC']['restore']).'">
 <select name="version" class="tl_select">'.$versions.'
 </select> 
-<input type="submit" name="showVersion" id="showVersion" class="tl_submit" value="'.specialchars($GLOBALS['TL_LANG']['MSC']['restore']).'">
 </div>
 </form>
 ';
@@ -442,7 +442,7 @@ class DC_Multilingual extends DC_Table
 		}
 
 		// Check languages
-		if (is_array($this->arrLanguages) && count($this->arrLanguages))
+		if (is_array($this->arrLanguages) && count($this->arrLanguages) > 1)
 		{
 			$arrAvailableLanguages = $this->Database->prepare("SELECT {$this->strLangColumn} FROM " . $this->strTable . " WHERE {$this->strPidColumn}=?")->execute($this->intId)->fetchEach($this->strLangColumn);
 			$arrLanguageLabels = $this->getLanguages();
@@ -479,11 +479,11 @@ class DC_Multilingual extends DC_Table
 <div class="tl_formbody" style="margin-left:5px;float:left;">
 <input type="hidden" name="FORM_SUBMIT" value="tl_language">
 <input type="hidden" name="REQUEST_TOKEN" value="'.REQUEST_TOKEN.'">
+<input type="submit" name="editLanguage" class="tl_submit" value="'.specialchars($GLOBALS['TL_LANG']['MSC']['editLanguage']).'">
+<input type="submit" name="deleteLanguage" class="tl_submit" value="'.specialchars($GLOBALS['TL_LANG']['MSC']['deleteLanguage']).'" onclick="return confirm(\'' . $GLOBALS['TL_LANG']['MSC']['deleteLanguageConfirm'] . '\')">
 <select name="language" class="tl_select' . (strlen($_SESSION['BE_DATA']['language'][$this->strTable][$this->intId]) ? ' active' : '') . '" style="width:160px">
 '.$available.$undefined.'
 </select>
-<input type="submit" name="editLanguage" class="tl_submit" value="'.specialchars($GLOBALS['TL_LANG']['MSC']['editLanguage']).'">
-<input type="submit" name="deleteLanguage" class="tl_submit" value="'.specialchars($GLOBALS['TL_LANG']['MSC']['deleteLanguage']).'" onclick="return confirm(\'' . $GLOBALS['TL_LANG']['MSC']['deleteLanguageConfirm'] . '\')">
 </div>
 </form>';
 		}
