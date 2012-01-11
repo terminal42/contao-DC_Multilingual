@@ -21,11 +21,11 @@
  * Software Foundation website at <http://www.gnu.org/licenses/>.
  *
  * PHP version 5
- * @copyright  Leo Feyer 2005-2011
- * @author     Leo Feyer <http://www.contao.org>
- * @package    System
- * @license    LGPL
- * @filesource
+ * @copyright  certo web & design GmbH 2011-2012
+ * @copyright  Andreas Schempp 2011-2012
+ * @author     Yanick Witschi <yanick.witschi@certo-net.ch>
+ * @author     Andreas Schempp <andreas@schempp.ch>
+ * @license    http://opensource.org/licenses/lgpl-3.0.html
  */
 
  
@@ -36,7 +36,9 @@ require_once(TL_ROOT . '/system/drivers/DC_Table.php');
  *
  * Provide methods to handle multilingual DC_Table entries
  * @copyright  certo web & design GmbH 2011
+ * @copyright  Andreas Schempp 2011-2012
  * @author     Yanick Witschi <yanick.witschi@certo-net.ch>
+ * @author     Andreas Schempp <andreas@schempp.ch>
  * @package    dc_multilingual
  */
 class DC_Multilingual extends DC_Table
