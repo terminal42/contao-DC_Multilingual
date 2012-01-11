@@ -78,7 +78,7 @@ class DC_Multilingual extends DC_Table
 	 * pid column
 	 * @var string
 	 */
-	protected $strPidColumn = 'pid';
+	protected $strPidColumn = 'langPid';
 
 
 	/**
