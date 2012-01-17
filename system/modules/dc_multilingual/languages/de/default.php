@@ -26,6 +26,7 @@
  * @author     Yanick Witschi <yanick.witschi@certo-net.ch>
  * @author     Andreas Schempp <andreas@schempp.ch>
  * @license    http://opensource.org/licenses/lgpl-3.0.html
+ * @package    DC_Multilingual
  */
 
 
