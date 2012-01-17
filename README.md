@@ -34,3 +34,34 @@ Usage
 	$GLOBALS['TL_DCA']['table']['fields']['name']['eval']['translatableFor'] = array('de');
 	
 	?>
+
+	
+Querying using the DC_Multilingual_Query builder
+-----
+	<?php
+	$objQuery = new DC_Multilingual_Query('table');
+	
+	// the base query as string
+	// you see the table-alias t1 for the base-fields
+	// and t2 for the language-fields
+	echo $objQuery->getQuery();
+	
+	// probably you would change the language, default is $GLOBALS[TL_LANGUAGE]
+	$objQuery->language = 'en';
+	
+	// add some conditions
+	$objQuery->addField('CONCAT(t2.firstname," ",t2.lastname") AS fullname')
+	         ->addField('joinedTable.anotherField')
+			 ->addJoin('LEFT JOIN joinedTable ON (t1.joinedID = joinedTable.id)');
+	
+	// some WHERE and ORDER conditions
+	$objQuery->addWhere('t1.published="1"')->addOrder('t2.lastname');
+	
+	echo $objQuery->getQuery();
+	
+	// or get the Database_Statement instance
+	$objStatement = $objQuery->getStatement();
+	
+	$objResult = $objQuery->getStatement()->execute();
+	
+	?>
