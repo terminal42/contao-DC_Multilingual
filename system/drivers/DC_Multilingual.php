@@ -686,7 +686,14 @@ window.addEvent(\'domready\', function() {
 	 */
 	public function treeView()
 	{
-		$this->root = $this->Database->query("SELECT id FROM $this->strTable WHERE {$this->strLangColumn}='' AND id IN(" . implode(',', $this->root) . ")")->fetchEach('id');
+		$strWhere = '';
+		
+		if (is_array($this->root) && count($this->root))
+		{
+			$strWhere = ' AND id IN(' . implode(',', $this->root) . ')';
+		}
+		
+		$this->root = $this->Database->query("SELECT id FROM $this->strTable WHERE {$this->strLangColumn}=''" . $strWhere)->fetchEach('id');
 
 		return parent::treeView();
 	}
