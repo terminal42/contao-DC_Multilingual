@@ -115,7 +115,7 @@ class DC_Multilingual_Query extends Controller
 	 */
 	public function getQuery()
 	{
-		$strPid = isset($GLOBALS['TL_DCA'][$strTable]['config']['pidColumn']) ? $GLOBALS['TL_DCA'][$strTable]['config']['pidColumn'] : 'langPid';
+		$strPid = isset($GLOBALS['TL_DCA'][$this->strTable]['config']['pidColumn']) ? $GLOBALS['TL_DCA'][$this->strTable]['config']['pidColumn'] : 'langPid';
 
 		return "
 SELECT t1.*,
