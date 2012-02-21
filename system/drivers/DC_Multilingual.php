@@ -238,8 +238,16 @@ class DC_Multilingual extends DC_Table
 
 			if (!$objRow->numRows)
 			{
-				$blnIncludePid = ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 4) ? true : false;
-				$intId = $this->Database->prepare("INSERT INTO " . $this->strTable . " ({$this->strPidColumn},tstamp,{$this->strLangColumn}" . ($blnIncludePid ? ",pid" : "") . ") VALUES (?,?,?" . ($blnIncludePid ? ",?" : "") . ")")->execute($this->intId, time(), $_SESSION['BE_DATA']['language'][$this->strTable][$this->intId], CURRENT_ID)->insertId;
+				// Save PID in sorting mode 4
+				if ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 4)
+				{
+					$intId = $this->Database->prepare("INSERT INTO " . $this->strTable . " ({$this->strPidColumn},tstamp,{$this->strLangColumn},pid) VALUES (?,?,?,?)")->execute($this->intId, time(), $_SESSION['BE_DATA']['language'][$this->strTable][$this->intId], CURRENT_ID)->insertId;					
+				}
+				else
+				{
+					$intId = $this->Database->prepare("INSERT INTO " . $this->strTable . " ({$this->strPidColumn},tstamp,{$this->strLangColumn}) VALUES (?,?,?)")->execute($this->intId, time(), $_SESSION['BE_DATA']['language'][$this->strTable][$this->intId])->insertId;
+				}
+
 				$objRow = $this->Database->prepare("SELECT * FROM " . $this->strTable . " WHERE id=?")->execute($intId);
 			}
 
