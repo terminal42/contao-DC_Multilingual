@@ -238,9 +238,8 @@ class DC_Multilingual extends DC_Table
 
 			if (!$objRow->numRows)
 			{
-				// Save PID in sorting mode 4 or zero
-				if ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 4 || $GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 0)
-				{
+				// check if the table has a parent table defined, if so store the pid number
+				if ( strlen($GLOBALS['TL_DCA'][$this->strTable]['config']['ptable']) > 0 ) {
 					$intId = $this->Database->prepare("INSERT INTO " . $this->strTable . " ({$this->strPidColumn},tstamp,{$this->strLangColumn},pid) VALUES (?,?,?,?)")->execute($this->intId, time(), $_SESSION['BE_DATA']['language'][$this->strTable][$this->intId], CURRENT_ID)->insertId;
 				}
 				else
