@@ -499,9 +499,14 @@ class DC_Multilingual extends DC_Table
 		}
 
 
-		$version .= '<div class="clear"></div></div>';
-
-		// Add some buttons and end the form
+		if ( $hasVersions )
+		{
+			$version .= '<div class="clear"></div></div>';
+		} else {
+			$version = '';
+		}
+		
+        // Add some buttons and end the form
 		$return .= '
 </div>
 
