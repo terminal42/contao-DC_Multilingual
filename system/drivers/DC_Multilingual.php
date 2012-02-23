@@ -239,8 +239,9 @@ class DC_Multilingual extends DC_Table
 			if (!$objRow->numRows)
 			{
 				// check if the field 'pid' exists in the table, if so we should always store the pid idea as suggested in
-				// DC_Table#getNewPosition-method line 1130
-				if ($this->Database->fieldExists('pid', $this->strTable)) {
+				// DC_Table::getNewPosition(), line 1130
+				if ($this->Database->fieldExists('pid', $this->strTable))
+				{
 					$intId = $this->Database->prepare("INSERT INTO " . $this->strTable . " ({$this->strPidColumn},tstamp,{$this->strLangColumn},pid) VALUES (?,?,?,?)")->execute($this->intId, time(), $_SESSION['BE_DATA']['language'][$this->strTable][$this->intId], CURRENT_ID)->insertId;
 				}
 				else
