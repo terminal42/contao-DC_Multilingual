@@ -452,8 +452,11 @@ class DC_Multilingual extends DC_Table
         }
 
         // Check languages
+        $hasLanguages = false;
         if (is_array($this->arrLanguages) && count($this->arrLanguages) > 1)
         {
+            $hasLanguages = true;
+
             $arrAvailableLanguages = $this->Database->prepare("SELECT {$this->strLangColumn} FROM " . $this->strTable . " WHERE {$this->strPidColumn}=?")->execute($this->intId)->fetchEach($this->strLangColumn);
             $arrLanguageLabels = $this->getLanguages();
             $available = ($this->strFallbackLang) ? '' : '<option value="">' . $GLOBALS['TL_LANG']['MSC']['defaultLanguage'] . '</option>';
@@ -499,9 +502,15 @@ class DC_Multilingual extends DC_Table
         }
 
 
-        $version .= '<div class="clear"></div></div>';
-        
-        
+        // check if languages are defined for the data container, if not don't render the button bar
+        if ( !$hasVersions && !$hasLanguages )
+        {
+            $version = '';
+        } else
+        {
+            $version .= '<div class="clear"></div></div>';
+        }
+
         // Add some buttons and end the form
         $return .= '
 </div>
