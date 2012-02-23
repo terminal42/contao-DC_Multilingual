@@ -10,12 +10,12 @@
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation, either
  * version 3 of the License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this program. If not, please visit the Free
  * Software Foundation website at <http://www.gnu.org/licenses/>.
@@ -28,7 +28,7 @@
  * @license    http://opensource.org/licenses/lgpl-3.0.html
  */
 
- 
+
 require_once(TL_ROOT . '/system/drivers/DC_Table.php');
 
 /**
@@ -49,31 +49,31 @@ class DC_Multilingual extends DC_Table
 	 * @param boolean
 	 */
 	protected $blnEditLanguage = false;
-	
+
 	/**
 	 * Array containing all languages that are translatable
 	 * @var array
 	 */
 	protected $arrLanguages = array();
-	
+
 	/**
 	 * Fallback language
 	 * @var string
 	 */
 	protected $strFallbackLang = '';
-	
+
 	/**
 	 * Language we are currently editing
 	 * @var string
 	 */
 	protected $strCurrentLang = '';
-	
+
 	/**
 	 * Language column
 	 * @var string
 	 */
 	protected $strLangColumn = 'language';
-	
+
 	/**
 	 * pid column
 	 * @var string
@@ -88,7 +88,7 @@ class DC_Multilingual extends DC_Table
 	public function __construct($strTable)
 	{
 		parent::__construct($strTable);
-		
+
 		// languages array
 		if (isset($GLOBALS['TL_DCA'][$this->strTable]['config']['languages']))
 		{
@@ -97,20 +97,20 @@ class DC_Multilingual extends DC_Table
 		else
 		{
 			$this->arrLanguages = $this->getLanguages();
-		}	
-		
+		}
+
 		// fallback language
 		if (isset($GLOBALS['TL_DCA'][$this->strTable]['config']['fallbackLang']))
 		{
 			$this->strFallbackLang = $GLOBALS['TL_DCA'][$this->strTable]['config']['fallbackLang'];
 		}
-		
+
 		// parent association column (default: pid)
 		if ($GLOBALS['TL_DCA'][$this->strTable]['config']['pidColumn'])
 		{
 			$this->strPidColumn = $GLOBALS['TL_DCA'][$this->strTable]['config']['pidColumn'];
 		}
-		
+
 		// lang column (default: language)
 		if ($GLOBALS['TL_DCA'][$this->strTable]['config']['langColumn'])
 		{
@@ -147,8 +147,8 @@ class DC_Multilingual extends DC_Table
 		if ($GLOBALS['TL_DCA'][$this->strTable]['config']['enableVersioning'] && $this->Input->post('FORM_SUBMIT') == 'tl_version' && strlen($this->Input->post('version')))
 		{
 			$objData = $this->Database->prepare("SELECT * FROM tl_version WHERE fromTable=? AND pid=? AND version=?")
-									  ->limit(1)
-									  ->execute($this->strTable, $this->intId, $this->Input->post('version'));
+									->limit(1)
+									->execute($this->strTable, $this->intId, $this->Input->post('version'));
 
 			if ($objData->numRows)
 			{
@@ -157,14 +157,14 @@ class DC_Multilingual extends DC_Table
 				if (is_array($data))
 				{
 					$this->Database->prepare("UPDATE " . $objData->fromTable . " %s WHERE id=?")
-								   ->set($data)
-								   ->execute($this->intId);
+								->set($data)
+								->execute($this->intId);
 
 					$this->Database->prepare("UPDATE tl_version SET active='' WHERE pid=?")
-								   ->execute($this->intId);
+								->execute($this->intId);
 
 					$this->Database->prepare("UPDATE tl_version SET active=1 WHERE pid=? AND version=?")
-								   ->execute($this->intId, $this->Input->post('version'));
+								->execute($this->intId, $this->Input->post('version'));
 
 					$this->log(sprintf('Version %s of record ID %s (table %s) has been restored', $this->Input->post('version'), $this->intId, $this->strTable), 'DC_Table edit()', TL_GENERAL);
 
@@ -188,8 +188,8 @@ class DC_Multilingual extends DC_Table
 
 		// Get the current record
 		$objRow = $this->Database->prepare("SELECT * FROM " . $this->strTable . " WHERE id=?")
-								 ->limit(1)
-								 ->executeUncached($this->intId);
+								->limit(1)
+								->executeUncached($this->intId);
 
 		// Redirect if there is no record with the given ID
 		if ($objRow->numRows < 1)
@@ -238,7 +238,16 @@ class DC_Multilingual extends DC_Table
 
 			if (!$objRow->numRows)
 			{
-				$intId = $this->Database->prepare("INSERT INTO " . $this->strTable . " ({$this->strPidColumn},tstamp,{$this->strLangColumn}) VALUES (?,?,?)")->execute($this->intId, time(), $_SESSION['BE_DATA']['language'][$this->strTable][$this->intId])->insertId;
+				// check if the field 'pid' exists in the table, if so we should always store the pid idea as suggested in
+				// DC_Table#getNewPosition-method line 1130
+				if ($this->Database->fieldExists('pid', $this->strTable)) {
+					$intId = $this->Database->prepare("INSERT INTO " . $this->strTable . " ({$this->strPidColumn},tstamp,{$this->strLangColumn},pid) VALUES (?,?,?,?)")->execute($this->intId, time(), $_SESSION['BE_DATA']['language'][$this->strTable][$this->intId], CURRENT_ID)->insertId;
+				}
+				else
+				{
+					$intId = $this->Database->prepare("INSERT INTO " . $this->strTable . " ({$this->strPidColumn},tstamp,{$this->strLangColumn}) VALUES (?,?,?)")->execute($this->intId, time(), $_SESSION['BE_DATA']['language'][$this->strTable][$this->intId])->insertId;
+				}
+
 				$objRow = $this->Database->prepare("SELECT * FROM " . $this->strTable . " WHERE id=?")->execute($intId);
 			}
 
@@ -281,7 +290,7 @@ class DC_Multilingual extends DC_Table
 					{
 						unset($boxes[$k][$kk]);
 					}
-					
+
 					// unset fields that are not translatable for the current language
 					$translatableFor = $GLOBALS['TL_DCA'][$this->strTable]['fields'][$vv]['eval']['translatableFor'];
 
@@ -297,7 +306,7 @@ class DC_Multilingual extends DC_Table
 						unset($boxes[$k][$kk]);
 						continue;
 					}
-					
+
 					// we check if the field is not editable for the current language
 					if(!in_array($this->strCurrentLang, $translatableFor))
 					{
@@ -414,7 +423,7 @@ class DC_Multilingual extends DC_Table
 		if ($GLOBALS['TL_DCA'][$this->strTable]['config']['enableVersioning'])
 		{
 			$objVersion = $this->Database->prepare("SELECT tstamp, version, username, active FROM tl_version WHERE fromTable=? AND pid=? ORDER BY version DESC")
-									     ->execute($this->strTable, $this->intId);
+										->execute($this->strTable, $this->intId);
 
 			if ($objVersion->numRows > 1)
 			{
@@ -424,7 +433,7 @@ class DC_Multilingual extends DC_Table
 				while ($objVersion->next())
 				{
 					$versions .= '
-  <option value="'.$objVersion->version.'"'.($objVersion->active ? ' selected="selected"' : '').'>'.$GLOBALS['TL_LANG']['MSC']['version'].' '.$objVersion->version.' ('.$this->parseDate($GLOBALS['TL_CONFIG']['datimFormat'], $objVersion->tstamp).') '.$objVersion->username.'</option>';
+<option value="'.$objVersion->version.'"'.($objVersion->active ? ' selected="selected"' : '').'>'.$GLOBALS['TL_LANG']['MSC']['version'].' '.$objVersion->version.' ('.$this->parseDate($GLOBALS['TL_CONFIG']['datimFormat'], $objVersion->tstamp).') '.$objVersion->username.'</option>';
 				}
 
 				$version .= '
@@ -434,7 +443,7 @@ class DC_Multilingual extends DC_Table
 <input type="hidden" name="REQUEST_TOKEN" value="'.REQUEST_TOKEN.'">
 <input type="submit" name="showVersion" id="showVersion" class="tl_submit" value="'.specialchars($GLOBALS['TL_LANG']['MSC']['restore']).'">
 <select name="version" class="tl_select">'.$versions.'
-</select> 
+</select>
 </div>
 </form>
 ';
@@ -453,7 +462,7 @@ class DC_Multilingual extends DC_Table
 			{
 				$value = ($this->strFallbackLang == $language) ? '' : $language;
 				$label = ($this->strFallbackLang == $language) ? ($arrLanguageLabels[$language] . ' (' . $GLOBALS['TL_LANG']['MSC']['defaultLanguage'] . ')') : $arrLanguageLabels[$language];
-				
+
 				// show the languages that are already translated (fallback is always "translated")
 				if (in_array($language, $arrAvailableLanguages) || ($language == $this->strFallbackLang))
 				{
@@ -472,7 +481,7 @@ class DC_Multilingual extends DC_Table
 					$undefined .= '<option value="' . $value . '">' . $label . ' ('.$GLOBALS['TL_LANG']['MSC']['undefinedLanguage'].')' . '</option>';
 				}
 			}
-			
+
 			$style = ($hasVersions) ? ' style="float:left;width:360px"' : '';
 
 			$version .= '<form action="'.ampersand($this->Environment->request, true).'" id="tl_language" class="tl_form" method="post"' . $style . '>
@@ -498,7 +507,7 @@ class DC_Multilingual extends DC_Table
 <div class="tl_formbody_submit">
 
 <div class="tl_submit_container">
-<input type="submit" name="save" id="save" class="tl_submit" accesskey="s" value="'.specialchars($GLOBALS['TL_LANG']['MSC']['save']).'"> 
+<input type="submit" name="save" id="save" class="tl_submit" accesskey="s" value="'.specialchars($GLOBALS['TL_LANG']['MSC']['save']).'">
 <input type="submit" name="saveNclose" id="saveNclose" class="tl_submit" accesskey="c" value="'.specialchars($GLOBALS['TL_LANG']['MSC']['saveNclose']).'"> ' . (!$GLOBALS['TL_DCA'][$this->strTable]['config']['closed'] ? '
 <input type="submit" name="saveNcreate" id="saveNcreate" class="tl_submit" accesskey="n" value="'.specialchars($GLOBALS['TL_LANG']['MSC']['saveNcreate']).'"> ' : '') . ($this->Input->get('s2e') ? '
 <input type="submit" name="saveNedit" id="saveNedit" class="tl_submit" accesskey="e" value="'.specialchars($GLOBALS['TL_LANG']['MSC']['saveNedit']).'"> ' : (($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 4 || strlen($this->ptable) || $GLOBALS['TL_DCA'][$this->strTable]['config']['switchToEdit']) ? '
@@ -510,8 +519,8 @@ class DC_Multilingual extends DC_Table
 
 <script>
 window.addEvent(\'domready\', function() {
-  var first = $(\''.$this->strTable.'\').getElement(\'input[type="text"]\');
-  if (first) first.focus();
+var first = $(\''.$this->strTable.'\').getElement(\'input[type="text"]\');
+if (first) first.focus();
 });
 </script>';
 
@@ -567,7 +576,7 @@ window.addEvent(\'domready\', function() {
 
 			// Set the current timestamp (-> DO NOT CHANGE THE ORDER version - timestamp)
 			$this->Database->prepare("UPDATE " . $this->strTable . " SET tstamp=? WHERE id=?")
-						   ->execute(time(), $this->intId);
+						->execute(time(), $this->intId);
 
 			// Redirect
 			if (isset($_POST['saveNclose']))
@@ -659,7 +668,7 @@ window.addEvent(\'domready\', function() {
 
 <script>
 window.addEvent(\'domready\', function() {
-  Backend.vScrollTo(($(\'' . $this->strTable . '\').getElement(\'label.error\').getPosition().y - 20));
+Backend.vScrollTo(($(\'' . $this->strTable . '\').getElement(\'label.error\').getPosition().y - 20));
 });
 </script>';
 		}
@@ -687,18 +696,18 @@ window.addEvent(\'domready\', function() {
 	public function treeView()
 	{
 		$strWhere = '';
-		
+
 		if (is_array($this->root) && count($this->root))
 		{
 			$strWhere = ' AND id IN(' . implode(',', $this->root) . ')';
 		}
-		
+
 		$this->root = $this->Database->query("SELECT id FROM $this->strTable WHERE {$this->strLangColumn}=''" . $strWhere)->fetchEach('id');
 
 		return parent::treeView();
 	}
-	
-	
+
+
 	/**
 	 * Get all languages
 	 * @return array
@@ -707,8 +716,8 @@ window.addEvent(\'domready\', function() {
 	{
 		return $this->arrLanguages;
 	}
-	
-	
+
+
 	/**
 	 * Get the fallback language
 	 * @return string
@@ -717,8 +726,8 @@ window.addEvent(\'domready\', function() {
 	{
 		return $this->strFallbackLang;
 	}
-	
-	
+
+
 	/**
 	 * Get the current language
 	 * @return string
@@ -727,8 +736,8 @@ window.addEvent(\'domready\', function() {
 	{
 		return $this->strCurrentLang;
 	}
-	
-	
+
+
 	/**
 	 * Get the language column
 	 * @return string
@@ -737,8 +746,8 @@ window.addEvent(\'domready\', function() {
 	{
 		return $this->strLangColumn;
 	}
-	
-	
+
+
 	/**
 	 * Get the parent reference column
 	 * @return string
