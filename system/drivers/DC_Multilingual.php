@@ -238,11 +238,21 @@ class DC_Multilingual extends DC_Table
 
             if (!$objRow->numRows)
             {
-                // check if the field 'pid' exists in the table, if so we should always store the pid idea as suggested in
-                // DC_Table::getNewPosition(), line 1130
+
                 if ($this->Database->fieldExists('pid', $this->strTable))
                 {
-                    $intId = $this->Database->prepare("INSERT INTO " . $this->strTable . " ({$this->strPidColumn},tstamp,{$this->strLangColumn},pid) VALUES (?,?,?,?)")->execute($this->intId, time(), $_SESSION['BE_DATA']['language'][$this->strTable][$this->intId], CURRENT_ID)->insertId;
+                    // retrieve the pid value of the entry which gets translated to ensure that the translation record gets the same
+                    // pid value has the original record otherwise it will break foreign fields or parent-child relationships.
+                    // see also: https://github.com/Toflar/DC_Multilingual/pull/8#issuecomment-4152752
+
+                    $intPid = 0;
+                    $objRecord = $this->Database->prepare('SELECT * FROM ' . $this->strTable . ' WHERE id=?')->executeUncached($this->intId);
+                    if ( $objRecord )
+                    {
+                        $intPid = $objRecord->pid;
+                    }
+
+                    $intId = $this->Database->prepare("INSERT INTO " . $this->strTable . " ({$this->strPidColumn},tstamp,{$this->strLangColumn},pid) VALUES (?,?,?,?)")->execute($this->intId, time(), $_SESSION['BE_DATA']['language'][$this->strTable][$this->intId], $intPid)->insertId;
                 }
                 else
                 {
