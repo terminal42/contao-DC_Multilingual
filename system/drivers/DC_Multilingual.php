@@ -103,6 +103,11 @@ class DC_Multilingual extends DC_Table
         if (isset($GLOBALS['TL_DCA'][$this->strTable]['config']['fallbackLang']))
         {
             $this->strFallbackLang = $GLOBALS['TL_DCA'][$this->strTable]['config']['fallbackLang'];
+            
+            if (!in_array($this->strFallbackLang, $this->arrLanguages))
+            {
+            	$this->arrLanguages[] = $this->strFallbackLang;
+            }
         }
 
         // parent association column (default: pid)
