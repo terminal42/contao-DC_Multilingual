@@ -96,7 +96,7 @@ class DC_Multilingual extends DC_Table
         }
         else
         {
-            $this->arrLanguages = $this->getLanguages();
+            $this->arrLanguages = $this->getRootPageLanguages();
         }
 
         // fallback language
@@ -771,4 +771,16 @@ Backend.vScrollTo(($(\'' . $this->strTable . '\').getElement(\'label.error\').ge
     {
         return $this->strPidColumn;
     }
+    
+    
+    /**
+     * Get the list of languages based on root pages
+     * @return array
+     */
+    protected function getRootPageLanguages()
+    {
+    	$objPages = $this->Database->execute("SELECT DISTINCT language FROM tl_page WHERE type='root' AND language!=''");
+    	return $objPages->fetchEach('language');
+    }
 }
+
