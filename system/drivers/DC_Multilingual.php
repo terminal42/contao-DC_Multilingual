@@ -238,7 +238,20 @@ class DC_Multilingual extends DC_Table
 
 			if (!$objRow->numRows)
 			{
-				$intId = $this->Database->prepare("INSERT INTO " . $this->strTable . " ({$this->strPidColumn},tstamp,{$this->strLangColumn}) VALUES (?,?,?)")->execute($this->intId, time(), $_SESSION['BE_DATA']['language'][$this->strTable][$this->intId])->insertId;
+				// if theres a pid column we sould adopt its value in the lang-specific row cause of reviseTable
+				if($this->Database->fieldExists('pid',$this->strTable) && $this->strLangColumn != 'pid')
+				{
+					$intId = $this->Database->prepare("INSERT INTO " . $this->strTable . " ({$this->strPidColumn},tstamp,{$this->strLangColumn},pid) VALUES (?,?,?,?)")
+										    ->execute($this->intId, time(), $_SESSION['BE_DATA']['language'][$this->strTable][$this->intId],$this->objActiveRecord->pid)
+										    ->insertId;
+				}
+				else
+				{
+					$intId = $this->Database->prepare("INSERT INTO " . $this->strTable . " ({$this->strPidColumn},tstamp,{$this->strLangColumn}) VALUES (?,?,?)")
+											->execute($this->intId, time(), $_SESSION['BE_DATA']['language'][$this->strTable][$this->intId])
+											->insertId;
+				}
+
 				$objRow = $this->Database->prepare("SELECT * FROM " . $this->strTable . " WHERE id=?")->execute($intId);
 			}
 
