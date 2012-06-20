@@ -5,6 +5,7 @@ This is a standalone DC driver for contao that allows you to easily make your da
 
 Usage
 -----
+```php
 	<?php
 	/* DCA configuration */
 	
@@ -33,11 +34,12 @@ Usage
 	// use an array of language keys to specify for which languages the field is translatable
 	$GLOBALS['TL_DCA']['table']['fields']['name']['eval']['translatableFor'] = array('de');
 	
-	?>
+```
 
 	
 Querying using the DC_Multilingual_Query builder
 -----
+```php
 	<?php
 	$objQuery = new DC_Multilingual_Query('table');
 	
@@ -64,4 +66,4 @@ Querying using the DC_Multilingual_Query builder
 	
 	$objResult = $objQuery->getStatement()->execute();
 	
-	?>
+```
