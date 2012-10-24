@@ -724,7 +724,14 @@ Backend.vScrollTo(($(\'' . $this->strTable . '\').getElement(\'label.error\').ge
             $strWhere = ' AND id IN(' . implode(',', $this->root) . ')';
         }
 
-        $this->root = $this->Database->query("SELECT id FROM $this->strTable WHERE {$this->strLangColumn}=''" . $strWhere)->fetchEach('id');
+        $strOrderBy = "";
+
+        if ($this->Database->fieldExists('sorting', $this->strTable))
+        {
+	        $strOrderBy = " ORDER BY sorting";
+        }
+
+        $this->root = $this->Database->query("SELECT id FROM $this->strTable WHERE {$this->strLangColumn}=''" . $strWhere . $strOrderBy)->fetchEach('id');
 
         return parent::treeView();
     }
@@ -969,6 +976,136 @@ Backend.vScrollTo(($(\'' . $this->strTable . '\').getElement(\'label.error\').ge
 
 		$this->Session->setData($session);
 		return $return;
+	}
+
+
+	/**
+	 * Calculate the new position of a moved or inserted record
+	 * @param string
+	 * @param integer
+	 * @param boolean
+	 */
+	protected function getNewPosition($mode, $pid=null, $insertInto=false)
+	{
+		// If there is pid and sorting
+		if ($this->Database->fieldExists('pid', $this->strTable) && $this->Database->fieldExists('sorting', $this->strTable))
+		{
+			// PID is not set - only valid for duplicated records, as they get the same parent ID as the original record!
+			if ($pid === null && $this->intId && $mode == 'copy')
+			{
+				$pid = $this->intId;
+			}
+
+			// PID is set (insert after or into the parent record)
+			if (is_numeric($pid))
+			{
+				// Insert the current record at the beginning when inserting into the parent record
+				if ($insertInto)
+				{
+					$newPID = $pid;
+					$objSorting = $this->Database->prepare("SELECT MIN(sorting) AS sorting FROM " . $this->strTable . " WHERE pid=? AND {$this->strPidColumn}=0")
+												 ->executeUncached($pid);
+
+					// Select sorting value of the first record
+					if ($objSorting->numRows)
+					{
+						$curSorting = $objSorting->sorting;
+
+						// Resort if the new sorting value is not an integer or smaller than 1
+						if (($curSorting % 2) != 0 || $curSorting < 1)
+						{
+							$objNewSorting = $this->Database->prepare("SELECT id, sorting FROM " . $this->strTable . " WHERE pid=? AND {$this->strPidColumn}=0 ORDER BY sorting" )
+															->executeUncached($pid);
+
+							$count = 2;
+							$newSorting = 128;
+
+							while ($objNewSorting->next())
+							{
+								$this->Database->prepare("UPDATE " . $this->strTable . " SET sorting=? WHERE id=?")
+											   ->limit(1)
+											   ->execute(($count++*128), $objNewSorting->id);
+							}
+						}
+
+						// Else new sorting = (current sorting / 2)
+						else $newSorting = ($curSorting / 2);
+					}
+
+					// Else new sorting = 128
+					else $newSorting = 128;
+				}
+
+				// Else insert the current record after the parent record
+				elseif ($pid > 0)
+				{
+					$objSorting = $this->Database->prepare("SELECT * FROM " . $this->strTable . " WHERE id=? AND {$this->strPidColumn}=0")
+												 ->limit(1)
+												 ->executeUncached($pid);
+
+					// Set parent ID of the current record as new parent ID
+					if ($objSorting->numRows)
+					{
+						$newPID = $objSorting->pid;
+						$curSorting = $objSorting->sorting;
+
+						// Do not proceed without a parent ID
+						if (is_numeric($newPID))
+						{
+							$objNextSorting = $this->Database->prepare("SELECT MIN(sorting) AS sorting FROM " . $this->strTable . " WHERE pid=? AND {$this->strPidColumn}=0 AND sorting>?")
+											  				 ->executeUncached($newPID, $curSorting);
+
+							// Select sorting value of the next record
+							if ($objNextSorting->sorting !== null)
+							{
+								$nxtSorting = $objNextSorting->sorting;
+
+								// Resort if the new sorting value is no integer or bigger than a MySQL integer
+								if ((($curSorting + $nxtSorting) % 2) != 0 || $nxtSorting >= 4294967295)
+								{
+									$count = 1;
+
+									$objNewSorting = $this->Database->prepare("SELECT id, sorting FROM " . $this->strTable . " WHERE pid=? AND {$this->strPidColumn}=0 ORDER BY sorting")
+																	->executeUncached($newPID);
+
+									while ($objNewSorting->next())
+									{
+										$this->Database->prepare("UPDATE " . $this->strTable . " SET sorting=? WHERE id=?")
+													   ->execute(($count++*128), $objNewSorting->id);
+
+										if ($objNewSorting->sorting == $curSorting)
+										{
+											$newSorting = ($count++*128);
+										}
+									}
+								}
+
+								// Else new sorting = (current sorting + next sorting) / 2
+								else $newSorting = (($curSorting + $nxtSorting) / 2);
+							}
+
+							// Else new sorting = (current sorting + 128)
+							else $newSorting = ($curSorting + 128);
+						}
+					}
+
+					// Use the given parent ID as parent ID
+					else
+					{
+						$newPID = $pid;
+						$newSorting = 128;
+					}
+				}
+
+				// Set new sorting and new parent ID
+				$this->set['pid'] = intval($newPID);
+				$this->set['sorting'] = intval($newSorting);
+			}
+		}
+		else
+		{
+			parent::getNewPosition($mode, $pid, $insertInto);
+		}
 	}
 
 
