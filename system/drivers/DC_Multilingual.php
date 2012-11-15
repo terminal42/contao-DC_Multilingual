@@ -21,10 +21,9 @@
  * Software Foundation website at <http://www.gnu.org/licenses/>.
  *
  * PHP version 5
- * @copyright  certo web & design GmbH 2011-2012
- * @copyright  Andreas Schempp 2011-2012
- * @author     Yanick Witschi <yanick.witschi@certo-net.ch>
- * @author     Andreas Schempp <andreas@schempp.ch>
+ * @copyright  terminal42 gmbh 2011-2012
+ * @author     Yanick Witschi <yanick.witschi@terminal42.ch>
+ * @author     Andreas Schempp <andreas.schempp@terminal42.ch>
  * @author     Kamil Kuzminski <kamil.kuzminski@gmail.com>
  * @license    http://opensource.org/licenses/lgpl-3.0.html
  */
@@ -36,10 +35,9 @@ require_once(TL_ROOT . '/system/drivers/DC_Table.php');
  * Class DC_Multilingual
  *
  * Provide methods to handle multilingual DC_Table entries
- * @copyright  certo web & design GmbH 2011
- * @copyright  Andreas Schempp 2011-2012
- * @author     Yanick Witschi <yanick.witschi@certo-net.ch>
- * @author     Andreas Schempp <andreas@schempp.ch>
+ * @copyright  terminal42 gmbh 2011-2012
+ * @author     Yanick Witschi <yanick.witschi@terminal42.ch>
+ * @author     Andreas Schempp <andreas.schempp@terminal42.ch>
  * @author     Kamil Kuzminski <kamil.kuzminski@gmail.com>
  * @package    dc_multilingual
  */
