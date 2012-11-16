@@ -1154,6 +1154,20 @@ Backend.vScrollTo(($(\'' . $this->strTable . '\').getElement(\'label.error\').ge
 	}
 
 
+
+	/**
+	 * Delete record and associated translations
+	 * @param boolean
+	 */
+	public function delete($blnDoNotRedirect=false)
+	{
+		$this->Database->prepare("DELETE FROM " . $this->strTable . " WHERE " . $this->strPidColumn . "=?")
+					   ->execute($this->intId);
+
+		parent::delete($blnDoNotRedirect);
+	}
+
+
 	/**
 	 * Get all languages
 	 * @return array
