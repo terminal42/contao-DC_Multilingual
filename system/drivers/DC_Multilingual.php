@@ -700,6 +700,51 @@ Backend.vScrollTo(($(\'' . $this->strTable . '\').getElement(\'label.error\').ge
 
 
 	/**
+	 * Duplicate a particular record of the current table with all the translations
+	 * @param boolean
+	 * @return integer|boolean
+	 */
+	public function copy($blnDoNotRedirect=false)
+	{
+		$insertId = parent::copy(true);
+
+		// Get all translations
+		$objTranslations = $this->Database->prepare("SELECT * FROM $this->strTable WHERE $this->strPidColumn=?")->execute($this->intId);
+
+		while ($objTranslations->next())
+		{
+			$arrInsert = array_merge($this->set, $objTranslations->row());
+			$arrInsert['tstamp'] = time(); // array_merge() overwrites tstamp which is wrong
+			$arrInsert[$this->strPidColumn] = $insertId; // add language reference id
+			unset($arrInsert['id']); // unset id
+			$this->Database->prepare("INSERT INTO $this->strTable %s")->set($arrInsert)->execute();
+		}
+
+		// Switch to edit mode
+		if (!$blnDoNotRedirect)
+		{
+			$this->redirect($this->switchToEdit($insertId));
+		}
+
+		return $insertId;
+	}
+
+
+	/**
+	 * Duplicate all child records of a duplicated record
+	 * @param string
+	 * @param integer
+	 * @param integer
+	 * @param integer
+	 */
+	protected function copyChilds($table, $insertID, $id, $parentId)
+	{
+		// @todo: children translations should also be copied
+		parent::copyChilds($table, $insertID, $id, $parentId);
+	}
+
+
+	/**
 	 * List all records of a particular table
 	 * @return string
 	 */
