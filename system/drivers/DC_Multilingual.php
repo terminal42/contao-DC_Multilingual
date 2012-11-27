@@ -739,6 +739,24 @@ Backend.vScrollTo(($(\'' . $this->strTable . '\').getElement(\'label.error\').ge
 	protected function copyChilds($table, $insertID, $id, $parentId)
 	{
 		parent::copyChilds($table, $insertID, $id, $parentId);
+
+		// Return if the table is not multilingual
+		if ($GLOBALS['TL_DCA'][$table]['config']['dataContainer'] != 'Multilingual')
+		{
+			return;
+		}
+
+		$strPidColumn = $GLOBALS['TL_DCA'][$table]['config']['pidColumn'] ? $GLOBALS['TL_DCA'][$table]['config']['pidColumn'] : $this->strPidColumn;
+		$objLanguage = $this->Database->prepare("SELECT id FROM " . $table . " WHERE " . $strPidColumn . "=? AND id>?")
+									  ->limit(1)
+									  ->execute($id, $parentId);
+
+		// Update the language pid column
+		if ($objLanguage->numRows)
+		{
+			$this->Database->prepare("UPDATE " . $table . " SET " . $strPidColumn . "=? WHERE id=?")
+						   ->execute($insertID, $objLanguage->id);
+		}
 	}
 
 
