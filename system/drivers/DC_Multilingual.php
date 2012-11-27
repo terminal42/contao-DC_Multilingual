@@ -707,17 +707,16 @@ Backend.vScrollTo(($(\'' . $this->strTable . '\').getElement(\'label.error\').ge
 	public function copy($blnDoNotRedirect=false)
 	{
 		$insertId = parent::copy(true);
-
-		// Get all translations
-		$objTranslations = $this->Database->prepare("SELECT * FROM $this->strTable WHERE $this->strPidColumn=?")->execute($this->intId);
+		$time = time();
+		$objTranslations = $this->Database->prepare("SELECT * FROM " . $this->strTable . " WHERE " . $this->strPidColumn . "=?")->execute($this->intId);
 
 		while ($objTranslations->next())
 		{
 			$arrInsert = array_merge($this->set, $objTranslations->row());
-			$arrInsert['tstamp'] = time(); // array_merge() overwrites tstamp which is wrong
+			$arrInsert['tstamp'] = $time; // array_merge() overwrites tstamp which is wrong
 			$arrInsert[$this->strPidColumn] = $insertId; // add language reference id
 			unset($arrInsert['id']); // unset id
-			$this->Database->prepare("INSERT INTO $this->strTable %s")->set($arrInsert)->execute();
+			$this->Database->prepare("INSERT INTO " . $this->strTable . " %s")->set($arrInsert)->execute();
 		}
 
 		// Switch to edit mode
@@ -739,7 +738,6 @@ Backend.vScrollTo(($(\'' . $this->strTable . '\').getElement(\'label.error\').ge
 	 */
 	protected function copyChilds($table, $insertID, $id, $parentId)
 	{
-		// @todo: children translations should also be copied
 		parent::copyChilds($table, $insertID, $id, $parentId);
 	}
 
@@ -751,7 +749,6 @@ Backend.vScrollTo(($(\'' . $this->strTable . '\').getElement(\'label.error\').ge
 	public function showAll()
 	{
 		$this->procedure[] = "{$this->strLangColumn}=''";
-
 		return parent::showAll();
 	}
 
@@ -1154,7 +1151,6 @@ Backend.vScrollTo(($(\'' . $this->strTable . '\').getElement(\'label.error\').ge
 	}
 
 
-
 	/**
 	 * Delete record and associated translations
 	 * @param boolean
@@ -1165,6 +1161,32 @@ Backend.vScrollTo(($(\'' . $this->strTable . '\').getElement(\'label.error\').ge
 					   ->execute($this->intId);
 
 		parent::delete($blnDoNotRedirect);
+	}
+
+
+	/**
+	 * Recursively get all related table names and language records
+	 * @param string
+	 * @param integer
+	 * @param array
+	 */
+	public function deleteChilds($table, $id, &$delete)
+	{
+		parent::deleteChilds($table, $id, &$delete);
+
+		// Return if the table is not multilingual
+		if ($GLOBALS['TL_DCA'][$table]['config']['dataContainer'] != 'DC_Multilingual')
+		{
+			return;
+		}
+
+		$objLanguages = $this->Database->prepare("SELECT id FROM " . $table . " WHERE " . ($GLOBALS['TL_DCA'][$table]['config']['pidColumn'] ? $GLOBALS['TL_DCA'][$table]['config']['pidColumnd'] : $this->strPidColumn) . " IN (SELECT id FROM " . $table . " WHERE pid=?)")
+									   ->execute($id);
+
+		while ($objLanguages->next())
+		{
+			$delete[$table][] = $objLanguages->id;
+		}
 	}
 
 
