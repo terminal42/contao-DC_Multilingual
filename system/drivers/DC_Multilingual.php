@@ -780,6 +780,75 @@ Backend.vScrollTo(($(\'' . $this->strTable . '\').getElement(\'label.error\').ge
 
 
 	/**
+	 * Generate a particular subpart of the tree and return it as HTML string
+	 * @param integer
+	 * @param integer
+	 * @return string
+	 */
+	public function ajaxTreeView($id, $level)
+	{
+		if (!$this->Environment->isAjaxRequest)
+		{
+			return '';
+		}
+
+		$return = '';
+		$table = $this->strTable;
+		$blnPtable = false;
+
+		// Load parent table
+		if ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 6)
+		{
+			$table = $this->ptable;
+
+			$this->loadLanguageFile($table);
+			$this->loadDataContainer($table);
+
+			$blnPtable = true;
+		}
+
+		$blnProtected = false;
+
+		// Check protected pages
+		if ($table == 'tl_page')
+		{
+			$objParent = $this->getPageDetails($id);
+			$blnProtected = $objParent->protected ? true : false;
+		}
+
+		$margin = ($level * 20);
+		$hasSorting = $this->Database->fieldExists('sorting', $table);
+		$arrIds = array();
+
+		// Get records
+		$objRows = $this->Database->prepare("SELECT id FROM " . $table . " WHERE " . $this->strPidColumn . "=0 AND pid=?" . ($hasSorting ? " ORDER BY sorting" : ""))
+							 	  ->execute($id);
+
+		while ($objRows->next())
+		{
+			$arrIds[] = $objRows->id;
+		}
+
+		$blnClipboard = false;
+		$arrClipboard = $this->Session->get('CLIPBOARD');
+
+		// Check clipboard
+		if (!empty($arrClipboard[$this->strTable]))
+		{
+			$blnClipboard = true;
+			$arrClipboard = $arrClipboard[$this->strTable];
+		}
+
+		for ($i=0; $i<count($arrIds); $i++)
+		{
+			$return .= ' ' . trim($this->generateTree($table, $arrIds[$i], array('p'=>$arrIds[($i-1)], 'n'=>$arrIds[($i+1)]), $hasSorting, $margin, ($blnClipboard ? $arrClipboard : false), ($id == $arrClipboard ['id'] || (is_array($arrClipboard ['id']) && in_array($id, $arrClipboard ['id'])) || (!$blnPtable && !is_array($arrClipboard['id']) && in_array($id, $this->getChildRecords($arrClipboard['id'], $table)))), $blnProtected));
+		}
+
+		return $return;
+	}
+
+
+	/**
 	 * Recursively generate the tree and return it as HTML string (taken from Contao 2.11.2)
 	 * @param string
 	 * @param integer
