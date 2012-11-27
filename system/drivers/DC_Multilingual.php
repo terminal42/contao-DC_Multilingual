@@ -1244,7 +1244,7 @@ Backend.vScrollTo(($(\'' . $this->strTable . '\').getElement(\'label.error\').ge
 		parent::deleteChilds($table, $id, &$delete);
 
 		// Return if the table is not multilingual
-		if ($GLOBALS['TL_DCA'][$table]['config']['dataContainer'] != 'DC_Multilingual')
+		if ($GLOBALS['TL_DCA'][$table]['config']['dataContainer'] != 'Multilingual')
 		{
 			return;
 		}
