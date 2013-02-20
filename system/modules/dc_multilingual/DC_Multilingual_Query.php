@@ -1,4 +1,4 @@
-<?php if(!defined('TL_ROOT')) die('You cannot access this file directly!');
+<?php
 
 /**
  * @copyright     4ward.media 2011 <http://www.4wardmedia.de>
@@ -8,6 +8,11 @@
  * @filesource
  */
 
+
+/**
+ * Run in a custom namespace so the class can be replaced
+ */
+namespace Contao;
 
 
 /**

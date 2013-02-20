@@ -1,4 +1,4 @@
-<?php if (!defined('TL_ROOT')) die('You cannot access this file directly!');
+<?php
 
 /**
  * Contao Open Source CMS
@@ -24,12 +24,22 @@
  * @copyright  terminal42 gmbh 2011-2012
  * @author     Yanick Witschi <yanick.witschi@terminal42.ch>
  * @author     Andreas Schempp <andreas.schempp@terminal42.ch>
- * @author     Kamil Kuzminski <kamil.kuzminski@gmail.com>
+ * @author     Kamil Kuzminski <kamil.kuzminski@codefog.pl>
  * @license    http://opensource.org/licenses/lgpl-3.0.html
  */
 
 
-require_once(TL_ROOT . '/system/drivers/DC_Table.php');
+/**
+ * Run in a custom namespace so the class can be replaced
+ */
+namespace Contao;
+
+
+/**
+ * Require the DC_Table driver
+ */
+require_once(TL_ROOT . '/system/modules/core/drivers/DC_Table.php');
+
 
 /**
  * Class DC_Multilingual
@@ -38,7 +48,7 @@ require_once(TL_ROOT . '/system/drivers/DC_Table.php');
  * @copyright  terminal42 gmbh 2011-2012
  * @author     Yanick Witschi <yanick.witschi@terminal42.ch>
  * @author     Andreas Schempp <andreas.schempp@terminal42.ch>
- * @author     Kamil Kuzminski <kamil.kuzminski@gmail.com>
+ * @author     Kamil Kuzminski <kamil.kuzminski@codefog.pl>
  * @package    dc_multilingual
  */
 class DC_Multilingual extends DC_Table
@@ -876,9 +886,10 @@ Backend.vScrollTo(($(\'' . $this->strTable . '\').getElement(\'label.error\').ge
 	 * @param array
 	 * @param boolean
 	 * @param boolean
+	 * @param boolean
 	 * @return string
 	 */
-	protected function generateTree($table, $id, $arrPrevNext, $blnHasSorting, $intMargin=0, $arrClipboard=false, $blnCircularReference=false, $protectedPage=false)
+	protected function generateTree($table, $id, $arrPrevNext, $blnHasSorting, $intMargin=0, $arrClipboard=null, $blnCircularReference=false, $protectedPage=false, $blnNoRecursion=false)
 	{
 		static $session;
 
