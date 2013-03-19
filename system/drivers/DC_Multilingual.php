@@ -103,7 +103,7 @@ class DC_Multilingual extends DC_Table
 		if (isset($GLOBALS['TL_DCA'][$this->strTable]['config']['fallbackLang']))
 		{
 			$this->strFallbackLang = $GLOBALS['TL_DCA'][$this->strTable]['config']['fallbackLang'];
-			
+
 			if (!in_array($this->strFallbackLang, $this->arrLanguages))
 			{
 				$this->arrLanguages[] = $this->strFallbackLang;
@@ -1259,7 +1259,7 @@ Backend.vScrollTo(($(\'' . $this->strTable . '\').getElement(\'label.error\').ge
 	 */
 	public function deleteChilds($table, $id, &$delete)
 	{
-		parent::deleteChilds($table, $id, &$delete);
+		parent::deleteChilds($table, $id, $delete);
 
 		// Return if the table is not multilingual
 		if ($GLOBALS['TL_DCA'][$table]['config']['dataContainer'] != 'Multilingual')
@@ -1325,8 +1325,8 @@ Backend.vScrollTo(($(\'' . $this->strTable . '\').getElement(\'label.error\').ge
 	{
 		return $this->strPidColumn;
 	}
-	
-	
+
+
 	/**
 	 * Get the list of languages based on root pages
 	 * @return array
