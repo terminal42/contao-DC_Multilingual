@@ -715,7 +715,7 @@ if (first) first.focus();
 					$strUrl .= strlen($this->ptable) ? '&amp;act=create&amp;mode=2&amp;pid=' . CURRENT_ID : '&amp;act=create';
 				}
 
-				$this->redirect($strUrl);
+				$this->redirect($strUrl . '&amp;rt=' . REQUEST_TOKEN);
 			}
 
 			$this->reload();
