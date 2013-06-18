@@ -222,6 +222,12 @@ class DC_Multilingual extends DC_Table
 
 		$this->objActiveRecord = $objRow;
 
+		// incomplete records cant be translated
+		if($objRow->tstamp == 0)
+		{
+			$this->arrLanguages = array();
+		}
+
 		// Load and/or change language
 		if ($this->Input->post('FORM_SUBMIT') == 'tl_language')
 		{
