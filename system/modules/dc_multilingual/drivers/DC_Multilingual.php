@@ -157,46 +157,18 @@ class DC_Multilingual extends DC_Table
 		$this->values[] = $this->intId;
 		$this->procedure[] = 'id=?';
 		$this->blnCreateNewVersion = false;
+		$objVersions = new \Versions($this->strTable, $this->intId);
 
-		// Change version
-		if ($GLOBALS['TL_DCA'][$this->strTable]['config']['enableVersioning'] && $this->Input->post('FORM_SUBMIT') == 'tl_version' && strlen($this->Input->post('version')))
+		// Compare versions
+		if (\Input::get('versions'))
 		{
-			$objData = $this->Database->prepare("SELECT * FROM tl_version WHERE fromTable=? AND pid=? AND version=?")
-									->limit(1)
-									->execute($this->strTable, $this->intId, $this->Input->post('version'));
+			$objVersions->compare();
+		}
 
-			if ($objData->numRows)
-			{
-				$data = deserialize($objData->data);
-
-				if (is_array($data))
-				{
-					$this->Database->prepare("UPDATE " . $objData->fromTable . " %s WHERE id=?")
-								->set($data)
-								->execute($this->intId);
-
-					$this->Database->prepare("UPDATE tl_version SET active='' WHERE pid=?")
-								->execute($this->intId);
-
-					$this->Database->prepare("UPDATE tl_version SET active=1 WHERE pid=? AND version=?")
-								->execute($this->intId, $this->Input->post('version'));
-
-					$this->log(sprintf('Version %s of record ID %s (table %s) has been restored', $this->Input->post('version'), $this->intId, $this->strTable), 'DC_Table edit()', TL_GENERAL);
-
-					// Trigger the onrestore_callback
-					if (is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['onrestore_callback'])) {
-						foreach ($GLOBALS['TL_DCA'][$this->strTable]['config']['onrestore_callback'] as $callback) {
-							if (is_array($callback)) {
-								$this->import($callback[0]);
-								$this->$callback[0]->$callback[1]($this->intId, $this->strTable, $data, $this->Input->post('version'));
-							} elseif (is_callable($callback)) {
-								$callback($this->intId, $this->strTable, $data, $this->Input->post('version'));
-							}
-						}
-					}
-				}
-			}
-
+		// Restore a version
+		if (\Input::post('FORM_SUBMIT') == 'tl_version' && \Input::post('version') != '')
+		{
+			$objVersions->restore(\Input::post('version'));
 			$this->reload();
 		}
 
@@ -220,6 +192,7 @@ class DC_Multilingual extends DC_Table
 		}
 
 		$this->objActiveRecord = $objRow;
+		$this->checkForTinyMce();
 
 		// Incomplete records can't be translated (see #17)
 		if (!$objRow->tstamp) {
@@ -282,8 +255,8 @@ class DC_Multilingual extends DC_Table
 			$this->strCurrentLang = $_SESSION['BE_DATA']['language'][$this->strTable][$this->intId];
 		}
 
-		$this->createInitialVersion($this->strTable, $this->intId);
-		$this->checkForTinyMce();
+		$objVersions = new Versions($this->strTable, $this->intId);
+		$objVersions->initialize();
 
 		// Build an array from boxes and rows
 		$this->strPalette = $this->getPalette();
@@ -345,46 +318,41 @@ class DC_Multilingual extends DC_Table
 				}
 			}
 
-			$class = 'tl_tbox block';
+			$class = 'tl_tbox';
 			$fs = $this->Session->get('fieldset_states');
-
-			// Render boxes
+			$blnIsFirst = true;
+// Render boxes
 			foreach ($boxes as $k=>$v)
 			{
 				$strAjax = '';
 				$blnAjax = false;
+				$key = '';
+				$cls = '';
 				$legend = '';
 
 				if (isset($legends[$k]))
 				{
 					list($key, $cls) = explode(':', $legends[$k]);
-					$legend = "\n" . '<legend onclick="AjaxRequest.toggleFieldset(this, \'' . $key . '\', \'' . $this->strTable . '\')">' . (isset($GLOBALS['TL_LANG'][$this->strTable][$key]) ? $GLOBALS['TL_LANG'][$this->strTable][$key] : $key) . '</legend>';
+					$legend = "\n" . '<legend onclick="AjaxRequest.toggleFieldset(this,\'' . $key . '\',\'' . $this->strTable . '\')">' . (isset($GLOBALS['TL_LANG'][$this->strTable][$key]) ? $GLOBALS['TL_LANG'][$this->strTable][$key] : $key) . '</legend>';
 				}
 
-				if (!$GLOBALS['TL_CONFIG']['oldBeTheme'])
+				if (isset($fs[$this->strTable][$key]))
 				{
-					if (isset($fs[$this->strTable][$key]))
-					{
-						$class .= ($fs[$this->strTable][$key] ? '' : ' collapsed');
-					}
-					else
-					{
-						$class .= (($cls && $legend) ? ' ' . $cls : '');
-					}
-
-					$return .= "\n\n" . '<fieldset' . ($key ? ' id="pal_'.$key.'"' : '') . ' class="' . $class . ($legend ? '' : ' nolegend') . '">' . $legend;
+					$class .= ($fs[$this->strTable][$key] ? '' : ' collapsed');
 				}
 				else
 				{
-					$return .= "\n\n" . '<div class="'.$class.'">';
+					$class .= (($cls && $legend) ? ' ' . $cls : '');
 				}
 
+				$return .= "\n\n" . '<fieldset' . ($key ? ' id="pal_'.$key.'"' : '') . ' class="' . $class . ($legend ? '' : ' nolegend') . '">' . $legend;
+
 				// Build rows of the current box
-				foreach ($v as $kk=>$vv)
+				foreach ($v as $vv)
 				{
 					if ($vv == '[EOF]')
 					{
-						if ($blnAjax && $this->Environment->isAjaxRequest)
+						if ($blnAjax && \Environment::get('isAjaxRequest'))
 						{
 							return $strAjax . '<input type="hidden" name="FORM_FIELDS[]" value="'.specialchars($this->strPalette).'">';
 						}
@@ -395,10 +363,10 @@ class DC_Multilingual extends DC_Table
 						continue;
 					}
 
-					if (preg_match('/^\[.*\]$/i', $vv))
+					if (preg_match('/^\[.*\]$/', $vv))
 					{
 						$thisId = 'sub_' . substr($vv, 1, -1);
-						$blnAjax = ($ajaxId == $thisId && $this->Environment->isAjaxRequest) ? true : false;
+						$blnAjax = ($ajaxId == $thisId && \Environment::get('isAjaxRequest')) ? true : false;
 						$return .= "\n" . '<div id="'.$thisId.'">';
 
 						continue;
@@ -408,73 +376,61 @@ class DC_Multilingual extends DC_Table
 					$this->strInputName = $vv;
 					$this->varValue = $objRow->$vv;
 
+					// Autofocus the first field
+					if ($blnIsFirst && $GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['inputType'] == 'text')
+					{
+						$GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['eval']['autofocus'] = 'autofocus';
+						$blnIsFirst = false;
+					}
+
+					// Convert CSV fields (see #2890)
+					if ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['eval']['multiple'] && isset($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['eval']['csv']))
+					{
+						$this->varValue = trimsplit($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['eval']['csv'], $this->varValue);
+					}
+
 					// Call load_callback
-					if (is_array($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['load_callback'])) {
-						foreach ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['load_callback'] as $callback) {
-							if (is_array($callback)) {
+					if (is_array($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['load_callback']))
+					{
+						foreach ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['load_callback'] as $callback)
+						{
+							if (is_array($callback))
+							{
 								$this->import($callback[0]);
 								$this->varValue = $this->$callback[0]->$callback[1]($this->varValue, $this);
-							} elseif (is_callable($callback)) {
+							}
+							elseif (is_callable($callback))
+							{
 								$this->varValue = $callback($this->varValue, $this);
 							}
 						}
-
-						$this->objActiveRecord->{$this->strField} = $this->varValue;
 					}
 
-					// Build row
-					$blnAjax ? $strAjax .= $this->row() : $return .= $this->row();
+					// Re-set the current value
+					$this->objActiveRecord->{$this->strField} = $this->varValue;
+
+					// Build the row and pass the current palette string (thanks to Tristan Lins)
+					$blnAjax ? $strAjax .= $this->row($this->strPalette) : $return .= $this->row($this->strPalette);
 				}
 
-				$class = 'tl_box block';
-
-				if (!$GLOBALS['TL_CONFIG']['oldBeTheme'])
-				{
-					$return .= "\n" . '</fieldset>';
-				}
-				else
-				{
-					$return .= "\n" . '</div>';
-				}
+				$class = 'tl_box';
+				$return .= "\n" . '</fieldset>';
 			}
 		}
 
-		$hasVersions = false;
-		$version = '<div class="tl_version_panel">';
-
-		// Check versions
+		// Versions overview
 		if ($GLOBALS['TL_DCA'][$this->strTable]['config']['enableVersioning'])
 		{
-			$objVersion = $this->Database->prepare("SELECT tstamp, version, username, active FROM tl_version WHERE fromTable=? AND pid=? ORDER BY version DESC")
-										->execute($this->strTable, $this->intId);
-
-			if ($objVersion->numRows > 1)
-			{
-				$hasVersions = true;
-				$versions = '';
-
-				while ($objVersion->next())
-				{
-					$versions .= '
-<option value="'.$objVersion->version.'"'.($objVersion->active ? ' selected="selected"' : '').'>'.$GLOBALS['TL_LANG']['MSC']['version'].' '.$objVersion->version.' ('.$this->parseDate($GLOBALS['TL_CONFIG']['datimFormat'], $objVersion->tstamp).') '.$objVersion->username.'</option>';
-				}
-
-				$version .= '
-<form action="'.ampersand($this->Environment->request, true).'" id="tl_version" class="tl_form" method="post" style="float:right;width:360px;">
-<div class="tl_formbody">
-<input type="hidden" name="FORM_SUBMIT" value="tl_version">
-<input type="hidden" name="REQUEST_TOKEN" value="'.REQUEST_TOKEN.'">
-<input type="submit" name="showVersion" id="showVersion" class="tl_submit" value="'.specialchars($GLOBALS['TL_LANG']['MSC']['restore']).'">
-<select name="version" class="tl_select">'.$versions.'
-</select>
-</div>
-</form>
-';
-			}
+			$version = $objVersions->renderDropdown();
+		}
+		else
+		{
+			$version = '';
 		}
 
-		// Check languages
 		$hasLanguages = false;
+
+		// Check languages
 		if (is_array($this->arrLanguages) && count($this->arrLanguages) > 1)
 		{
 			$hasLanguages = true;
@@ -510,9 +466,7 @@ class DC_Multilingual extends DC_Table
 				}
 			}
 
-			$style = ($hasVersions) ? ' style="float:left;width:360px"' : '';
-
-			$version .= '<form action="'.ampersand($this->Environment->request, true).'" id="tl_language" class="tl_form" method="post"' . $style . '>
+			$languagePanel .= '<form action="'.ampersand($this->Environment->request, true).'" id="tl_language" class="tl_form" method="post"' . (strlen($version) ? ' style="float:left;width:360px"' : '') . '>
 <div class="tl_formbody" style="margin-left:5px;float:left;">
 <input type="hidden" name="FORM_SUBMIT" value="tl_language">
 <input type="hidden" name="REQUEST_TOKEN" value="'.REQUEST_TOKEN.'">
@@ -523,16 +477,14 @@ class DC_Multilingual extends DC_Table
 </select>
 </div>
 </form>';
-		}
 
-
-		// check if languages are defined for the data container, if not don't render the button bar
-		if ( !$hasVersions && !$hasLanguages )
-		{
-			$version = '';
-		} else
-		{
-			$version .= '<div class="clear"></div></div>';
+			// God please forgive me this devilish code
+			if (strlen($version)) {
+				$version = str_replace('method="post"', 'method="post" style="float:right;"', $version);
+				$version = str_replace('<div class="tl_version_panel">', '<div class="tl_version_panel language_panel" style="overflow:hidden;">' . $languagePanel, $version);
+			} else {
+				$version .= '<div class="tl_version_panel language_panel" style="overflow:hidden;">' . $languagePanel . '</div>';
+			}
 		}
 
 		// Submit buttons
@@ -589,21 +541,20 @@ class DC_Multilingual extends DC_Table
 </form>
 
 <script>
-window.addEvent(\'domready\', function() {
-var first = $(\''.$this->strTable.'\').getElement(\'input[type="text"]\');
-if (first) first.focus();
-});
+  window.addEvent(\'domready\', function() {
+    Theme.focusInput("'.$this->strTable.'");
+  });
 </script>';
 
 		// Begin the form (-> DO NOT CHANGE THIS ORDER -> this way the onsubmit attribute of the form can be changed by a field)
 		$return = $version . '
-<div id="tl_buttons">
-<a href="'.$this->getReferer(true).'" class="header_back" title="'.specialchars($GLOBALS['TL_LANG']['MSC']['backBT']).'" accesskey="b" onclick="Backend.getScrollOffset();">'.$GLOBALS['TL_LANG']['MSC']['backBT'].'</a>
+<div id="tl_buttons">' . (\Input::get('nb') ? '&nbsp;' : '
+<a href="'.$this->getReferer(true).'" class="header_back" title="'.specialchars($GLOBALS['TL_LANG']['MSC']['backBTTitle']).'" accesskey="b" onclick="Backend.getScrollOffset()">'.$GLOBALS['TL_LANG']['MSC']['backBT'].'</a>') . '
 </div>
 
 <h2 class="sub_headline">'.sprintf($GLOBALS['TL_LANG']['MSC']['editRecord'], ($this->intId ? 'ID '.$this->intId : '')).'</h2>
-'.$this->getMessages().'
-<form action="'.ampersand($this->Environment->request, true).'" id="'.$this->strTable.'" class="tl_form" method="post" enctype="' . ($this->blnUploadable ? 'multipart/form-data' : 'application/x-www-form-urlencoded') . '"'.(count($this->onsubmit) ? ' onsubmit="'.implode(' ', $this->onsubmit).'"' : '').'>
+'.\Message::generate().'
+<form action="'.ampersand(\Environment::get('request'), true).'" id="'.$this->strTable.'" class="tl_form" method="post" enctype="' . ($this->blnUploadable ? 'multipart/form-data' : 'application/x-www-form-urlencoded') . '"'.(!empty($this->onsubmit) ? ' onsubmit="'.implode(' ', $this->onsubmit).'"' : '').'>
 <div class="tl_formbody_edit">
 <input type="hidden" name="FORM_SUBMIT" value="'.specialchars($this->strTable).'">
 <input type="hidden" name="REQUEST_TOKEN" value="'.REQUEST_TOKEN.'">
@@ -612,27 +563,32 @@ if (first) first.focus();
 <p class="tl_error">'.$GLOBALS['TL_LANG']['ERR']['general'].'</p>' : '').$return;
 
 		// Reload the page to prevent _POST variables from being sent twice
-		if ($this->Input->post('FORM_SUBMIT') == $this->strTable && !$this->noReload)
+		if (\Input::post('FORM_SUBMIT') == $this->strTable && !$this->noReload)
 		{
 			$arrValues = $this->values;
 			array_unshift($arrValues, time());
 
 			// Trigger the onsubmit_callback
-			if (is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['onsubmit_callback'])) {
-				foreach ($GLOBALS['TL_DCA'][$this->strTable]['config']['onsubmit_callback'] as $callback) {
-					if (is_array($callback)) {
+			if (is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['onsubmit_callback']))
+			{
+				foreach ($GLOBALS['TL_DCA'][$this->strTable]['config']['onsubmit_callback'] as $callback)
+				{
+					if (is_array($callback))
+					{
 						$this->import($callback[0]);
 						$this->$callback[0]->$callback[1]($this);
-					} elseif (is_callable($callback)) {
+					}
+					elseif (is_callable($callback))
+					{
 						$callback($this);
 					}
 				}
 			}
 
 			// Save the current version
-			if ($this->blnCreateNewVersion && $this->Input->post('SUBMIT_TYPE') != 'auto')
+			if ($this->blnCreateNewVersion && \Input::post('SUBMIT_TYPE') != 'auto')
 			{
-				$this->createNewVersion($this->strTable, $this->intId);
+				$objVersions->create();
 
 				// Call the onversion_callback
 				if (is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['onversion_callback'])) {
@@ -646,30 +602,32 @@ if (first) first.focus();
 					}
 				}
 
-				$this->log(sprintf('A new version of %s ID %s has been created', $this->strTable, $this->intId), 'DC_Table edit()', TL_GENERAL);
+				$this->log('A new version of record "'.$this->strTable.'.id='.$this->intId.'" has been created'.$this->getParentEntries($this->strTable, $this->intId), 'DC_Table edit()', TL_GENERAL);
 			}
 
 			// Set the current timestamp (-> DO NOT CHANGE THE ORDER version - timestamp)
-			$this->Database->prepare("UPDATE " . $this->strTable . " SET tstamp=? WHERE id=?")
-						->execute(time(), $this->intId);
+			if ($GLOBALS['TL_DCA'][$this->strTable]['config']['dynamicPtable'])
+			{
+				$this->Database->prepare("UPDATE " . $this->strTable . " SET ptable=?, tstamp=? WHERE id=?")
+							   ->execute($this->ptable, time(), $this->intId);
+			}
+			else
+			{
+				$this->Database->prepare("UPDATE " . $this->strTable . " SET tstamp=? WHERE id=?")
+							   ->execute(time(), $this->intId);
+			}
 
 			// Redirect
 			if (isset($_POST['saveNclose']))
 			{
-				$_SESSION['TL_INFO'] = '';
-				$_SESSION['TL_ERROR'] = '';
-				$_SESSION['TL_CONFIRM'] = '';
-
-				setcookie('BE_PAGE_OFFSET', 0, 0, '/');
+				\Message::reset();
+				\System::setCookie('BE_PAGE_OFFSET', 0, 0);
 				$this->redirect($this->getReferer());
 			}
 			elseif (isset($_POST['saveNedit']))
 			{
-				$_SESSION['TL_INFO'] = '';
-				$_SESSION['TL_ERROR'] = '';
-				$_SESSION['TL_CONFIRM'] = '';
-
-				setcookie('BE_PAGE_OFFSET', 0, 0, '/');
+				\Message::reset();
+				\System::setCookie('BE_PAGE_OFFSET', 0, 0);
 				$strUrl = $this->addToUrl($GLOBALS['TL_DCA'][$this->strTable]['list']['operations']['edit']['href']);
 
 				$strUrl = preg_replace('/(&amp;)?s2e=[^&]*/i', '', $strUrl);
@@ -679,17 +637,15 @@ if (first) first.focus();
 			}
 			elseif (isset($_POST['saveNback']))
 			{
-				$_SESSION['TL_INFO'] = '';
-				$_SESSION['TL_ERROR'] = '';
-				$_SESSION['TL_CONFIRM'] = '';
-
-				setcookie('BE_PAGE_OFFSET', 0, 0, '/');
+				\Message::reset();
+				\System::setCookie('BE_PAGE_OFFSET', 0, 0);
 
 				if ($this->ptable == '')
 				{
-					$this->redirect($this->Environment->script . '?do=' . $this->Input->get('do'));
+					$this->redirect(\Environment::get('script') . '?do=' . \Input::get('do'));
 				}
-				elseif (($this->ptable == 'tl_theme' && $this->strTable == 'tl_style_sheet') || ($this->ptable == 'tl_page' && $this->strTable == 'tl_article')) # TODO: try to abstract this
+				// TODO: try to abstract this
+				elseif (($this->ptable == 'tl_theme' && $this->strTable == 'tl_style_sheet') || ($this->ptable == 'tl_page' && $this->strTable == 'tl_article'))
 				{
 					$this->redirect($this->getReferer(false, $this->strTable));
 				}
@@ -700,16 +656,13 @@ if (first) first.focus();
 			}
 			elseif (isset($_POST['saveNcreate']))
 			{
-				$_SESSION['TL_INFO'] = '';
-				$_SESSION['TL_ERROR'] = '';
-				$_SESSION['TL_CONFIRM'] = '';
-
-				setcookie('BE_PAGE_OFFSET', 0, 0, '/');
-				$strUrl = $this->Environment->script . '?do=' . $this->Input->get('do');
+				\Message::reset();
+				\System::setCookie('BE_PAGE_OFFSET', 0, 0);
+				$strUrl = \Environment::get('script') . '?do=' . \Input::get('do');
 
 				if (isset($_GET['table']))
 				{
-					$strUrl .= '&amp;table=' . $this->Input->get('table');
+					$strUrl .= '&amp;table=' . \Input::get('table');
 				}
 
 				// Tree view
@@ -727,7 +680,7 @@ if (first) first.focus();
 				// List view
 				else
 				{
-					$strUrl .= strlen($this->ptable) ? '&amp;act=create&amp;mode=2&amp;pid=' . CURRENT_ID : '&amp;act=create';
+					$strUrl .= ($this->ptable != '') ? '&amp;act=create&amp;mode=2&amp;pid=' . CURRENT_ID : '&amp;act=create';
 				}
 
 				$this->redirect($strUrl . '&amp;rt=' . REQUEST_TOKEN);
@@ -742,9 +695,9 @@ if (first) first.focus();
 			$return .= '
 
 <script>
-window.addEvent(\'domready\', function() {
-Backend.vScrollTo(($(\'' . $this->strTable . '\').getElement(\'label.error\').getPosition().y - 20));
-});
+  window.addEvent(\'domready\', function() {
+    Backend.vScrollTo(($(\'' . $this->strTable . '\').getElement(\'label.error\').getPosition().y - 20));
+  });
 </script>';
 		}
 
@@ -858,7 +811,7 @@ Backend.vScrollTo(($(\'' . $this->strTable . '\').getElement(\'label.error\').ge
 	 */
 	public function ajaxTreeView($id, $level)
 	{
-		if (!$this->Environment->isAjaxRequest)
+		if (!\Environment::get('isAjaxRequest'))
 		{
 			return '';
 		}
@@ -872,10 +825,8 @@ Backend.vScrollTo(($(\'' . $this->strTable . '\').getElement(\'label.error\').ge
 		{
 			$table = $this->ptable;
 
-			$this->loadLanguageFile($table);
+			\System::loadLanguageFile($table);
 			$this->loadDataContainer($table);
-
-			$blnPtable = true;
 		}
 
 		$blnProtected = false;
@@ -883,7 +834,7 @@ Backend.vScrollTo(($(\'' . $this->strTable . '\').getElement(\'label.error\').ge
 		// Check protected pages
 		if ($table == 'tl_page')
 		{
-			$objParent = $this->getPageDetails($id);
+			$objParent = \PageModel::findWithDetails($id);
 			$blnProtected = $objParent->protected ? true : false;
 		}
 
@@ -940,12 +891,12 @@ Backend.vScrollTo(($(\'' . $this->strTable . '\').getElement(\'label.error\').ge
 		$node = ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 6) ? $this->strTable.'_'.$table.'_tree' : $this->strTable.'_tree';
 
 		// Toggle nodes
-		if ($this->Input->get('ptg'))
+		if (\Input::get('ptg'))
 		{
-			$session[$node][$this->Input->get('ptg')] = (isset($session[$node][$this->Input->get('ptg')]) && $session[$node][$this->Input->get('ptg')] == 1) ? 0 : 1;
+			$session[$node][\Input::get('ptg')] = (isset($session[$node][\Input::get('ptg')]) && $session[$node][\Input::get('ptg')] == 1) ? 0 : 1;
 			$this->Session->setData($session);
 
-			$this->redirect(preg_replace('/(&(amp;)?|\?)ptg=[^& ]*/i', '', $this->Environment->request));
+			$this->redirect(preg_replace('/(&(amp;)?|\?)ptg=[^& ]*/i', '', \Environment::get('request')));
 		}
 
 		$objRow = $this->Database->prepare("SELECT * FROM " . $table . " WHERE id=?")
@@ -961,6 +912,7 @@ Backend.vScrollTo(($(\'' . $this->strTable . '\').getElement(\'label.error\').ge
 
 		$return = '';
 		$intSpacing = 20;
+		$childs = array();
 
 		// Add the ID to the list of current IDs
 		if ($this->strTable == $table)
@@ -968,15 +920,19 @@ Backend.vScrollTo(($(\'' . $this->strTable . '\').getElement(\'label.error\').ge
 			$this->current[] = $objRow->id;
 		}
 
-		// Check whether there are child records
-		if ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 5 || $this->strTable != $table)
-		{
-			$objChilds = $this->Database->prepare("SELECT id FROM " . $table . " WHERE pid=? AND {$this->strLangColumn}=''" . ($blnHasSorting ? " ORDER BY sorting" : ''))
-										->execute($id);
 
-			if ($objChilds->numRows)
+		// Check whether there are child records
+		if (!$blnNoRecursion)
+		{
+			if ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 5 || $this->strTable != $table)
 			{
-				$childs = $objChilds->fetchEach('id');
+				$objChilds = $this->Database->prepare("SELECT id FROM " . $table . " WHERE pid=? AND {$this->strLangColumn}=''" . ($blnHasSorting ? " ORDER BY sorting" : ''))
+											->execute($id);
+
+				if ($objChilds->numRows)
+				{
+					$childs = $objChilds->fetchEach('id');
+				}
 			}
 		}
 
@@ -989,22 +945,20 @@ Backend.vScrollTo(($(\'' . $this->strTable . '\').getElement(\'label.error\').ge
 		}
 
 		$session[$node][$id] = (is_int($session[$node][$id])) ? $session[$node][$id] : 0;
-		$mouseover = ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 5 || $table == $this->strTable) ? ' onmouseover="Theme.hoverDiv(this,1)" onmouseout="Theme.hoverDiv(this,0)"' : '';
+		$mouseover = ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 5 || $table == $this->strTable) ? ' onmouseover="Theme.hoverDiv(this,1)" onmouseout="Theme.hoverDiv(this,0)" onclick="Theme.toggleSelect(this)"' : '';
 
-		$return .= "\n  " . '<li class="'.((($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 5 && $objRow->type == 'root') || $table != $this->strTable) ? 'tl_folder' : 'tl_file').'"'.$mouseover.'><div class="tl_left" style="padding-left:'.($intMargin + $intSpacing).'px">';
+		$return .= "\n  " . '<li class="'.((($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 5 && $objRow->type == 'root') || $table != $this->strTable) ? 'tl_folder' : 'tl_file').' click2edit"'.$mouseover.'><div class="tl_left" style="padding-left:'.($intMargin + $intSpacing + (empty($childs) ? 20 : 0)).'px">';
 
 		// Calculate label and add a toggle button
 		$args = array();
-		$folderAttribute = 'style="margin-left:20px"';
 		$showFields = $GLOBALS['TL_DCA'][$table]['list']['label']['fields'];
 		$level = ($intMargin / $intSpacing + 1);
 
 		if (!empty($childs))
 		{
-			$folderAttribute = '';
 			$img = ($session[$node][$id] == 1) ? 'folMinus.gif' : 'folPlus.gif';
 			$alt = ($session[$node][$id] == 1) ? $GLOBALS['TL_LANG']['MSC']['collapseNode'] : $GLOBALS['TL_LANG']['MSC']['expandNode'];
-			$return .= '<a href="'.$this->addToUrl('ptg='.$id).'" title="'.specialchars($alt).'" onclick="Backend.getScrollOffset();return AjaxRequest.toggleStructure(this,\''.$node.'_'.$id.'\','.$level.','.$GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'].')">'.$this->generateImage($img, '', 'style="margin-right:2px"').'</a>';
+			$return .= '<a href="'.$this->addToUrl('ptg='.$id).'" title="'.specialchars($alt).'" onclick="Backend.getScrollOffset();return AjaxRequest.toggleStructure(this,\''.$node.'_'.$id.'\','.$level.','.$GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'].')">'.\Image::getHtml($img, '', 'style="margin-right:2px"').'</a>';
 		}
 
 		foreach ($showFields as $k=>$v)
@@ -1012,10 +966,7 @@ Backend.vScrollTo(($(\'' . $this->strTable . '\').getElement(\'label.error\').ge
 			// Decrypt the value
 			if ($GLOBALS['TL_DCA'][$table]['fields'][$v]['eval']['encrypt'])
 			{
-				$objRow->$v = deserialize($objRow->$v);
-
-				$this->import('Encryption');
-				$objRow->$v = $this->Encryption->decrypt($objRow->$v);
+				$objRow->$v = \Encryption::decrypt(deserialize($objRow->$v));
 			}
 
 			if (strpos($v, ':') !== false)
@@ -1031,30 +982,29 @@ Backend.vScrollTo(($(\'' . $this->strTable . '\').getElement(\'label.error\').ge
 			}
 			elseif (in_array($GLOBALS['TL_DCA'][$table]['fields'][$v]['flag'], array(5, 6, 7, 8, 9, 10)))
 			{
-				$args[$k] = $this->parseDate($GLOBALS['TL_CONFIG']['datimFormat'], $objRow->$v);
+				$args[$k] = \Date::parse($GLOBALS['TL_CONFIG']['datimFormat'], $objRow->$v);
 			}
 			elseif ($GLOBALS['TL_DCA'][$table]['fields'][$v]['inputType'] == 'checkbox' && !$GLOBALS['TL_DCA'][$table]['fields'][$v]['eval']['multiple'])
 			{
-				$args[$k] = strlen($objRow->$v) ? (strlen($GLOBALS['TL_DCA'][$table]['fields'][$v]['label'][0]) ? $GLOBALS['TL_DCA'][$table]['fields'][$v]['label'][0] : $v) : '';
+				$args[$k] = ($objRow->$v != '') ? (isset($GLOBALS['TL_DCA'][$table]['fields'][$v]['label'][0]) ? $GLOBALS['TL_DCA'][$table]['fields'][$v]['label'][0] : $v) : '';
 			}
 			else
 			{
-				$args[$k] = strlen($GLOBALS['TL_DCA'][$table]['fields'][$v]['reference'][$objRow->$v]) ? $GLOBALS['TL_DCA'][$table]['fields'][$v]['reference'][$objRow->$v] : $objRow->$v;
+				$args[$k] = $GLOBALS['TL_DCA'][$table]['fields'][$v]['reference'][$objRow->$v] ?: $objRow->$v;
 			}
 		}
 
 		$label = vsprintf(((strlen($GLOBALS['TL_DCA'][$table]['list']['label']['format'])) ? $GLOBALS['TL_DCA'][$table]['list']['label']['format'] : '%s'), $args);
 
-		// Shorten the label it if it is too long
+		// Shorten the label if it is too long
 		if ($GLOBALS['TL_DCA'][$table]['list']['label']['maxCharacters'] > 0 && $GLOBALS['TL_DCA'][$table]['list']['label']['maxCharacters'] < utf8_strlen(strip_tags($label)))
 		{
-			$this->import('String');
-			$label = trim($this->String->substrHtml($label, $GLOBALS['TL_DCA'][$table]['list']['label']['maxCharacters'])) . ' …';
+			$label = trim(\String::substrHtml($label, $GLOBALS['TL_DCA'][$table]['list']['label']['maxCharacters'])) . ' …';
 		}
 
-		$label = preg_replace('/\(\) ?|\[\] ?|\{\} ?|<> ?/i', '', $label);
+		$label = preg_replace('/\(\) ?|\[\] ?|\{\} ?|<> ?/', '', $label);
 
-		// Call label_callback ($row, $label, $this)
+		// Call the label_callback ($row, $label, $this)
 		if (is_array($GLOBALS['TL_DCA'][$table]['list']['label']['label_callback'])) {
 			$strClass = $GLOBALS['TL_DCA'][$table]['list']['label']['label_callback'][0];
 			$strMethod = $GLOBALS['TL_DCA'][$table]['list']['label']['label_callback'][1];
@@ -1064,7 +1014,7 @@ Backend.vScrollTo(($(\'' . $this->strTable . '\').getElement(\'label.error\').ge
 		} elseif (is_callable($GLOBALS['TL_DCA'][$table]['list']['label']['label_callback'])) {
 			$return .= $GLOBALS['TL_DCA'][$table]['list']['label']['label_callback']($objRow->row(), $label, $this, '', false, $blnProtected);
 		} else {
-			$return .= $this->generateImage('iconPLAIN.gif', '', $folderAttribute) . ' ' . $label;
+			$return .= \Image::getHtml('iconPLAIN.gif', '') . ' ' . $label;
 		}
 
 		$return .= '</div> <div class="tl_right">';
@@ -1075,11 +1025,11 @@ Backend.vScrollTo(($(\'' . $this->strTable . '\').getElement(\'label.error\').ge
 		// Regular buttons ($row, $table, $root, $blnCircularReference, $childs, $previous, $next)
 		if ($this->strTable == $table)
 		{
-			$_buttons .= ($this->Input->get('act') == 'select') ? '<input type="checkbox" name="IDS[]" id="ids_'.$id.'" class="tl_tree_checkbox" value="'.$id.'">' : $this->generateButtons($objRow->row(), $table, $this->root, $blnCircularReference, $childs, $previous, $next);
+			$_buttons .= (\Input::get('act') == 'select') ? '<input type="checkbox" name="IDS[]" id="ids_'.$id.'" class="tl_tree_checkbox" value="'.$id.'">' : $this->generateButtons($objRow->row(), $table, $this->root, $blnCircularReference, $childs, $previous, $next);
 		}
 
 		// Paste buttons
-		if ($arrClipboard !== false && $this->Input->get('act') != 'select')
+		if ($arrClipboard !== false && \Input::get('act') != 'select')
 		{
 			$_buttons .= ' ';
 
@@ -1093,28 +1043,28 @@ Backend.vScrollTo(($(\'' . $this->strTable . '\').getElement(\'label.error\').ge
 			} elseif (is_callable($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['paste_button_callback'])) {
 				$_buttons .= $GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['paste_button_callback']($this, $objRow->row(), $table, $blnCircularReference, $arrClipboard, $childs, $previous, $next);
 			} else {
-				$imagePasteAfter = $this->generateImage('pasteafter.gif', sprintf($GLOBALS['TL_LANG'][$this->strTable]['pasteafter'][1], $id), 'class="blink"');
-				$imagePasteInto = $this->generateImage('pasteinto.gif', sprintf($GLOBALS['TL_LANG'][$this->strTable]['pasteinto'][1], $id), 'class="blink"');
+				$imagePasteAfter = \Image::getHtml('pasteafter.gif', sprintf($GLOBALS['TL_LANG'][$this->strTable]['pasteafter'][1], $id));
+				$imagePasteInto = \Image::getHtml('pasteinto.gif', sprintf($GLOBALS['TL_LANG'][$this->strTable]['pasteinto'][1], $id));
 
 				// Regular tree (on cut: disable buttons of the page all its childs to avoid circular references)
 				if ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 5)
 				{
-					$_buttons .= ($arrClipboard['mode'] == 'cut' && ($blnCircularReference || $arrClipboard['id'] == $id) || $arrClipboard['mode'] == 'cutAll' && ($blnCircularReference || in_array($id, $arrClipboard['id'])) || (!empty($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['root']) && in_array($id, $this->root))) ? $this->generateImage('pasteafter_.gif', '', 'class="blink"').' ' : '<a href="'.$this->addToUrl('act='.$arrClipboard['mode'].'&amp;mode=1&amp;pid='.$id.(!is_array($arrClipboard['id']) ? '&amp;id='.$arrClipboard['id'] : '')).'" title="'.specialchars(sprintf($GLOBALS['TL_LANG'][$this->strTable]['pasteafter'][1], $id)).'" onclick="Backend.getScrollOffset()">'.$imagePasteAfter.'</a> ';
-					$_buttons .= ($arrClipboard['mode'] == 'paste' && ($blnCircularReference || $arrClipboard['id'] == $id) || $arrClipboard['mode'] == 'cutAll' && ($blnCircularReference || in_array($id, $arrClipboard['id']))) ? $this->generateImage('pasteinto_.gif', '', 'class="blink"').' ' : '<a href="'.$this->addToUrl('act='.$arrClipboard['mode'].'&amp;mode=2&amp;pid='.$id.(!is_array($arrClipboard['id']) ? '&amp;id='.$arrClipboard['id'] : '')).'" title="'.specialchars(sprintf($GLOBALS['TL_LANG'][$this->strTable]['pasteinto'][1], $id)).'" onclick="Backend.getScrollOffset()">'.$imagePasteInto.'</a> ';
+					$_buttons .= ($arrClipboard['mode'] == 'cut' && ($blnCircularReference || $arrClipboard['id'] == $id) || $arrClipboard['mode'] == 'cutAll' && ($blnCircularReference || in_array($id, $arrClipboard['id'])) || (!empty($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['root']) && in_array($id, $this->root))) ? \Image::getHtml('pasteafter_.gif').' ' : '<a href="'.$this->addToUrl('act='.$arrClipboard['mode'].'&amp;mode=1&amp;pid='.$id.(!is_array($arrClipboard['id']) ? '&amp;id='.$arrClipboard['id'] : '')).'" title="'.specialchars(sprintf($GLOBALS['TL_LANG'][$this->strTable]['pasteafter'][1], $id)).'" onclick="Backend.getScrollOffset()">'.$imagePasteAfter.'</a> ';
+					$_buttons .= ($arrClipboard['mode'] == 'paste' && ($blnCircularReference || $arrClipboard['id'] == $id) || $arrClipboard['mode'] == 'cutAll' && ($blnCircularReference || in_array($id, $arrClipboard['id']))) ? \Image::getHtml('pasteinto_.gif').' ' : '<a href="'.$this->addToUrl('act='.$arrClipboard['mode'].'&amp;mode=2&amp;pid='.$id.(!is_array($arrClipboard['id']) ? '&amp;id='.$arrClipboard['id'] : '')).'" title="'.specialchars(sprintf($GLOBALS['TL_LANG'][$this->strTable]['pasteinto'][1], $id)).'" onclick="Backend.getScrollOffset()">'.$imagePasteInto.'</a> ';
 				}
 
 				// Extended tree
 				else
 				{
-					$_buttons .= ($this->strTable == $table) ? (($arrClipboard['mode'] == 'cut' && ($blnCircularReference || $arrClipboard['id'] == $id) || $arrClipboard['mode'] == 'cutAll' && ($blnCircularReference || in_array($id, $arrClipboard['id']))) ? $this->generateImage('pasteafter_.gif', '', 'class="blink"') : '<a href="'.$this->addToUrl('act='.$arrClipboard['mode'].'&amp;mode=1&amp;pid='.$id.(!is_array($arrClipboard['id']) ? '&amp;id='.$arrClipboard['id'] : '')).'" title="'.specialchars(sprintf($GLOBALS['TL_LANG'][$this->strTable]['pasteafter'][1], $id)).'" onclick="Backend.getScrollOffset()">'.$imagePasteAfter.'</a> ') : '';
+					$_buttons .= ($this->strTable == $table) ? (($arrClipboard['mode'] == 'cut' && ($blnCircularReference || $arrClipboard['id'] == $id) || $arrClipboard['mode'] == 'cutAll' && ($blnCircularReference || in_array($id, $arrClipboard['id']))) ? \Image::getHtml('pasteafter_.gif') : '<a href="'.$this->addToUrl('act='.$arrClipboard['mode'].'&amp;mode=1&amp;pid='.$id.(!is_array($arrClipboard['id']) ? '&amp;id='.$arrClipboard['id'] : '')).'" title="'.specialchars(sprintf($GLOBALS['TL_LANG'][$this->strTable]['pasteafter'][1], $id)).'" onclick="Backend.getScrollOffset()">'.$imagePasteAfter.'</a> ') : '';
 					$_buttons .= ($this->strTable != $table) ? '<a href="'.$this->addToUrl('act='.$arrClipboard['mode'].'&amp;mode=2&amp;pid='.$id.(!is_array($arrClipboard['id']) ? '&amp;id='.$arrClipboard['id'] : '')).'" title="'.specialchars(sprintf($GLOBALS['TL_LANG'][$this->strTable]['pasteinto'][1], $id)).'" onclick="Backend.getScrollOffset()">'.$imagePasteInto.'</a> ' : '';
 				}
 			}
 		}
 
-		$return .= (strlen($_buttons) ? $_buttons : '&nbsp;') . '</div><div style="clear:both"></div></li>';
+		$return .= ($_buttons ?: '&nbsp;') . '</div><div style="clear:both"></div></li>';
 
-		// Add records of the table itself
+		// Add the records of the table itself
 		if ($table != $this->strTable)
 		{
 			$objChilds = $this->Database->prepare("SELECT id FROM " . $this->strTable . " WHERE pid=?" . ($blnHasSorting ? " ORDER BY sorting" : ''))
@@ -1124,35 +1074,38 @@ Backend.vScrollTo(($(\'' . $this->strTable . '\').getElement(\'label.error\').ge
 			{
 				$ids = $objChilds->fetchEach('id');
 
-				for ($j=0; $j<count($ids); $j++)
+				for ($j=0, $c=count($ids); $j<$c; $j++)
 				{
-					$return .= $this->generateTree($this->strTable, $ids[$j], array('pp'=>$ids[($j-1)], 'nn'=>$ids[($j+1)]), $blnHasSorting, ($intMargin + $intSpacing + 20), $arrClipboard, false, ($j<(count($ids)-1) || !empty($childs)));
+					$return .= $this->generateTree($this->strTable, $ids[$j], array('pp'=>$ids[($j-1)], 'nn'=>$ids[($j+1)]), $blnHasSorting, ($intMargin + $intSpacing), $arrClipboard, false, ($j<(count($ids)-1) || !empty($childs)));
 				}
 			}
 		}
 
-		// Begin new submenu
-		if (!empty($childs) && $session[$node][$id] == 1)
+		// Begin a new submenu
+		if (!$blnNoRecursion)
 		{
-			$return .= '<li class="parent" id="'.$node.'_'.$id.'"><ul class="level_'.$level.'">';
-		}
-
-		// Add records of the parent table
-		if ($session[$node][$id] == 1)
-		{
-			if (is_array($childs))
+			if (!empty($childs) && $session[$node][$id] == 1)
 			{
-				for ($k=0; $k<count($childs); $k++)
+				$return .= '<li class="parent" id="'.$node.'_'.$id.'"><ul class="level_'.$level.'">';
+			}
+
+			// Add the records of the parent table
+			if ($session[$node][$id] == 1)
+			{
+				if (is_array($childs))
 				{
-					$return .= $this->generateTree($table, $childs[$k], array('p'=>$childs[($k-1)], 'n'=>$childs[($k+1)]), $blnHasSorting, ($intMargin + $intSpacing), $arrClipboard, ((($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 5 && $childs[$k] == $arrClipboard['id']) || $blnCircularReference) ? true : false), ($blnProtected || $protectedPage));
+					for ($k=0, $c=count($childs); $k<$c; $k++)
+					{
+						$return .= $this->generateTree($table, $childs[$k], array('p'=>$childs[($k-1)], 'n'=>$childs[($k+1)]), $blnHasSorting, ($intMargin + $intSpacing), $arrClipboard, ((($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 5 && $childs[$k] == $arrClipboard['id']) || $blnCircularReference) ? true : false), ($blnProtected || $protectedPage));
+					}
 				}
 			}
-		}
 
-		// Close submenu
-		if (!empty($childs) && $session[$node][$id] == 1)
-		{
-			$return .= '</ul></li>';
+			// Close the submenu
+			if (!empty($childs) && $session[$node][$id] == 1)
+			{
+				$return .= '</ul></li>';
+			}
 		}
 
 		$this->Session->setData($session);
