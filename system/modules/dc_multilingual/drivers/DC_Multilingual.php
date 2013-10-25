@@ -184,14 +184,13 @@ class DC_Multilingual extends DC_Table
 					$this->log(sprintf('Version %s of record ID %s (table %s) has been restored', $this->Input->post('version'), $this->intId, $this->strTable), 'DC_Table edit()', TL_GENERAL);
 
 					// Trigger the onrestore_callback
-					if (is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['onrestore_callback']))
-					{
-						foreach ($GLOBALS['TL_DCA'][$this->strTable]['config']['onrestore_callback'] as $callback)
-						{
-							if (is_array($callback))
-							{
+					if (is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['onrestore_callback'])) {
+						foreach ($GLOBALS['TL_DCA'][$this->strTable]['config']['onrestore_callback'] as $callback) {
+							if (is_array($callback)) {
 								$this->import($callback[0]);
 								$this->$callback[0]->$callback[1]($this->intId, $this->strTable, $data, $this->Input->post('version'));
+							} elseif (is_callable($callback)) {
+								$callback($this->intId, $this->strTable, $data, $this->Input->post('version'));
 							}
 						}
 					}
@@ -405,14 +404,13 @@ class DC_Multilingual extends DC_Table
 					$this->varValue = $objRow->$vv;
 
 					// Call load_callback
-					if (is_array($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['load_callback']))
-					{
-						foreach ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['load_callback'] as $callback)
-						{
-							if (is_array($callback))
-							{
+					if (is_array($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['load_callback'])) {
+						foreach ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['load_callback'] as $callback) {
+							if (is_array($callback)) {
 								$this->import($callback[0]);
 								$this->varValue = $this->$callback[0]->$callback[1]($this->varValue, $this);
+							} elseif (is_callable($callback)) {
+								$this->varValue = $callback($this->varValue, $this);
 							}
 						}
 
@@ -579,12 +577,14 @@ if (first) first.focus();
 			array_unshift($arrValues, time());
 
 			// Trigger the onsubmit_callback
-			if (is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['onsubmit_callback']))
-			{
-				foreach ($GLOBALS['TL_DCA'][$this->strTable]['config']['onsubmit_callback'] as $callback)
-				{
-					$this->import($callback[0]);
-					$this->$callback[0]->$callback[1]($this);
+			if (is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['onsubmit_callback'])) {
+				foreach ($GLOBALS['TL_DCA'][$this->strTable]['config']['onsubmit_callback'] as $callback) {
+					if (is_array($callback)) {
+						$this->import($callback[0]);
+						$this->$callback[0]->$callback[1]($this);
+					} elseif (is_callable($callback)) {
+						$callback($this);
+					}
 				}
 			}
 
@@ -594,12 +594,14 @@ if (first) first.focus();
 				$this->createNewVersion($this->strTable, $this->intId);
 
 				// Call the onversion_callback
-				if (is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['onversion_callback']))
-				{
-					foreach ($GLOBALS['TL_DCA'][$this->strTable]['config']['onversion_callback'] as $callback)
-					{
-						$this->import($callback[0]);
-						$this->$callback[0]->$callback[1]($this->strTable, $this->intId, $this);
+				if (is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['onversion_callback'])) {
+					foreach ($GLOBALS['TL_DCA'][$this->strTable]['config']['onversion_callback'] as $callback) {
+						if (is_array($callback)) {
+							$this->import($callback[0]);
+							$this->$callback[0]->$callback[1]($this->strTable, $this->intId, $this);
+						} elseif (is_callable($callback)) {
+							$callback($this->strTable, $this->intId, $this);
+						}
 					}
 				}
 
@@ -1012,16 +1014,15 @@ Backend.vScrollTo(($(\'' . $this->strTable . '\').getElement(\'label.error\').ge
 		$label = preg_replace('/\(\) ?|\[\] ?|\{\} ?|<> ?/i', '', $label);
 
 		// Call label_callback ($row, $label, $this)
-		if (is_array($GLOBALS['TL_DCA'][$table]['list']['label']['label_callback']))
-		{
+		if (is_array($GLOBALS['TL_DCA'][$table]['list']['label']['label_callback'])) {
 			$strClass = $GLOBALS['TL_DCA'][$table]['list']['label']['label_callback'][0];
 			$strMethod = $GLOBALS['TL_DCA'][$table]['list']['label']['label_callback'][1];
 
 			$this->import($strClass);
-			$return .= $this->$strClass->$strMethod($objRow->row(), $label, $this, $folderAttribute);
-		}
-		else
-		{
+			$return .= $this->$strClass->$strMethod($objRow->row(), $label, $this, '', false, $blnProtected);
+		} elseif (is_callable($GLOBALS['TL_DCA'][$table]['list']['label']['label_callback'])) {
+			$return .= $GLOBALS['TL_DCA'][$table]['list']['label']['label_callback']($objRow->row(), $label, $this, '', false, $blnProtected);
+		} else {
 			$return .= $this->generateImage('iconPLAIN.gif', '', $folderAttribute) . ' ' . $label;
 		}
 
@@ -1042,16 +1043,15 @@ Backend.vScrollTo(($(\'' . $this->strTable . '\').getElement(\'label.error\').ge
 			$_buttons .= ' ';
 
 			// Call paste_button_callback(&$dc, $row, $table, $blnCircularReference, $arrClipboard, $childs, $previous, $next)
-			if (is_array($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['paste_button_callback']))
-			{
+			if (is_array($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['paste_button_callback'])) {
 				$strClass = $GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['paste_button_callback'][0];
 				$strMethod = $GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['paste_button_callback'][1];
 
 				$this->import($strClass);
 				$_buttons .= $this->$strClass->$strMethod($this, $objRow->row(), $table, $blnCircularReference, $arrClipboard, $childs, $previous, $next);
-			}
-			else
-			{
+			} elseif (is_callable($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['paste_button_callback'])) {
+				$_buttons .= $GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['paste_button_callback']($this, $objRow->row(), $table, $blnCircularReference, $arrClipboard, $childs, $previous, $next);
+			} else {
 				$imagePasteAfter = $this->generateImage('pasteafter.gif', sprintf($GLOBALS['TL_LANG'][$this->strTable]['pasteafter'][1], $id), 'class="blink"');
 				$imagePasteInto = $this->generateImage('pasteinto.gif', sprintf($GLOBALS['TL_LANG'][$this->strTable]['pasteinto'][1], $id), 'class="blink"');
 
