@@ -91,11 +91,7 @@ class MultilingualQueryBuilder
 
         // Where condition
         if ($arrOptions['column'] !== null) {
-            foreach ($arrOptions['column'] as $k => $v) {
-                $arrOptions[$k] = str_replace($arrOptions['table'] . ".", "dcm1.", $v);
-            }
-
-            $strQuery .= " AND " . (is_array($arrOptions['column']) ? implode(" AND ", $arrOptions['column']) : $arrOptions['table'] . '.' . $arrOptions['column'] . "=?");
+            $strQuery .= " AND " . str_replace($arrOptions['table'] . ".", "dcm1.", (is_array($arrOptions['column']) ? implode(" AND ", $arrOptions['column']) : $arrOptions['table'] . '.' . $arrOptions['column'] . "=?"));
         }
 
         // Group by
