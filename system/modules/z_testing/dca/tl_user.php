@@ -1,4 +1,4 @@
-<?php if (!defined('TL_ROOT')) die('You cannot access this file directly!');
+<?php
 
 /**
  * Contao Open Source CMS
@@ -28,20 +28,38 @@
  * @filesource
  */
 
+
 /**
- * Table tl_news
+ * Update tl_user configuration
  */
 $GLOBALS['TL_DCA']['tl_user']['config']['dataContainer'] = 'Multilingual';
 $GLOBALS['TL_DCA']['tl_user']['config']['languages'] = array('de', 'en');
+$GLOBALS['TL_DCA']['tl_user']['config']['langPid'] = 'langPid';
 $GLOBALS['TL_DCA']['tl_user']['config']['langColumn'] = 'language_dc';
 $GLOBALS['TL_DCA']['tl_user']['config']['fallbackLang'] = 'de';
 
 
+/**
+ * Add the language fieldslanguage_dc
+ */
+$GLOBALS['TL_DCA']['tl_user']['config']['sql']['keys']['langPid'] = 'index';
+$GLOBALS['TL_DCA']['tl_user']['config']['sql']['keys']['language_dc'] = 'index';
+$GLOBALS['TL_DCA']['tl_user']['fields']['langPid']['sql'] = "int(10) unsigned NOT NULL default '0'";
+$GLOBALS['TL_DCA']['tl_user']['fields']['language_dc']['sql'] = "varchar(2) NOT NULL default ''";
 
+
+/**
+ * Make some fields translatable
+ */
 $GLOBALS['TL_DCA']['tl_user']['fields']['username']['eval']['translatableFor'] = '*';
 $GLOBALS['TL_DCA']['tl_user']['fields']['name']['eval']['translatableFor'] = array('de');
 
 
-## TESTING
-#$objUsers = \UserTestModel::findAll();
-#print_r($objUsers->fetchAll());
+/**
+ * Test the multilingual models
+ */
+if ($_GET['test'])
+{
+	$objUsers = \UserTestModel::findAll();
+	print_r($objUsers->fetchAll());
+}
