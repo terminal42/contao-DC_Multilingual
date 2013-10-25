@@ -82,13 +82,13 @@ class DC_Multilingual extends DC_Table
 	 * Language column
 	 * @var string
 	 */
-	protected $strLangColumn = 'language';
+	protected $strLangColumn;
 
 	/**
 	 * pid column
 	 * @var string
 	 */
-	protected $strPidColumn = 'langPid';
+	protected $strPidColumn;
 
 
 	/**
@@ -120,17 +120,38 @@ class DC_Multilingual extends DC_Table
 			}
 		}
 
-		// parent association column (default: pid)
-		if ($GLOBALS['TL_DCA'][$this->strTable]['config']['pidColumn'])
-		{
-			$this->strPidColumn = $GLOBALS['TL_DCA'][$this->strTable]['config']['pidColumn'];
+		$this->strPidColumn = static::getPidColumnForTable($this->strTable);
+		$this->strLangColumn = static::getLanguageColumnForTable($this->strTable);
+	}
+
+
+	/**
+	 * Get the language pid column name of particular table
+	 * @param string
+	 * @return string
+	 */
+	public static function getPidColumnForTable($strTable)
+	{
+		if ($GLOBALS['TL_DCA'][$strTable]['config']['langPid']) {
+			return $GLOBALS['TL_DCA'][$strTable]['config']['langPid'];
 		}
 
-		// lang column (default: language)
-		if ($GLOBALS['TL_DCA'][$this->strTable]['config']['langColumn'])
-		{
-			$this->strLangColumn = $GLOBALS['TL_DCA'][$this->strTable]['config']['langColumn'];
+		return 'langPid';
+	}
+
+
+	/**
+	 * Get the language column name of particular table
+	 * @param string
+	 * @return string
+	 */
+	public static function getLanguageColumnForTable($strTable)
+	{
+		if ($GLOBALS['TL_DCA'][$strTable]['config']['langColumn']) {
+			return $GLOBALS['TL_DCA'][$strTable]['config']['langColumn'];
 		}
+
+		return 'language';
 	}
 
 

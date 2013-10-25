@@ -23,8 +23,8 @@ class MultilingualQueryBuilder
     {
         $objBase = new \DcaExtractor($arrOptions['table']);
         $arrLanguageFields = static::getMultilingualFields($arrOptions['table']);
-        $strPid = isset($GLOBALS['TL_DCA'][$arrOptions['table']]['config']['pidColumn']) ? $GLOBALS['TL_DCA'][$arrOptions['table']]['config']['pidColumn'] : 'langPid';
-        $strLang = isset($GLOBALS['TL_DCA'][$arrOptions['table']]['config']['langColumn']) ? $GLOBALS['TL_DCA'][$arrOptions['table']]['config']['langColumn'] : 'language';
+        $strPid = \DC_Multilingual::getPidColumnForTable($arrOptions['table']);
+        $strLang = \DC_Multilingual::getLanguageColumnForTable($arrOptions['table']);
 
         // Use the current language if none provided
         if (!isset($arrOptions['language'])) {
@@ -67,8 +67,8 @@ class MultilingualQueryBuilder
 // @todo - make sure the relations also use " WHERE dcm1.$strPid=0"
                         // Use multilingual query or normal
                         if (!empty($arrLanguageFieldsRelation)) {
-                            $strPidRelation = isset($GLOBALS['TL_DCA'][$arrConfig['table']]['config']['pidColumn']) ? $GLOBALS['TL_DCA'][$arrConfig['table']]['config']['pidColumn'] : 'langPid';
-                            $strLangRelation = isset($GLOBALS['TL_DCA'][$arrConfig['table']]['config']['langColumn']) ? $GLOBALS['TL_DCA'][$arrConfig['table']]['config']['langColumn'] : 'language';
+                            $strPidRelation = \DC_Multilingual::getPidColumnForTable($arrConfig['table']);
+                            $strLangRelation = \DC_Multilingual::getLanguageColumnForTable($arrConfig['table']);
 
                             $arrJoins[] = " LEFT JOIN " . $arrConfig['table'] . " j$intCount" . "dcm1 ON " . $arrOptions['table'] . "." . $strKey . "=j$intCount" . "dcm1.id";
                             $arrJoins[] = " LEFT OUTER JOIN " . $arrConfig['table'] . " AS j$intcount" . "dcm2 ON (j$intCount" . "dcm1.id=j$intCount" . "dcm2." . $strPid . " AND j$intCount" . "dcm2.$strLangRelation='" . $arrOptions['language'] . "')";
