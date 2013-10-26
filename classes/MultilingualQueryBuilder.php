@@ -58,8 +58,10 @@ class MultilingualQueryBuilder
                         $arrLanguageFieldsRelation = static::getMultilingualFields($arrConfig['table']);
 
                         foreach (array_keys($objRelated->getFields()) as $strField) {
-                            if (in_array($strField, $arrLanguageFieldsRelation)) {
+                            if (!empty($arrLanguageFieldsRelation) && in_array($strField, $arrLanguageFieldsRelation)) {
                                 $arrFields[] = static::generateFieldsSubquery($strField, "j".$intCount."dcm1", "j".$intCount."dcm2", $strKey . "__");
+                            } elseif (!empty($arrLanguageFieldsRelation)) {
+                            	$arrFields[] = "j" . $intCount . "dcm1." . $strField . " AS " . $strKey . "__" . $strField;
                             } else {
                                 $arrFields[] = "j" . $intCount . "." . $strField . " AS " . $strKey . "__" . $strField;
                             }
@@ -70,8 +72,8 @@ class MultilingualQueryBuilder
                             $strPidRelation = \DC_Multilingual::getPidColumnForTable($arrConfig['table']);
                             $strLangRelation = \DC_Multilingual::getLanguageColumnForTable($arrConfig['table']);
 
-                            $arrJoins[] = " LEFT JOIN " . $arrConfig['table'] . " j$intCount" . "dcm1 ON " . $arrOptions['table'] . "." . $strKey . "=j$intCount" . "dcm1.id";
-                            $arrJoins[] = " LEFT OUTER JOIN " . $arrConfig['table'] . " AS j$intcount" . "dcm2 ON (j$intCount" . "dcm1.id=j$intCount" . "dcm2." . $strPid . " AND j$intCount" . "dcm2.$strLangRelation='" . $arrOptions['language'] . "')";
+                            $arrJoins[] = " LEFT JOIN " . $arrConfig['table'] . " j$intCount" . "dcm1 ON dcm1." . $strKey . "=j$intCount" . "dcm1.id";
+                            $arrJoins[] = " LEFT OUTER JOIN " . $arrConfig['table'] . " AS j$intCount" . "dcm2 ON (j$intCount" . "dcm1.id=j$intCount" . "dcm2." . $strPid . " AND j$intCount" . "dcm2.$strLangRelation='" . $arrOptions['language'] . "')";
                         } else {
                             $arrJoins[] = " LEFT JOIN " . $arrConfig['table'] . " j$intCount ON " . $arrOptions['table'] . "." . $strKey . "=j$intCount.id";
                         }
