@@ -120,13 +120,14 @@ class DC_Multilingual_Query extends Controller
      */
     public function getQuery()
     {
-        $strPid = isset($GLOBALS['TL_DCA'][$this->strTable]['config']['pidColumn']) ? $GLOBALS['TL_DCA'][$this->strTable]['config']['pidColumn'] : 'langPid';
+        $strPid = \DC_Multilingual::getPidColumnForTable($this->strTable);
+        $strLang = \DC_Multilingual::getLanguageColumnForTable($this->strTable);
 
         return "
 SELECT t1.*,
     " . implode(', ', $this->arrFields) . "
 FROM {$this->strTable} AS t1
-LEFT OUTER JOIN {$this->strTable} AS t2 ON (t1.id=t2.$strPid AND t2.language='{$this->language}') ".
+LEFT OUTER JOIN {$this->strTable} AS t2 ON (t1.id=t2.$strPid AND t2.$strLang='{$this->language}') ".
 implode(' ',$this->arrJoin) ."
 WHERE t1.$strPid=0".
 (count($this->arrWhere) ? ' AND (' .implode(' AND ',$this->arrWhere).')' : '').
