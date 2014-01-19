@@ -1,9 +1,13 @@
 <?php
 
 /**
- * @author  Kamil Kuzminski <kamil.kuzminski@codefog.pl>
- * @package DC_Multilingual
- * @license LGPL
+ * Contao Open Source CMS
+ *
+ * Copyright (c) 2005-2014 Leo Feyer
+ *
+ * @package Dc_multilingual
+ * @link    https://contao.org
+ * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
  */
 
 
@@ -12,8 +16,13 @@
  */
 ClassLoader::addClasses(array
 (
-	'Contao\DC_Multilingual'       => 'system/modules/dc_multilingual/drivers/DC_Multilingual.php',
-	'Contao\MultilingualModel'     => 'system/modules/dc_multilingual/models/MultilingualModel.php',
+	// Classes
+	'Contao\DC_Multilingual_Query'    => 'system/modules/dc_multilingual/classes/DC_Multilingual_Query.php',
 	'Contao\MultilingualQueryBuilder' => 'system/modules/dc_multilingual/classes/MultilingualQueryBuilder.php',
-	'Contao\DC_Multilingual_Query' => 'system/modules/dc_multilingual/classes/DC_Multilingual_Query.php'
+
+	// Drivers
+	'DC_Multilingual'                 => 'system/modules/dc_multilingual/drivers/DC_Multilingual.php',
+
+	// Models
+	'Contao\MultilingualModel'        => 'system/modules/dc_multilingual/models/MultilingualModel.php',
 ));
