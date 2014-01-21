@@ -25,6 +25,8 @@ class MultilingualQueryBuilder
      * @param array $arrOptions The options array
      *
      * @return string The query string
+     *
+     * @throws \Exception
      */
     public static function find($arrOptions)
     {
@@ -46,54 +48,7 @@ class MultilingualQueryBuilder
                 $strQuery .= " LEFT OUTER JOIN " . $arrOptions['table'] . " AS dcm2 ON (dcm1.id=dcm2." . $strPid . " AND dcm2.$strLang='" . $arrOptions['language'] . "')";
             }
         } else {
-            // Query with relations
-            $arrJoins = array();
-            $arrFields = array("dcm1.*");
-            $intCount = 0;
-
-            // Add the language fields
-            if (!empty($arrLanguageFields)) {
-                $arrFields = array_merge($arrFields, static::generateFieldsSubquery($arrLanguageFields, 'dcm1', 'dcm2'));
-            }
-
-            foreach ($objBase->getRelations() as $strKey => $arrConfig) {
-                // Automatically join the single-relation records
-                if ($arrConfig['load'] == 'eager' || $arrOptions['eager']) {
-                    if ($arrConfig['type'] == 'hasOne' || $arrConfig['type'] == 'belongsTo') {
-                        ++$intCount;
-                        $objRelated = new \DcaExtractor($arrConfig['table']);
-                        $arrLanguageFieldsRelation = static::getMultilingualFields($arrConfig['table']);
-
-                        foreach (array_keys($objRelated->getFields()) as $strField) {
-                            if (!empty($arrLanguageFieldsRelation) && in_array($strField, $arrLanguageFieldsRelation)) {
-                                $arrFields[] = static::generateFieldsSubquery($strField, "j".$intCount."dcm1", "j".$intCount."dcm2", $strKey . "__");
-                            } elseif (!empty($arrLanguageFieldsRelation)) {
-                            	$arrFields[] = "j" . $intCount . "dcm1." . $strField . " AS " . $strKey . "__" . $strField;
-                            } else {
-                                $arrFields[] = "j" . $intCount . "." . $strField . " AS " . $strKey . "__" . $strField;
-                            }
-                        }
-// @todo - make sure the relations also use " WHERE dcm1.$strPid=0"
-                        // Use multilingual query or normal
-                        if (!empty($arrLanguageFieldsRelation)) {
-                            $strPidRelation = \DC_Multilingual::getPidColumnForTable($arrConfig['table']);
-                            $strLangRelation = \DC_Multilingual::getLanguageColumnForTable($arrConfig['table']);
-
-                            $arrJoins[] = " LEFT JOIN " . $arrConfig['table'] . " j$intCount" . "dcm1 ON dcm1." . $strKey . "=j$intCount" . "dcm1.id";
-                            $arrJoins[] = " LEFT OUTER JOIN " . $arrConfig['table'] . " AS j$intCount" . "dcm2 ON (j$intCount" . "dcm1.id=j$intCount" . "dcm2." . $strPid . " AND j$intCount" . "dcm2.$strLangRelation='" . $arrOptions['language'] . "')";
-                        } else {
-                            $arrJoins[] = " LEFT JOIN " . $arrConfig['table'] . " j$intCount ON " . $arrOptions['table'] . "." . $strKey . "=j$intCount.id";
-                        }
-                    }
-                }
-            }
-
-            // Generate the query
-            $strQuery = "SELECT " . implode(', ', $arrFields) . " FROM " . $arrOptions['table'] . " AS dcm1" . implode("", $arrJoins);
-
-            if (!empty($arrLanguageFields)) {
-                $strQuery .= " LEFT OUTER JOIN " . $arrOptions['table'] . " AS dcm2 ON (dcm1.id=dcm2." . $strPid . " AND dcm2.language_dc='" . $arrOptions['language'] . "')";
-            }
+            throw new \Exception('The model does not support eagerly loaded relations!');
         }
 
         $strQuery .= " WHERE dcm1.$strPid=0";
