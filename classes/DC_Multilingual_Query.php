@@ -11,12 +11,6 @@
 
 
 /**
- * Run in a custom namespace so the class can be replaced
- */
-namespace Contao;
-
-
-/**
  * Create a Query for a DC_Multilingual table
  */
 class DC_Multilingual_Query extends Controller
