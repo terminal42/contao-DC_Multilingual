@@ -30,18 +30,6 @@
 
 
 /**
- * Run in a custom namespace so the class can be replaced
- */
-namespace Contao;
-
-
-/**
- * Require the DC_Table driver
- */
-require_once(TL_ROOT . '/system/modules/core/drivers/DC_Table.php');
-
-
-/**
  * Class DC_Multilingual
  *
  * Provide methods to handle multilingual DC_Table entries
@@ -51,7 +39,7 @@ require_once(TL_ROOT . '/system/modules/core/drivers/DC_Table.php');
  * @author     Kamil Kuzminski <kamil.kuzminski@codefog.pl>
  * @package    dc_multilingual
  */
-class DC_Multilingual extends DC_Table
+class DC_Multilingual extends \DC_Table
 {
 
 	/**
