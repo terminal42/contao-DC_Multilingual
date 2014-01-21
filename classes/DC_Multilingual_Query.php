@@ -1,11 +1,12 @@
 <?php
 
 /**
- * @copyright     4ward.media 2011 <http://www.4wardmedia.de>
- * @author        Christoph Wiechert <wio@psitrax.de>
- * @package       DC_Multilingual
- * @license       LGPL
- * @filesource
+ * dc_multilingual Extension for Contao Open Source CMS
+ *
+ * @copyright  Copyright (c) 2011-2014, terminal42 gmbh
+ * @author     terminal42 gmbh <info@terminal42.ch>
+ * @license    http://opensource.org/licenses/lgpl-3.0.html LGPL
+ * @link       http://github.com/terminal42/contao-dc_multilingual
  */
 
 
@@ -120,13 +121,14 @@ class DC_Multilingual_Query extends Controller
      */
     public function getQuery()
     {
-        $strPid = isset($GLOBALS['TL_DCA'][$this->strTable]['config']['pidColumn']) ? $GLOBALS['TL_DCA'][$this->strTable]['config']['pidColumn'] : 'langPid';
+        $strPid = \DC_Multilingual::getPidColumnForTable($this->strTable);
+        $strLang = \DC_Multilingual::getLanguageColumnForTable($this->strTable);
 
         return "
 SELECT t1.*,
     " . implode(', ', $this->arrFields) . "
 FROM {$this->strTable} AS t1
-LEFT OUTER JOIN {$this->strTable} AS t2 ON (t1.id=t2.$strPid AND t2.language='{$this->language}') ".
+LEFT OUTER JOIN {$this->strTable} AS t2 ON (t1.id=t2.$strPid AND t2.$strLang='{$this->language}') ".
 implode(' ',$this->arrJoin) ."
 WHERE t1.$strPid=0".
 (count($this->arrWhere) ? ' AND (' .implode(' AND ',$this->arrWhere).')' : '').
