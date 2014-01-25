@@ -26,7 +26,7 @@ class MultilingualQueryBuilder
      *
      * @return string The query string
      *
-     * @throws \Exception
+     * @throws \BadMethodCallException
      */
     public static function find($arrOptions)
     {
@@ -48,7 +48,7 @@ class MultilingualQueryBuilder
                 $strQuery .= " LEFT OUTER JOIN " . $arrOptions['table'] . " AS dcm2 ON (dcm1.id=dcm2." . $strPid . " AND dcm2.$strLang='" . $arrOptions['language'] . "')";
             }
         } else {
-            throw new \Exception('The model does not support eagerly loaded relations!');
+            throw new \BadMethodCallException('The model does not support eagerly loaded relations!');
         }
 
         $strQuery .= " WHERE dcm1.$strPid=0";
