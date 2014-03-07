@@ -40,15 +40,11 @@ class MultilingualQueryBuilder
             $arrOptions['language'] = $GLOBALS['TL_LANGUAGE'];
         }
 
-        // Regular query
-        if (!$objBase->hasRelations()) {
-            $strQuery = "SELECT dcm1.*" . (!empty($arrLanguageFields) ? (", " . implode(", ", static::generateFieldsSubquery($arrLanguageFields, 'dcm1', 'dcm2'))) : "") . " FROM " . $arrOptions['table'] . " AS dcm1";
+        $strQuery = "SELECT dcm1.*" . (!empty($arrLanguageFields) ? (", " . implode(", ", static::generateFieldsSubquery($arrLanguageFields, 'dcm1', 'dcm2'))) : "") . " FROM " . $arrOptions['table'] . " AS dcm1";
 
-            if (!empty($arrLanguageFields)) {
-                $strQuery .= " LEFT OUTER JOIN " . $arrOptions['table'] . " AS dcm2 ON (dcm1.id=dcm2." . $strPid . " AND dcm2.$strLang='" . $arrOptions['language'] . "')";
-            }
-        } else {
-            throw new \BadMethodCallException('The model does not support eagerly loaded relations!');
+        // Fetch language fields
+        if (!empty($arrLanguageFields)) {
+            $strQuery .= " LEFT OUTER JOIN " . $arrOptions['table'] . " AS dcm2 ON (dcm1.id=dcm2." . $strPid . " AND dcm2.$strLang='" . $arrOptions['language'] . "')";
         }
 
         $strQuery .= " WHERE dcm1.$strPid=0";
@@ -81,7 +77,7 @@ class MultilingualQueryBuilder
      */
     public static function count($arrOptions)
     {
-        $strPid = isset($GLOBALS['TL_DCA'][$arrOptions['table']]['config']['pidColumn']) ? $GLOBALS['TL_DCA'][$arrOptions['table']]['config']['pidColumn'] : 'langPid';
+        $strPid = \DC_Multilingual::getPidColumnForTable($arrOptions['table']);
         $strQuery = "SELECT COUNT(*) AS count FROM " . $arrOptions['table'] . " WHERE $strPid=0";
 
         if ($arrOptions['column'] !== null) {
