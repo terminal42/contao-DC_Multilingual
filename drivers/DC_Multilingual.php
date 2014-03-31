@@ -1262,6 +1262,12 @@ class DC_Multilingual extends \DC_Table
 			return;
 		}
 
+        // Do not delete record if there is no parent table
+        if ($GLOBALS['TL_DCA'][$table]['config']['ptable'] == '')
+        {
+            return;
+        }
+
 		$objLanguages = $this->Database->prepare("SELECT id FROM " . $table . " WHERE " . ($GLOBALS['TL_DCA'][$table]['config']['pidColumn'] ? $GLOBALS['TL_DCA'][$table]['config']['pidColumn'] : $this->strPidColumn) . " IN (SELECT id FROM " . $table . " WHERE pid=?)")
 									   ->execute($id);
 
