@@ -23,7 +23,7 @@ $GLOBALS['TL_DCA']['table']['config']['languages'] = array('en', 'de', 'pl');
 $GLOBALS['TL_DCA']['table']['config']['langColumn'] = 'language';
 
 // Database column that contains the reference id (default: "langPid")
-$GLOBALS['TL_DCA']['table']['config']['pidColumn'] = 'langPid';
+$GLOBALS['TL_DCA']['table']['config']['langPid'] = 'langPid';
 
 // Fallback language - if none is given then there will be another language "fallback" selectable from the dropdown
 $GLOBALS['TL_DCA']['table']['config']['fallbackLang'] = 'en';
