@@ -33,7 +33,7 @@ class DC_Multilingual extends \DC_Table
      * Array containing all languages that are translatable
      * @var array
      */
-    protected $arrLanguages = array();
+    protected $arrTranslatableLanguages = array();
 
     /**
      * Fallback language
@@ -71,11 +71,11 @@ class DC_Multilingual extends \DC_Table
         // languages array
         if (isset($GLOBALS['TL_DCA'][$this->strTable]['config']['languages']))
         {
-            $this->arrLanguages = $GLOBALS['TL_DCA'][$this->strTable]['config']['languages'];
+            $this->arrTranslatableLanguages = $GLOBALS['TL_DCA'][$this->strTable]['config']['languages'];
         }
         else
         {
-            $this->arrLanguages = $this->getRootPageLanguages();
+            $this->arrTranslatableLanguages = $this->getRootPageLanguages();
         }
 
         // fallback language
@@ -83,9 +83,9 @@ class DC_Multilingual extends \DC_Table
         {
             $this->strFallbackLang = $GLOBALS['TL_DCA'][$this->strTable]['config']['fallbackLang'];
 
-            if (!in_array($this->strFallbackLang, $this->arrLanguages))
+            if (!in_array($this->strFallbackLang, $this->arrTranslatableLanguages))
             {
-                $this->arrLanguages[] = $this->strFallbackLang;
+                $this->arrTranslatableLanguages[] = $this->strFallbackLang;
             }
         }
 
@@ -186,7 +186,7 @@ class DC_Multilingual extends \DC_Table
 
         // Incomplete records can't be translated (see #17)
         if (!$objRow->tstamp) {
-            $this->arrLanguages = array();
+            $this->arrTranslatableLanguages = array();
         }
 
         // Load and/or change language
@@ -194,7 +194,7 @@ class DC_Multilingual extends \DC_Table
         {
             $session = $this->Session->getData();
 
-            if (in_array($this->Input->post('language'), array_keys($this->arrLanguages)))
+            if (in_array($this->Input->post('language'), array_keys($this->arrTranslatableLanguages)))
             {
                 $session['language'][$this->strTable][$this->intId] = $this->Input->post('language');
 
@@ -214,7 +214,7 @@ class DC_Multilingual extends \DC_Table
             $this->reload();
         }
 
-        if (strlen($_SESSION['BE_DATA']['language'][$this->strTable][$this->intId]) && in_array($_SESSION['BE_DATA']['language'][$this->strTable][$this->intId], array_keys($this->arrLanguages)))
+        if (strlen($_SESSION['BE_DATA']['language'][$this->strTable][$this->intId]) && in_array($_SESSION['BE_DATA']['language'][$this->strTable][$this->intId], array_keys($this->arrTranslatableLanguages)))
         {
             $objRow = $this->Database->prepare("SELECT * FROM " . $this->strTable . " WHERE {$this->strPidColumn}=? AND {$this->strLangColumn}=?")->execute($this->intId, $_SESSION['BE_DATA']['language'][$this->strTable][$this->intId]);
 
@@ -421,7 +421,7 @@ class DC_Multilingual extends \DC_Table
         $hasLanguages = false;
 
         // Check languages
-        if (is_array($this->arrLanguages) && count($this->arrLanguages) > 1)
+        if (is_array($this->arrTranslatableLanguages) && count($this->arrTranslatableLanguages) > 1)
         {
             $hasLanguages = true;
 
@@ -430,7 +430,7 @@ class DC_Multilingual extends \DC_Table
             $available = ($this->strFallbackLang) ? '' : '<option value="">' . $GLOBALS['TL_LANG']['MSC']['defaultLanguage'] . '</option>';
             $undefined = '';
 
-            foreach ($this->arrLanguages as $language)
+            foreach ($this->arrTranslatableLanguages as $language)
             {
                 $value = ($this->strFallbackLang == $language) ? '' : $language;
                 $label = ($this->strFallbackLang == $language) ? ($arrLanguageLabels[$language] . ' (' . $GLOBALS['TL_LANG']['MSC']['defaultLanguage'] . ')') : $arrLanguageLabels[$language];
@@ -1284,7 +1284,7 @@ class DC_Multilingual extends \DC_Table
      */
     public function getAllowedLanguages()
     {
-        return $this->arrLanguages;
+        return $this->arrTranslatableLanguages;
     }
 
 
