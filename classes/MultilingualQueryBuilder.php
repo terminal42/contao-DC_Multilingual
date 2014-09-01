@@ -97,7 +97,7 @@ class MultilingualQueryBuilder
     {
         $arrFields = array();
 
-        \Haste\Haste::getInstance()->call('loadDataContainer', $strTable);
+        \Controller::loadDataContainer($strTable);
 
         foreach ($GLOBALS['TL_DCA'][$strTable]['fields'] as $k => $v) {
             if ($v['eval']['translatableFor']) {
