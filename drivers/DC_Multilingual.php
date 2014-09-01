@@ -417,13 +417,9 @@ class DC_Multilingual extends \DC_Table
             $version = '';
         }
 
-        $hasLanguages = false;
-
         // Check languages
         if (is_array($this->arrTranslatableLanguages) && count($this->arrTranslatableLanguages) > 1)
         {
-            $hasLanguages = true;
-
             $arrAvailableLanguages = $this->Database->prepare("SELECT {$this->strLangColumn} FROM " . $this->strTable . " WHERE {$this->strPidColumn}=?")->execute($this->intId)->fetchEach($this->strLangColumn);
             $arrLanguageLabels = $this->getLanguages();
             $available = ($this->strFallbackLang) ? '' : '<option value="">' . $GLOBALS['TL_LANG']['MSC']['defaultLanguage'] . '</option>';
@@ -455,7 +451,7 @@ class DC_Multilingual extends \DC_Table
                 }
             }
 
-            $languagePanel .= '<form action="'.ampersand($this->Environment->request, true).'" id="tl_language" class="tl_form" method="post"' . (strlen($version) ? ' style="float:left;width:360px"' : '') . '>
+            $languagePanel = '<form action="'.ampersand($this->Environment->request, true).'" id="tl_language" class="tl_form" method="post"' . (strlen($version) ? ' style="float:left;width:360px"' : '') . '>
 <div class="tl_formbody" style="margin-left:5px;float:left;">
 <input type="hidden" name="FORM_SUBMIT" value="tl_language">
 <input type="hidden" name="REQUEST_TOKEN" value="'.REQUEST_TOKEN.'">
@@ -874,8 +870,6 @@ class DC_Multilingual extends \DC_Table
      */
     protected function generateTree($table, $id, $arrPrevNext, $blnHasSorting, $intMargin=0, $arrClipboard=null, $blnCircularReference=false, $protectedPage=false, $blnNoRecursion=false)
     {
-        static $session;
-
         $session = $this->Session->getData();
         $node = ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 6) ? $this->strTable.'_'.$table.'_tree' : $this->strTable.'_tree';
 

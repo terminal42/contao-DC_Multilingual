@@ -30,7 +30,6 @@ class MultilingualQueryBuilder
      */
     public static function find($arrOptions)
     {
-        $objBase = new \DcaExtractor($arrOptions['table']);
         $arrLanguageFields = static::getMultilingualFields($arrOptions['table']);
         $strPid = \DC_Multilingual::getPidColumnForTable($arrOptions['table']);
         $strLang = \DC_Multilingual::getLanguageColumnForTable($arrOptions['table']);
