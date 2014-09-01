@@ -130,15 +130,15 @@ class DC_Multilingual extends \DC_Table
      * @param integer
      * @return string
      */
-    public function edit($intID=false, $ajaxId=false)
+    public function edit($intID=null, $ajaxId=null)
     {
         if ($GLOBALS['TL_DCA'][$this->strTable]['config']['notEditable'])
         {
-            $this->log('Table "'.$this->strTable.'" is not editable', 'DC_Table edit()', TL_ERROR);
+            $this->log('Table "'.$this->strTable.'" is not editable', __METHOD__, TL_ERROR);
             $this->redirect('contao/main.php?act=error');
         }
 
-        if ($intID)
+        if ($intID != '')
         {
             $this->intId = $intID;
         }
@@ -146,6 +146,7 @@ class DC_Multilingual extends \DC_Table
         $return = '';
         $this->values[] = $this->intId;
         $this->procedure[] = 'id=?';
+
         $this->blnCreateNewVersion = false;
         $objVersions = new \Versions($this->strTable, $this->intId);
 
@@ -244,7 +245,6 @@ class DC_Multilingual extends \DC_Table
             $this->strCurrentLang = $_SESSION['BE_DATA']['language'][$this->strTable][$this->intId];
         }
 
-        $objVersions = new Versions($this->strTable, $this->intId);
         $objVersions->initialize();
 
         // Build an array from boxes and rows
@@ -252,7 +252,7 @@ class DC_Multilingual extends \DC_Table
         $boxes = trimsplit(';', $this->strPalette);
         $legends = array();
 
-        if (count($boxes))
+        if (!empty($boxes))
         {
             foreach ($boxes as $k=>$v)
             {
@@ -261,13 +261,13 @@ class DC_Multilingual extends \DC_Table
 
                 foreach ($boxes[$k] as $kk=>$vv)
                 {
-                    if (preg_match('/^\[.*\]$/i', $vv))
+                    if (preg_match('/^\[.*\]$/', $vv))
                     {
                         ++$eCount;
                         continue;
                     }
 
-                    if (preg_match('/^\{.*\}$/i', $vv))
+                    if (preg_match('/^\{.*\}$/', $vv))
                     {
                         $legends[$k] = substr($vv, 1, -1);
                         unset($boxes[$k][$kk]);
@@ -310,7 +310,8 @@ class DC_Multilingual extends \DC_Table
             $class = 'tl_tbox';
             $fs = $this->Session->get('fieldset_states');
             $blnIsFirst = true;
-// Render boxes
+
+            // Render boxes
             foreach ($boxes as $k=>$v)
             {
                 $strAjax = '';
@@ -512,7 +513,7 @@ class DC_Multilingual extends \DC_Table
             }
         }
 
-        // Add some buttons and end the form
+        // Add the buttons and end the form
         $return .= '
 </div>
 
@@ -571,35 +572,40 @@ class DC_Multilingual extends \DC_Table
             }
 
             // Save the current version
-            if ($this->blnCreateNewVersion && \Input::post('SUBMIT_TYPE') != 'auto')
+            if ($this->blnCreateNewVersion)
             {
                 $objVersions->create();
 
                 // Call the onversion_callback
-                if (is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['onversion_callback'])) {
-                    foreach ($GLOBALS['TL_DCA'][$this->strTable]['config']['onversion_callback'] as $callback) {
-                        if (is_array($callback)) {
+                if (is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['onversion_callback']))
+                {
+                    foreach ($GLOBALS['TL_DCA'][$this->strTable]['config']['onversion_callback'] as $callback)
+                    {
+                        if (is_array($callback))
+                        {
                             $this->import($callback[0]);
                             $this->$callback[0]->$callback[1]($this->strTable, $this->intId, $this);
-                        } elseif (is_callable($callback)) {
+                        }
+                        elseif (is_callable($callback))
+                        {
                             $callback($this->strTable, $this->intId, $this);
                         }
                     }
                 }
 
-                $this->log('A new version of record "'.$this->strTable.'.id='.$this->intId.'" has been created'.$this->getParentEntries($this->strTable, $this->intId), 'DC_Table edit()', TL_GENERAL);
+                $this->log('A new version of record "'.$this->strTable.'.id='.$this->intId.'" has been created'.$this->getParentEntries($this->strTable, $this->intId), __METHOD__, TL_GENERAL);
             }
 
             // Set the current timestamp (-> DO NOT CHANGE THE ORDER version - timestamp)
             if ($GLOBALS['TL_DCA'][$this->strTable]['config']['dynamicPtable'])
             {
                 $this->Database->prepare("UPDATE " . $this->strTable . " SET ptable=?, tstamp=? WHERE id=?")
-                               ->execute($this->ptable, time(), $this->intId);
+                    ->execute($this->ptable, time(), $this->intId);
             }
             else
             {
                 $this->Database->prepare("UPDATE " . $this->strTable . " SET tstamp=? WHERE id=?")
-                               ->execute(time(), $this->intId);
+                    ->execute(time(), $this->intId);
             }
 
             // Redirect
@@ -607,16 +613,16 @@ class DC_Multilingual extends \DC_Table
             {
                 \Message::reset();
                 \System::setCookie('BE_PAGE_OFFSET', 0, 0);
+
                 $this->redirect($this->getReferer());
             }
             elseif (isset($_POST['saveNedit']))
             {
                 \Message::reset();
                 \System::setCookie('BE_PAGE_OFFSET', 0, 0);
-                $strUrl = $this->addToUrl($GLOBALS['TL_DCA'][$this->strTable]['list']['operations']['edit']['href']);
 
-                $strUrl = preg_replace('/(&amp;)?s2e=[^&]*/i', '', $strUrl);
-                $strUrl = preg_replace('/(&amp;)?act=[^&]*/i', '', $strUrl);
+                $strUrl = $this->addToUrl($GLOBALS['TL_DCA'][$this->strTable]['list']['operations']['edit']['href'], false);
+                $strUrl = preg_replace('/(&amp;)?(s2e|act)=[^&]*/i', '', $strUrl);
 
                 $this->redirect($strUrl);
             }
@@ -627,7 +633,7 @@ class DC_Multilingual extends \DC_Table
 
                 if ($this->ptable == '')
                 {
-                    $this->redirect(\Environment::get('script') . '?do=' . \Input::get('do'));
+                    $this->redirect(TL_SCRIPT . '?do=' . \Input::get('do'));
                 }
                 // TODO: try to abstract this
                 elseif (($this->ptable == 'tl_theme' && $this->strTable == 'tl_style_sheet') || ($this->ptable == 'tl_page' && $this->strTable == 'tl_article'))
@@ -643,7 +649,8 @@ class DC_Multilingual extends \DC_Table
             {
                 \Message::reset();
                 \System::setCookie('BE_PAGE_OFFSET', 0, 0);
-                $strUrl = \Environment::get('script') . '?do=' . \Input::get('do');
+
+                $strUrl = TL_SCRIPT . '?do=' . \Input::get('do');
 
                 if (isset($_GET['table']))
                 {
@@ -812,6 +819,8 @@ class DC_Multilingual extends \DC_Table
 
             \System::loadLanguageFile($table);
             $this->loadDataContainer($table);
+
+            $blnPtable = true;
         }
 
         $blnProtected = false;
@@ -829,7 +838,7 @@ class DC_Multilingual extends \DC_Table
 
         // Get records
         $objRows = $this->Database->prepare("SELECT id FROM " . $table . " WHERE " . $this->strPidColumn . "=0 AND pid=?" . ($hasSorting ? " ORDER BY sorting" : ""))
-                                   ->execute($id);
+            ->execute($id);
 
         while ($objRows->next())
         {
@@ -846,9 +855,9 @@ class DC_Multilingual extends \DC_Table
             $arrClipboard = $arrClipboard[$this->strTable];
         }
 
-        for ($i=0; $i<count($arrIds); $i++)
+        for ($i=0, $c=count($arrIds); $i<$c; $i++)
         {
-            $return .= ' ' . trim($this->generateTree($table, $arrIds[$i], array('p'=>$arrIds[($i-1)], 'n'=>$arrIds[($i+1)]), $hasSorting, $margin, ($blnClipboard ? $arrClipboard : false), ($id == $arrClipboard ['id'] || (is_array($arrClipboard ['id']) && in_array($id, $arrClipboard ['id'])) || (!$blnPtable && !is_array($arrClipboard['id']) && in_array($id, $this->getChildRecords($arrClipboard['id'], $table)))), $blnProtected));
+            $return .= ' ' . trim($this->generateTree($table, $arrIds[$i], array('p'=>$arrIds[($i-1)], 'n'=>$arrIds[($i+1)]), $hasSorting, $margin, ($blnClipboard ? $arrClipboard : false), ($id == $arrClipboard ['id'] || (is_array($arrClipboard ['id']) && in_array($id, $arrClipboard ['id'])) || (!$blnPtable && !is_array($arrClipboard['id']) && in_array($id, $this->Database->getChildRecords($arrClipboard['id'], $table)))), $blnProtected));
         }
 
         return $return;
@@ -883,8 +892,8 @@ class DC_Multilingual extends \DC_Table
         }
 
         $objRow = $this->Database->prepare("SELECT * FROM " . $table . " WHERE id=?")
-                                 ->limit(1)
-                                 ->execute($id);
+            ->limit(1)
+            ->execute($id);
 
         // Return if there is no result
         if ($objRow->numRows < 1)
@@ -902,7 +911,6 @@ class DC_Multilingual extends \DC_Table
         {
             $this->current[] = $objRow->id;
         }
-
 
         // Check whether there are child records
         if (!$blnNoRecursion)
@@ -930,15 +938,17 @@ class DC_Multilingual extends \DC_Table
         $session[$node][$id] = (is_int($session[$node][$id])) ? $session[$node][$id] : 0;
         $mouseover = ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 5 || $table == $this->strTable) ? ' onmouseover="Theme.hoverDiv(this,1)" onmouseout="Theme.hoverDiv(this,0)" onclick="Theme.toggleSelect(this)"' : '';
 
-        $return .= "\n  " . '<li class="'.((($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 5 && $objRow->type == 'root') || $table != $this->strTable) ? 'tl_folder' : 'tl_file').' click2edit"'.$mouseover.'><div class="tl_left" style="padding-left:'.($intMargin + $intSpacing + (empty($childs) ? 20 : 0)).'px">';
+        $return .= "\n  " . '<li class="'.((($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 5 && $objRow->type == 'root') || $table != $this->strTable) ? 'tl_folder' : 'tl_file').' click2edit"'.$mouseover.'><div class="tl_left" style="padding-left:'.($intMargin + $intSpacing).'px">';
 
         // Calculate label and add a toggle button
         $args = array();
+        $folderAttribute = 'style="margin-left:20px"';
         $showFields = $GLOBALS['TL_DCA'][$table]['list']['label']['fields'];
         $level = ($intMargin / $intSpacing + 1);
 
         if (!empty($childs))
         {
+            $folderAttribute = '';
             $img = ($session[$node][$id] == 1) ? 'folMinus.gif' : 'folPlus.gif';
             $alt = ($session[$node][$id] == 1) ? $GLOBALS['TL_LANG']['MSC']['collapseNode'] : $GLOBALS['TL_LANG']['MSC']['expandNode'];
             $return .= '<a href="'.$this->addToUrl('ptg='.$id).'" title="'.specialchars($alt).'" onclick="Backend.getScrollOffset();return AjaxRequest.toggleStructure(this,\''.$node.'_'.$id.'\','.$level.','.$GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'].')">'.\Image::getHtml($img, '', 'style="margin-right:2px"').'</a>';
@@ -958,14 +968,14 @@ class DC_Multilingual extends \DC_Table
                 list($strTable, $strField) = explode('.', $strTable);
 
                 $objRef = $this->Database->prepare("SELECT " . $strField . " FROM " . $strTable . " WHERE id=?")
-                                         ->limit(1)
-                                         ->execute($objRow->$strKey);
+                    ->limit(1)
+                    ->execute($objRow->$strKey);
 
                 $args[$k] = $objRef->numRows ? $objRef->$strField : '';
             }
             elseif (in_array($GLOBALS['TL_DCA'][$table]['fields'][$v]['flag'], array(5, 6, 7, 8, 9, 10)))
             {
-                $args[$k] = \Date::parse($GLOBALS['TL_CONFIG']['datimFormat'], $objRow->$v);
+                $args[$k] = \Date::parse(\Config::get('datimFormat'), $objRow->$v);
             }
             elseif ($GLOBALS['TL_DCA'][$table]['fields'][$v]['inputType'] == 'checkbox' && !$GLOBALS['TL_DCA'][$table]['fields'][$v]['eval']['multiple'])
             {
@@ -988,15 +998,20 @@ class DC_Multilingual extends \DC_Table
         $label = preg_replace('/\(\) ?|\[\] ?|\{\} ?|<> ?/', '', $label);
 
         // Call the label_callback ($row, $label, $this)
-        if (is_array($GLOBALS['TL_DCA'][$table]['list']['label']['label_callback'])) {
+        if (is_array($GLOBALS['TL_DCA'][$table]['list']['label']['label_callback']))
+        {
             $strClass = $GLOBALS['TL_DCA'][$table]['list']['label']['label_callback'][0];
             $strMethod = $GLOBALS['TL_DCA'][$table]['list']['label']['label_callback'][1];
 
             $this->import($strClass);
-            $return .= $this->$strClass->$strMethod($objRow->row(), $label, $this, '', false, $blnProtected);
-        } elseif (is_callable($GLOBALS['TL_DCA'][$table]['list']['label']['label_callback'])) {
-            $return .= $GLOBALS['TL_DCA'][$table]['list']['label']['label_callback']($objRow->row(), $label, $this, '', false, $blnProtected);
-        } else {
+            $return .= $this->$strClass->$strMethod($objRow->row(), $label, $this, $folderAttribute, false, $blnProtected);
+        }
+        elseif (is_callable($GLOBALS['TL_DCA'][$table]['list']['label']['label_callback']))
+        {
+            $return .= $GLOBALS['TL_DCA'][$table]['list']['label']['label_callback']($objRow->row(), $label, $this, $folderAttribute, false, $blnProtected);
+        }
+        else
+        {
             $return .= \Image::getHtml('iconPLAIN.gif', '') . ' ' . $label;
         }
 
@@ -1017,22 +1032,27 @@ class DC_Multilingual extends \DC_Table
             $_buttons .= ' ';
 
             // Call paste_button_callback(&$dc, $row, $table, $blnCircularReference, $arrClipboard, $childs, $previous, $next)
-            if (is_array($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['paste_button_callback'])) {
+            if (is_array($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['paste_button_callback']))
+            {
                 $strClass = $GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['paste_button_callback'][0];
                 $strMethod = $GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['paste_button_callback'][1];
 
                 $this->import($strClass);
                 $_buttons .= $this->$strClass->$strMethod($this, $objRow->row(), $table, $blnCircularReference, $arrClipboard, $childs, $previous, $next);
-            } elseif (is_callable($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['paste_button_callback'])) {
+            }
+            elseif (is_callable($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['paste_button_callback']))
+            {
                 $_buttons .= $GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['paste_button_callback']($this, $objRow->row(), $table, $blnCircularReference, $arrClipboard, $childs, $previous, $next);
-            } else {
+            }
+            else
+            {
                 $imagePasteAfter = \Image::getHtml('pasteafter.gif', sprintf($GLOBALS['TL_LANG'][$this->strTable]['pasteafter'][1], $id));
                 $imagePasteInto = \Image::getHtml('pasteinto.gif', sprintf($GLOBALS['TL_LANG'][$this->strTable]['pasteinto'][1], $id));
 
                 // Regular tree (on cut: disable buttons of the page all its childs to avoid circular references)
                 if ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 5)
                 {
-                    $_buttons .= ($arrClipboard['mode'] == 'cut' && ($blnCircularReference || $arrClipboard['id'] == $id) || $arrClipboard['mode'] == 'cutAll' && ($blnCircularReference || in_array($id, $arrClipboard['id'])) || (!empty($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['root']) && in_array($id, $this->root))) ? \Image::getHtml('pasteafter_.gif').' ' : '<a href="'.$this->addToUrl('act='.$arrClipboard['mode'].'&amp;mode=1&amp;pid='.$id.(!is_array($arrClipboard['id']) ? '&amp;id='.$arrClipboard['id'] : '')).'" title="'.specialchars(sprintf($GLOBALS['TL_LANG'][$this->strTable]['pasteafter'][1], $id)).'" onclick="Backend.getScrollOffset()">'.$imagePasteAfter.'</a> ';
+                    $_buttons .= ($arrClipboard['mode'] == 'cut' && ($blnCircularReference || $arrClipboard['id'] == $id) || $arrClipboard['mode'] == 'cutAll' && ($blnCircularReference || in_array($id, $arrClipboard['id'])) || (!empty($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['root']) && !$GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['rootPaste'] && in_array($id, $this->root))) ? \Image::getHtml('pasteafter_.gif').' ' : '<a href="'.$this->addToUrl('act='.$arrClipboard['mode'].'&amp;mode=1&amp;pid='.$id.(!is_array($arrClipboard['id']) ? '&amp;id='.$arrClipboard['id'] : '')).'" title="'.specialchars(sprintf($GLOBALS['TL_LANG'][$this->strTable]['pasteafter'][1], $id)).'" onclick="Backend.getScrollOffset()">'.$imagePasteAfter.'</a> ';
                     $_buttons .= ($arrClipboard['mode'] == 'paste' && ($blnCircularReference || $arrClipboard['id'] == $id) || $arrClipboard['mode'] == 'cutAll' && ($blnCircularReference || in_array($id, $arrClipboard['id']))) ? \Image::getHtml('pasteinto_.gif').' ' : '<a href="'.$this->addToUrl('act='.$arrClipboard['mode'].'&amp;mode=2&amp;pid='.$id.(!is_array($arrClipboard['id']) ? '&amp;id='.$arrClipboard['id'] : '')).'" title="'.specialchars(sprintf($GLOBALS['TL_LANG'][$this->strTable]['pasteinto'][1], $id)).'" onclick="Backend.getScrollOffset()">'.$imagePasteInto.'</a> ';
                 }
 
@@ -1051,7 +1071,7 @@ class DC_Multilingual extends \DC_Table
         if ($table != $this->strTable)
         {
             $objChilds = $this->Database->prepare("SELECT id FROM " . $this->strTable . " WHERE pid=?" . ($blnHasSorting ? " ORDER BY sorting" : ''))
-                                         ->execute($id);
+                ->execute($id);
 
             if ($objChilds->numRows)
             {
@@ -1059,7 +1079,7 @@ class DC_Multilingual extends \DC_Table
 
                 for ($j=0, $c=count($ids); $j<$c; $j++)
                 {
-                    $return .= $this->generateTree($this->strTable, $ids[$j], array('pp'=>$ids[($j-1)], 'nn'=>$ids[($j+1)]), $blnHasSorting, ($intMargin + $intSpacing), $arrClipboard, false, ($j<(count($ids)-1) || !empty($childs)));
+                    $return .= $this->generateTree($this->strTable, $ids[$j], array('pp'=>$ids[($j-1)], 'nn'=>$ids[($j+1)]), $blnHasSorting, ($intMargin + $intSpacing + 20), $arrClipboard, false, ($j<(count($ids)-1) || !empty($childs)));
                 }
             }
         }
@@ -1116,12 +1136,16 @@ class DC_Multilingual extends \DC_Table
             // PID is set (insert after or into the parent record)
             if (is_numeric($pid))
             {
+                $newPID = null;
+                $newSorting = null;
+
                 // Insert the current record at the beginning when inserting into the parent record
                 if ($insertInto)
                 {
                     $newPID = $pid;
+
                     $objSorting = $this->Database->prepare("SELECT MIN(sorting) AS sorting FROM " . $this->strTable . " WHERE pid=? AND {$this->strPidColumn}=0")
-                                                 ->executeUncached($pid);
+                        ->execute($pid);
 
                     // Select sorting value of the first record
                     if ($objSorting->numRows)
@@ -1131,8 +1155,8 @@ class DC_Multilingual extends \DC_Table
                         // Resort if the new sorting value is not an integer or smaller than 1
                         if (($curSorting % 2) != 0 || $curSorting < 1)
                         {
-                            $objNewSorting = $this->Database->prepare("SELECT id, sorting FROM " . $this->strTable . " WHERE pid=? AND {$this->strPidColumn}=0 ORDER BY sorting" )
-                                                            ->executeUncached($pid);
+                            $objNewSorting = $this->Database->prepare("SELECT id FROM " . $this->strTable . " WHERE pid=? AND {$this->strPidColumn}=0 ORDER BY sorting" )
+                                ->execute($pid);
 
                             $count = 2;
                             $newSorting = 128;
@@ -1140,8 +1164,8 @@ class DC_Multilingual extends \DC_Table
                             while ($objNewSorting->next())
                             {
                                 $this->Database->prepare("UPDATE " . $this->strTable . " SET sorting=? WHERE id=?")
-                                               ->limit(1)
-                                               ->execute(($count++*128), $objNewSorting->id);
+                                    ->limit(1)
+                                    ->execute(($count++ * 128), $objNewSorting->id);
                             }
                         }
 
@@ -1156,9 +1180,9 @@ class DC_Multilingual extends \DC_Table
                 // Else insert the current record after the parent record
                 elseif ($pid > 0)
                 {
-                    $objSorting = $this->Database->prepare("SELECT * FROM " . $this->strTable . " WHERE id=? AND {$this->strPidColumn}=0")
-                                                 ->limit(1)
-                                                 ->executeUncached($pid);
+                    $objSorting = $this->Database->prepare("SELECT pid, sorting FROM " . $this->strTable . " WHERE id=? AND {$this->strPidColumn}=0")
+                        ->limit(1)
+                        ->execute($pid);
 
                     // Set parent ID of the current record as new parent ID
                     if ($objSorting->numRows)
@@ -1170,7 +1194,7 @@ class DC_Multilingual extends \DC_Table
                         if (is_numeric($newPID))
                         {
                             $objNextSorting = $this->Database->prepare("SELECT MIN(sorting) AS sorting FROM " . $this->strTable . " WHERE pid=? AND {$this->strPidColumn}=0 AND sorting>?")
-                                                               ->executeUncached($newPID, $curSorting);
+                                ->execute($newPID, $curSorting);
 
                             // Select sorting value of the next record
                             if ($objNextSorting->sorting !== null)
@@ -1183,16 +1207,16 @@ class DC_Multilingual extends \DC_Table
                                     $count = 1;
 
                                     $objNewSorting = $this->Database->prepare("SELECT id, sorting FROM " . $this->strTable . " WHERE pid=? AND {$this->strPidColumn}=0 ORDER BY sorting")
-                                                                    ->executeUncached($newPID);
+                                        ->execute($newPID);
 
                                     while ($objNewSorting->next())
                                     {
                                         $this->Database->prepare("UPDATE " . $this->strTable . " SET sorting=? WHERE id=?")
-                                                       ->execute(($count++*128), $objNewSorting->id);
+                                            ->execute(($count++ * 128), $objNewSorting->id);
 
                                         if ($objNewSorting->sorting == $curSorting)
                                         {
-                                            $newSorting = ($count++*128);
+                                            $newSorting = ($count++ * 128);
                                         }
                                     }
                                 }
