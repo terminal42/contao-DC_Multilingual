@@ -183,11 +183,6 @@ class DC_Multilingual extends \DC_Table
 
         $this->objActiveRecord = $objRow;
 
-        // Check for tinyMCE
-        if (version_compare(VERSION, '3.3', '<')) {
-            $this->checkForTinyMce();
-        }
-
         // Incomplete records can't be translated (see #17)
         if (!$objRow->tstamp) {
             $this->arrTranslatableLanguages = array();
