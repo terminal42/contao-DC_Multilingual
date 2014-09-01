@@ -62,7 +62,7 @@ class DC_Multilingual extends \DC_Table
 
     /**
      * Set language specific config
-     * @param string | the database table
+     * @param string $strTable the database table
      */
     public function __construct($strTable)
     {

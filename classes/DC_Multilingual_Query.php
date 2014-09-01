@@ -43,11 +43,12 @@ class DC_Multilingual_Query extends Controller
         $this->strTable = $strTable;
 
         // Load DataContainer if its not already done
-        if (!is_array($GLOBALS['TL_DCA'][$this->strTable])) $this->loadDataContainer($this->strTable);
+        if (!is_array($GLOBALS['TL_DCA'][$this->strTable])) {
+            $this->loadDataContainer($this->strTable);
+        }
 
         // add multilingual fields
-        foreach ($GLOBALS['TL_DCA'][$this->strTable]['fields'] as $field => $arrData)
-        {
+        foreach ($GLOBALS['TL_DCA'][$this->strTable]['fields'] as $field => $arrData) {
             if ($arrData['eval']['translatableFor'] == '')continue;
             $this->arrFields[] = "IFNULL(t2.$field, t1.$field) AS $field";
         }
@@ -55,19 +56,21 @@ class DC_Multilingual_Query extends Controller
         // set default language
         $this->language = $GLOBALS['TL_LANGUAGE'];
 
-
         return $this;
     }
 
 
     /**
      * Add a field
+     *
      * @param string $strField fielname
+     *
      * @return DC_Multilingual_Query current instance
      */
     public function addField($strField)
     {
         $this->arrFields[] = $strField;
+
         return $this;
     }
 
@@ -75,36 +78,45 @@ class DC_Multilingual_Query extends Controller
     /**
      * Add a WHERE-constraint
      * all WHERE-pieces glued with AND
+     *
      * @param string $strWhere
+     *
      * @return DC_Multilingual_Query current instance
      */
     public function addWhere($strWhere)
     {
         $this->arrWhere[] = $strWhere;
+
         return $this;
     }
 
 
     /**
      * Add a JOIN-statement
+     *
      * @param string $strJoin
+     *
      * @return DC_Multilingual_Query current instance
      */
     public function addJoin($strJoin)
     {
         $this->arrJoin[] = $strJoin;
+
         return $this;
     }
 
 
     /**
      * Add a ORDER-constraint
+     *
      * @param string $strOrderfield
+     *
      * @return DC_Multilingual_Query current instance
      */
     public function addOrder($strOrderfield)
     {
         $this->arrOrder[] = $strOrderfield;
+
         return $this;
     }
 
@@ -133,11 +145,10 @@ WHERE t1.$strPid=0".
 
     /**
      * Returns the Database_Statement for the query
-     * @return Database_Statement
+     * @return \Database\Statement
      */
     public function getStatement()
     {
-        $this->import('Database');
-        return $this->Database->prepare($this->getQuery());
+        return \Database::getInstance()->prepare($this->getQuery());
     }
 }
