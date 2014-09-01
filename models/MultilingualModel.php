@@ -35,7 +35,7 @@ abstract class MultilingualModel extends \Model
     protected static function buildFindQuery(array $arrOptions)
     {
         if (static::$blnMultilingual === false) {
-            return parent::find($arrOptions);
+            return parent::buildFindQuery($arrOptions);
         }
 
         return \MultilingualQueryBuilder::find($arrOptions);
@@ -52,7 +52,7 @@ abstract class MultilingualModel extends \Model
     protected static function buildCountQuery(array $arrOptions)
     {
         if (static::$blnMultilingual === false) {
-            return parent::count($strColumn, $varValue);
+            return parent::buildCountQuery($arrOptions);
         }
 
         return \MultilingualQueryBuilder::count($arrOptions);
