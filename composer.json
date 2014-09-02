@@ -1,0 +1,32 @@
+{
+    "name":"terminal42/dc_multilingual",
+    "description":"DC_Multilingual extension for Contao Open Source CMS",
+    "keywords":["contao", "multilingual", "driver"],
+    "type":"contao-module",
+    "license":"LGPL-3.0+",
+    "authors":[
+        {
+            "name":"terminal42 gmbh",
+            "homepage":"http://www.terminal42.ch"
+        },
+        {
+            "name":"Codefog",
+            "homepage":"http://codefog.pl"
+        }
+    ],
+    "require":{
+        "php":">=5.3.2",
+        "contao/core":"~3.3",
+        "contao-community-alliance/composer-plugin":"2.*"
+    },
+    "replace": {
+        "contao-legacy/dc_multilingual": "self.version"
+    },
+    "extra":{
+        "contao": {
+            "sources":{
+                "":"system/modules/dc_multilingual"
+            }
+        }
+    }
+}
