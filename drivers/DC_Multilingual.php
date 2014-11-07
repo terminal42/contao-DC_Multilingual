@@ -1352,6 +1352,15 @@ class DC_Multilingual extends \DC_Table
     protected function getRootPageLanguages()
     {
         $objPages = $this->Database->execute("SELECT DISTINCT language FROM tl_page WHERE type='root' AND language!=''");
-        return $objPages->fetchEach('language');
+        $languages = $objPages->fetchEach('language');
+
+        array_walk(
+            $languages,
+            function(&$value) {
+                $value = str_replace('-', '_', $value);
+            }
+        );
+
+        return $languages;
     }
 }
