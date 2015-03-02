@@ -91,6 +91,8 @@ class DC_Multilingual extends \DC_Table
 
         $this->strPidColumn = static::getPidColumnForTable($this->strTable);
         $this->strLangColumn = static::getLanguageColumnForTable($this->strTable);
+
+        $GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['filter'][] = array($this->strLangColumn.'=?', '');
     }
 
 
