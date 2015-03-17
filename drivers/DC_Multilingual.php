@@ -740,12 +740,6 @@ class DC_Multilingual extends \DC_Table
     {
         parent::copyChilds($table, $insertID, $id, $parentId);
 
-        // Return if the table is not multilingual
-        if ($GLOBALS['TL_DCA'][$table]['config']['dataContainer'] != 'Multilingual')
-        {
-            return;
-        }
-
         $strPidColumn = $GLOBALS['TL_DCA'][$table]['config']['pidColumn'] ? $GLOBALS['TL_DCA'][$table]['config']['pidColumn'] : $this->strPidColumn;
         $objLanguage = $this->Database->prepare("SELECT id FROM " . $table . " WHERE " . $strPidColumn . "=? AND id>?")
                                       ->limit(1)
@@ -1274,12 +1268,6 @@ class DC_Multilingual extends \DC_Table
     public function deleteChilds($table, $id, &$delete)
     {
         parent::deleteChilds($table, $id, $delete);
-
-        // Return if the table is not multilingual
-        if ($GLOBALS['TL_DCA'][$table]['config']['dataContainer'] != 'Multilingual')
-        {
-            return;
-        }
 
         // Do not delete record if there is no parent table
         if ($GLOBALS['TL_DCA'][$table]['config']['ptable'] == '')
