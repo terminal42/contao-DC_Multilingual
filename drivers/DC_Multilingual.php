@@ -173,14 +173,14 @@ class DC_Multilingual extends \DC_Table
         // Redirect if there is no record with the given ID
         if ($objRow->numRows < 1)
         {
-            $this->log('Could not load record ID '.$this->intId.' of table "'.$this->strTable.'"', 'DC_Multilingual edit()', TL_ERROR);
+            $this->log('Could not load record ID '.$this->intId.' of table "'.$this->strTable.'"', __METHOD__, TL_ERROR);
             $this->redirect('contao/main.php?act=error');
         }
 
         // ID of a language record is not allowed
         elseif ($objRow->{$this->strLangColumn} != '')
         {
-            $this->log('Cannot edit language record ID "'.$this->intId.'" of table "'.$this->strTable.'"!', 'DC_Multilingual edit()', TL_ERROR);
+            $this->log('Cannot edit language record ID "'.$this->intId.'" of table "'.$this->strTable.'"!', __METHOD__, TL_ERROR);
             $this->redirect('contao/main.php?act=error');
         }
 
