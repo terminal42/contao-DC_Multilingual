@@ -708,7 +708,7 @@ class DC_Multilingual extends \DC_Table
     {
         $insertId = parent::copy(true);
         $time = time();
-        $objTranslations = $this->Database->prepare("SELECT * FROM " . $this->strTable . " WHERE " . $this->strPidColumn . "=?")->execute($this->intId);
+        $objTranslations = $this->Database->prepare("SELECT * FROM " . $this->strTable . " WHERE " . $this->strPidColumn . "=? AND " . $this->strLangColumn . "!=''")->execute($this->intId);
 
         while ($objTranslations->next())
         {
