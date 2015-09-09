@@ -127,6 +127,22 @@ class DC_Multilingual extends \DC_Table
 
 
     /**
+     * Get the fallback lang if available
+     *
+     * @param string
+     * @return string|null
+     */
+    public static function getFallbackLanguageForTable($strTable)
+    {
+        if ($GLOBALS['TL_DCA'][$strTable]['config']['fallbackLang']) {
+            return $GLOBALS['TL_DCA'][$strTable]['config']['fallbackLang'];
+        }
+
+        return null;
+    }
+
+
+    /**
      * Auto-generate a form to edit the current database record
      * @param integer
      * @param integer
