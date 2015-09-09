@@ -54,7 +54,7 @@ class DC_Multilingual_Query extends Controller
         }
 
         // set default language
-        $this->language = $GLOBALS['TL_LANGUAGE'];
+        $this->language = str_replace('-', '_', $GLOBALS['TL_LANGUAGE']);
 
         return $this;
     }

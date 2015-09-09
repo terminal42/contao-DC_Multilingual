@@ -91,6 +91,8 @@ class DC_Multilingual extends \DC_Table
 
         $this->strPidColumn = static::getPidColumnForTable($this->strTable);
         $this->strLangColumn = static::getLanguageColumnForTable($this->strTable);
+
+        $GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['filter'][] = array($this->strLangColumn.'=?', '');
     }
 
 
@@ -121,6 +123,22 @@ class DC_Multilingual extends \DC_Table
         }
 
         return 'language';
+    }
+
+
+    /**
+     * Get the fallback lang if available
+     *
+     * @param string
+     * @return string|null
+     */
+    public static function getFallbackLanguageForTable($strTable)
+    {
+        if ($GLOBALS['TL_DCA'][$strTable]['config']['fallbackLang']) {
+            return $GLOBALS['TL_DCA'][$strTable]['config']['fallbackLang'];
+        }
+
+        return null;
     }
 
 
@@ -171,14 +189,14 @@ class DC_Multilingual extends \DC_Table
         // Redirect if there is no record with the given ID
         if ($objRow->numRows < 1)
         {
-            $this->log('Could not load record ID '.$this->intId.' of table "'.$this->strTable.'"', 'DC_Multilingual edit()', TL_ERROR);
+            $this->log('Could not load record ID '.$this->intId.' of table "'.$this->strTable.'"', __METHOD__, TL_ERROR);
             $this->redirect('contao/main.php?act=error');
         }
 
         // ID of a language record is not allowed
         elseif ($objRow->{$this->strLangColumn} != '')
         {
-            $this->log('Cannot edit language record ID "'.$this->intId.'" of table "'.$this->strTable.'"!', 'DC_Multilingual edit()', TL_ERROR);
+            $this->log('Cannot edit language record ID "'.$this->intId.'" of table "'.$this->strTable.'"!', __METHOD__, TL_ERROR);
             $this->redirect('contao/main.php?act=error');
         }
 
@@ -706,7 +724,7 @@ class DC_Multilingual extends \DC_Table
     {
         $insertId = parent::copy(true);
         $time = time();
-        $objTranslations = $this->Database->prepare("SELECT * FROM " . $this->strTable . " WHERE " . $this->strPidColumn . "=?")->execute($this->intId);
+        $objTranslations = $this->Database->prepare("SELECT * FROM " . $this->strTable . " WHERE " . $this->strPidColumn . "=? AND " . $this->strLangColumn . "!=''")->execute($this->intId);
 
         while ($objTranslations->next())
         {
@@ -737,12 +755,6 @@ class DC_Multilingual extends \DC_Table
     protected function copyChilds($table, $insertID, $id, $parentId)
     {
         parent::copyChilds($table, $insertID, $id, $parentId);
-
-        // Return if the table is not multilingual
-        if ($GLOBALS['TL_DCA'][$table]['config']['dataContainer'] != 'Multilingual')
-        {
-            return;
-        }
 
         $strPidColumn = $GLOBALS['TL_DCA'][$table]['config']['pidColumn'] ? $GLOBALS['TL_DCA'][$table]['config']['pidColumn'] : $this->strPidColumn;
         $objLanguage = $this->Database->prepare("SELECT id FROM " . $table . " WHERE " . $strPidColumn . "=? AND id>?")
@@ -1273,12 +1285,6 @@ class DC_Multilingual extends \DC_Table
     {
         parent::deleteChilds($table, $id, $delete);
 
-        // Return if the table is not multilingual
-        if ($GLOBALS['TL_DCA'][$table]['config']['dataContainer'] != 'Multilingual')
-        {
-            return;
-        }
-
         // Do not delete record if there is no parent table
         if ($GLOBALS['TL_DCA'][$table]['config']['ptable'] == '')
         {
@@ -1352,6 +1358,15 @@ class DC_Multilingual extends \DC_Table
     protected function getRootPageLanguages()
     {
         $objPages = $this->Database->execute("SELECT DISTINCT language FROM tl_page WHERE type='root' AND language!=''");
-        return $objPages->fetchEach('language');
+        $languages = $objPages->fetchEach('language');
+
+        array_walk(
+            $languages,
+            function(&$value) {
+                $value = str_replace('-', '_', $value);
+            }
+        );
+
+        return $languages;
     }
 }

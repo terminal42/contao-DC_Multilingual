@@ -36,8 +36,17 @@ class MultilingualQueryBuilder
 
         // Use the current language if none provided
         if (!isset($arrOptions['language'])) {
-            $arrOptions['language'] = $GLOBALS['TL_LANGUAGE'];
+            $arrOptions['language'] = str_replace('-', '_', $GLOBALS['TL_LANGUAGE']);
         }
+
+        // Consider the fallback language
+        $fallbackLang = \DC_Multilingual::getFallbackLanguageForTable($arrOptions['table']);
+        if (null !== $fallbackLang
+            && $fallbackLang === $arrOptions['language']
+        ) {
+            $arrOptions['language'] = '';
+        }
+
 
         $strQuery = "SELECT dcm1.*" . (!empty($arrLanguageFields) ? (", " . implode(", ", static::generateFieldsSubquery($arrLanguageFields, 'dcm1', 'dcm2'))) : "") . " FROM " . $arrOptions['table'] . " AS dcm1";
 
