@@ -93,6 +93,8 @@ class DC_Multilingual extends \DC_Table
         $this->strLangColumn = static::getLanguageColumnForTable($this->strTable);
 
         $GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['filter'][] = array($this->strLangColumn.'=?', '');
+
+        $GLOBALS['TL_CSS'][] = 'system/modules/dc_multilingual/assets/backend.min.css';
     }
 
 
@@ -427,13 +429,10 @@ class DC_Multilingual extends \DC_Table
         }
 
         // Versions overview
-        if ($GLOBALS['TL_DCA'][$this->strTable]['config']['enableVersioning'])
-        {
+        if ($GLOBALS['TL_DCA'][$this->strTable]['config']['enableVersioning']) {
             $version = $objVersions->renderDropdown();
-        }
-        else
-        {
-            $version = '';
+        } else {
+            $version = '<div class="tl_version_panel"></div>';
         }
 
         // Check languages
@@ -470,25 +469,23 @@ class DC_Multilingual extends \DC_Table
                 }
             }
 
-            $languagePanel = '<form action="'.ampersand($this->Environment->request, true).'" id="tl_language" class="tl_form" method="post"' . (strlen($version) ? ' style="float:left;width:360px"' : '') . '>
-<div class="tl_formbody" style="margin-left:5px;float:left;">
+            $version = str_replace(
+                '<div class="tl_version_panel">',
+                '<div class="tl_version_panel language_panel">
+<form action="' . ampersand(\Environment::get('request'), true) . '" id="tl_language" class="tl_form" method="post">
+<div class="tl_formbody">
 <input type="hidden" name="FORM_SUBMIT" value="tl_language">
-<input type="hidden" name="REQUEST_TOKEN" value="'.REQUEST_TOKEN.'">
-<input type="submit" name="editLanguage" class="tl_submit" value="'.specialchars($GLOBALS['TL_LANG']['MSC']['editLanguage']).'">
-<input type="submit" name="deleteLanguage" class="tl_submit" value="'.specialchars($GLOBALS['TL_LANG']['MSC']['deleteLanguage']).'" onclick="return confirm(\'' . $GLOBALS['TL_LANG']['MSC']['deleteLanguageConfirm'] . '\')">
-<select name="language" class="tl_select' . (strlen($_SESSION['BE_DATA']['language'][$this->strTable][$this->intId]) ? ' active' : '') . '" style="width:160px">
-'.$available.$undefined.'
+<input type="hidden" name="REQUEST_TOKEN" value="' . REQUEST_TOKEN . '">
+<select name="language" class="tl_select' . (strlen($_SESSION['BE_DATA']['language'][$this->strTable][$this->intId]) ? ' active' : '') . '" onchange="document.id(this).getParent(\'form\').submit()">
+    ' . $available . $undefined . '
 </select>
+<noscript>
+<input type="submit" name="editLanguage" class="tl_submit" value="' . specialchars($GLOBALS['TL_LANG']['MSC']['editLanguage']) . '">
+</noscript>
 </div>
-</form>';
-
-            // God please forgive me this devilish code
-            if (strlen($version)) {
-                $version = str_replace('method="post"', 'method="post" style="float:right;"', $version);
-                $version = str_replace('<div class="tl_version_panel">', '<div class="tl_version_panel language_panel" style="overflow:hidden;">' . $languagePanel, $version);
-            } else {
-                $version .= '<div class="tl_version_panel language_panel" style="overflow:hidden;">' . $languagePanel . '</div>';
-            }
+</form>',
+                $version
+            );
         }
 
         // Submit buttons
@@ -512,6 +509,10 @@ class DC_Multilingual extends \DC_Table
         elseif (!\Input::get('popup') && ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 4 || strlen($this->ptable) || $GLOBALS['TL_DCA'][$this->strTable]['config']['switchToEdit']))
         {
             $arrButtons['saveNback'] = '<input type="submit" name="saveNback" id="saveNback" class="tl_submit" accesskey="g" value="'.specialchars($GLOBALS['TL_LANG']['MSC']['saveNback']).'">';
+        }
+
+        if ($this->blnEditLanguage) {
+            $arrButtons['deleteLanguage'] = '<input type="submit" name="deleteLanguage" class="tl_submit" style="float:right" value="' . specialchars($GLOBALS['TL_LANG']['MSC']['deleteLanguage']) . '" onclick="return confirm(\'' . $GLOBALS['TL_LANG']['MSC']['deleteLanguageConfirm'] . '\')">';
         }
 
         // Call the buttons_callback (see #4691)
