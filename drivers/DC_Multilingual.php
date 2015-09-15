@@ -209,33 +209,44 @@ class DC_Multilingual extends \DC_Table
             $this->arrTranslatableLanguages = array();
         }
 
-        // Load and/or change language
-        if ($this->Input->post('FORM_SUBMIT') == 'tl_language')
-        {
-            $session = $this->Session->getData();
+        if (!empty($this->arrTranslatableLanguages)) {
+            $blnLanguageUpdated = false;
+            $session            = $this->Session->getData();
 
-            if (in_array($this->Input->post('language'), array_keys($this->arrTranslatableLanguages)))
-            {
-                $session['language'][$this->strTable][$this->intId] = $this->Input->post('language');
-
-                if (strlen($this->Input->post('deleteLanguage')))
-                {
-                    $this->Database->prepare("DELETE FROM " . $this->strTable . " WHERE {$this->strPidColumn}=? AND {$this->strLangColumn}=?")->execute($this->intId, $this->Input->post('language'));
+            if (\Input::post('FORM_SUBMIT') == 'tl_language') {
+                if (in_array(\Input::post('language'), $this->arrTranslatableLanguages)) {
+                    $session['language'][$this->strTable][$this->intId] = \Input::post('language');
+                } else {
                     unset($session['language'][$this->strTable][$this->intId]);
                 }
-            }
-            else
-            {
+
+                $blnLanguageUpdated = true;
+            } elseif (\Input::post('FORM_SUBMIT') == $this->strTable && isset($_POST['deleteLanguage'])) {
+                \Database::getInstance()
+                    ->prepare(
+                        "DELETE FROM " . $this->strTable . "
+                         WHERE {$this->strPidColumn}=? AND {$this->strLangColumn}=?"
+                    )
+                    ->execute(
+                        $this->intId,
+                        $session['language'][$this->strTable][$this->intId]
+                    )
+                ;
+
                 unset($session['language'][$this->strTable][$this->intId]);
+                $blnLanguageUpdated = true;
             }
 
-            $this->Session->setData($session);
-            $_SESSION['TL_INFO'] = '';
-            $this->reload();
+            if ($blnLanguageUpdated) {
+                $this->Session->setData($session);
+                $_SESSION['TL_INFO'] = '';
+                \Controller::reload();
+            }
         }
 
-        if (strlen($_SESSION['BE_DATA']['language'][$this->strTable][$this->intId]) && in_array($_SESSION['BE_DATA']['language'][$this->strTable][$this->intId], array_keys($this->arrTranslatableLanguages)))
-        {
+        if (strlen($_SESSION['BE_DATA']['language'][$this->strTable][$this->intId])
+            && in_array($_SESSION['BE_DATA']['language'][$this->strTable][$this->intId], array_keys($this->arrTranslatableLanguages))
+        ) {
             $objRow = $this->Database->prepare("SELECT * FROM " . $this->strTable . " WHERE {$this->strPidColumn}=? AND {$this->strLangColumn}=?")->execute($this->intId, $_SESSION['BE_DATA']['language'][$this->strTable][$this->intId]);
 
             if (!$objRow->numRows)
