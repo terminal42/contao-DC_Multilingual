@@ -440,9 +440,13 @@ class DC_Multilingual extends \DC_Table
         }
 
         // Versions overview
+        $version  = '';
         if ($GLOBALS['TL_DCA'][$this->strTable]['config']['enableVersioning']) {
             $version = $objVersions->renderDropdown();
-        } else {
+        }
+
+        // Make sure there's always a panel to replace
+        if ('' === $version) {
             $version = '<div class="tl_version_panel"></div>';
         }
 
