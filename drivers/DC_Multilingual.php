@@ -469,7 +469,7 @@ class DC_Multilingual extends \DC_Table
                         $label);
 
                     // add translation hint
-                    if ($selected && (($this->strFallbackLang && $this->strFallbackLang != $language) || (!$this->strFallbackLang && $this->currentLang != '')))
+                    if ($selected && (($this->strFallbackLang && $this->strFallbackLang != $language) || (!$this->strFallbackLang && $this->strCurrentLang != '')))
                     {
                         $_SESSION['TL_INFO'] = array($GLOBALS['TL_LANG']['MSC']['editingLanguage']);
                     }
