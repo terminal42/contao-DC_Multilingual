@@ -851,21 +851,39 @@ class DC_Multilingual extends \DC_Table
      */
     public function treeView()
     {
-        $strWhere = '';
+        $where = array();
+
+        // Child mode
+        if ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 6) {
+            $table = $GLOBALS['TL_DCA'][$this->strTable]['config']['ptable'];
+
+            if ($GLOBALS['TL_DCA'][$table]['config']['dataContainer'] == 'Multilingual') {
+                $where[] = "$this->strLangColumn=''";
+            }
+
+        } else {
+
+            $table = $this->strTable;
+            $where[] = "$this->strLangColumn=''";
+        }
 
         if (is_array($this->root) && count($this->root))
         {
-            $strWhere = ' AND id IN(' . implode(',', $this->root) . ')';
+            $where[] = 'id IN(' . implode(',', $this->root) . ')';
         }
 
-        $strOrderBy = "";
+        $orderBy = '';
 
-        if ($this->Database->fieldExists('sorting', $this->strTable))
+        if (\Database::getInstance()->fieldExists('sorting', $table))
         {
-            $strOrderBy = " ORDER BY sorting";
+            $orderBy = " ORDER BY sorting";
         }
 
-        $this->root = $this->Database->query("SELECT id FROM $this->strTable WHERE {$this->strLangColumn}=''" . $strWhere . $strOrderBy)->fetchEach('id');
+        $where = implode(' AND ', $where);
+
+        $this->root = \Database::getInstance()
+            ->query("SELECT id FROM $table WHERE " . $where . $orderBy)
+            ->fetchEach('id');
 
         return parent::treeView();
     }
@@ -993,8 +1011,10 @@ class DC_Multilingual extends \DC_Table
         {
             if ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 5 || $this->strTable != $table)
             {
-                $objChilds = $this->Database->prepare("SELECT id FROM " . $table . " WHERE pid=? AND {$this->strLangColumn}=''" . ($blnHasSorting ? " ORDER BY sorting" : ''))
-                                            ->execute($id);
+                $limitForLanguage = $GLOBALS['TL_DCA'][$table]['config']['dataContainer'] == 'Multilingual';
+                $where = $limitForLanguage ? "  AND {$this->strLangColumn}=''" : '';
+                $objChilds = $this->Database->prepare("SELECT id FROM " . $table . " WHERE pid=?$where" . ($blnHasSorting ? " ORDER BY sorting" : ''))
+                    ->execute($id);
 
                 if ($objChilds->numRows)
                 {
