@@ -717,27 +717,74 @@ class DC_Multilingual extends \DC_Table
 
     /**
      * Duplicate a particular record of the current table with all the translations
-     * @param boolean
-     * @return integer|boolean
+     *
+     * @param  bool
+     * @return int|bool
+     *
+     * @see DC_Table from contao/core@3.2.13
      */
     public function copy($blnDoNotRedirect=false)
     {
-        $insertId = parent::copy(true);
-        $time = time();
-        $objTranslations = $this->Database->prepare("SELECT * FROM " . $this->strTable . " WHERE " . $this->strPidColumn . "=? AND " . $this->strLangColumn . "!=''")->execute($this->intId);
+        $insertId        = parent::copy(true);
+        $time            = time();
+        $objTranslations = \Database::getInstance()
+            ->prepare(
+                "SELECT *
+                 FROM " . $this->strTable . "
+                 WHERE " . $this->strPidColumn . "=? AND " . $this->strLangColumn . "!=''"
+            )
+            ->execute($this->intId)
+        ;
 
-        while ($objTranslations->next())
-        {
-            $arrInsert = array_merge($this->set, $objTranslations->row());
-            $arrInsert['tstamp'] = $time; // array_merge() overwrites tstamp which is wrong
-            $arrInsert[$this->strPidColumn] = $insertId; // add language reference id
-            unset($arrInsert['id']); // unset id
-            $this->Database->prepare("INSERT INTO " . $this->strTable . " %s")->set($arrInsert)->execute();
+        while ($objTranslations->next()) {
+            $set = $this->set;
+
+            foreach ($objTranslations->row() as $k => $v) {
+                if (in_array($k, array_keys($GLOBALS['TL_DCA'][$this->strTable]['fields']))
+                    && $GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['eval']['translatableFor'] != ''
+                ) {
+                    // Empty unique fields or add a unique identifier in copyAll mode
+                    if ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['eval']['unique']) {
+                        if (\Input::get('act') == 'copyAll') {
+                            $v = $v . '-' . substr(md5(uniqid(mt_rand(), true)), 0, 8);
+                        } else {
+                            $v = '';
+                        }
+                    }
+
+                    // Reset doNotCopy and fallback fields to their default value
+                    elseif ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['eval']['doNotCopy']
+                        || $GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['eval']['fallback']
+                    ) {
+                        $v = '';
+
+                        // Use array_key_exists to allow NULL (see #5252)
+                        if (array_key_exists('default', $GLOBALS['TL_DCA'][$this->strTable]['fields'][$k])) {
+                            $v = is_array($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['default']) ? serialize(
+                                $GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['default']
+                            ) : $GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['default'];
+                        }
+
+                        // Encrypt the default value (see #3740)
+                        if ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['eval']['encrypt']) {
+                            $v = \Encryption::encrypt($v);
+                        }
+                    }
+
+                    // Set fields (except password fields)
+                    $set[$k] = ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['inputType'] == 'password' ? '' : $v);
+                }
+            }
+
+            $set['tstamp'] = $time;
+            $set[$this->strPidColumn] = $insertId;
+            unset($set['id']);
+
+            \Database::getInstance()->prepare("INSERT INTO {$this->strTable} %s")->set($set)->execute();
         }
 
         // Switch to edit mode
-        if (!$blnDoNotRedirect)
-        {
+        if (!$blnDoNotRedirect) {
             $this->redirect($this->switchToEdit($insertId));
         }
 
