@@ -779,6 +779,7 @@ class DC_Multilingual extends \DC_Table
 
             $set['tstamp'] = $time;
             $set[$this->strPidColumn] = $insertId;
+            $set[$this->strLangColumn] = $objTranslations->{$this->strLangColumn};
             unset($set['id']);
 
             \Database::getInstance()->prepare("INSERT INTO {$this->strTable} %s")->set($set)->execute();
