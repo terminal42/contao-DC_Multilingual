@@ -190,17 +190,17 @@ class DC_Multilingual extends \DC_Table
         }
 
         // Load and/or change language
-        if ($this->Input->post('FORM_SUBMIT') == 'tl_language')
+        if (\Input::post('FORM_SUBMIT') == 'tl_language')
         {
             $session = $this->Session->getData();
 
-            if (in_array($this->Input->post('language'), array_keys($this->arrTranslatableLanguages)))
+            if (in_array(\Input::post('language'), array_keys($this->arrTranslatableLanguages)))
             {
-                $session['language'][$this->strTable][$this->intId] = $this->Input->post('language');
+                $session['language'][$this->strTable][$this->intId] = \Input::post('language');
 
-                if (strlen($this->Input->post('deleteLanguage')))
+                if (strlen(\Input::post('deleteLanguage')))
                 {
-                    $this->Database->prepare("DELETE FROM " . $this->strTable . " WHERE {$this->strPidColumn}=? AND {$this->strLangColumn}=?")->execute($this->intId, $this->Input->post('language'));
+                    $this->Database->prepare("DELETE FROM " . $this->strTable . " WHERE {$this->strPidColumn}=? AND {$this->strLangColumn}=?")->execute($this->intId, \Input::post('language'));
                     unset($session['language'][$this->strTable][$this->intId]);
                 }
             }
@@ -387,7 +387,7 @@ class DC_Multilingual extends \DC_Table
                             if (is_array($callback))
                             {
                                 $this->import($callback[0]);
-                                $this->varValue = $this->$callback[0]->$callback[1]($this->varValue, $this);
+                                $this->varValue = $this->{$callback[0]}->{$callback[1]}($this->varValue, $this);
                             }
                             elseif (is_callable($callback))
                             {
@@ -504,7 +504,7 @@ class DC_Multilingual extends \DC_Table
                 if (is_array($callback))
                 {
                     $this->import($callback[0]);
-                    $arrButtons = $this->$callback[0]->$callback[1]($arrButtons, $this);
+                    $arrButtons = $this->{$callback[0]}->{$callback[1]}($arrButtons, $this);
                 }
                 elseif (is_callable($callback))
                 {
@@ -562,7 +562,7 @@ class DC_Multilingual extends \DC_Table
                     if (is_array($callback))
                     {
                         $this->import($callback[0]);
-                        $this->$callback[0]->$callback[1]($this);
+                        $this->{$callback[0]}->{$callback[1]}($this);
                     }
                     elseif (is_callable($callback))
                     {
@@ -584,7 +584,7 @@ class DC_Multilingual extends \DC_Table
                         if (is_array($callback))
                         {
                             $this->import($callback[0]);
-                            $this->$callback[0]->$callback[1]($this->strTable, $this->intId, $this);
+                            $this->{$callback[0]}->{$callback[1]}($this->strTable, $this->intId, $this);
                         }
                         elseif (is_callable($callback))
                         {
