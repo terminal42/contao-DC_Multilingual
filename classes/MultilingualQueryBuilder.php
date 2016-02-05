@@ -98,7 +98,9 @@ class MultilingualQueryBuilder
 
     /**
      * Get the multilingual fields as array
+     *
      * @param string
+     *
      * @return array
      */
     public static function getMultilingualFields($strTable)
@@ -119,20 +121,20 @@ class MultilingualQueryBuilder
 
     /**
      * Generate the fields subquery and return it as array
+     *
      * @param mixed
      * @param string
      * @param string
      * @param string
+     *
      * @return mixed
      */
-    public static function generateFieldsSubquery($varFields, $strFirstTable, $strSecondTable, $strPrefix='')
+    public static function generateFieldsSubquery($varFields, $strFirstTable, $strSecondTable, $strPrefix = '')
     {
-        if (is_array($varFields))
-        {
+        if (is_array($varFields)) {
             $arrReturn = array();
 
-            foreach ($varFields as $field)
-            {
+            foreach ($varFields as $field) {
                 $arrReturn[] = static::generateFieldsSubquery($field, $strFirstTable, $strSecondTable, $strPrefix);
             }
 

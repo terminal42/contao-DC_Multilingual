@@ -33,7 +33,9 @@ class DC_Multilingual_Query extends Controller
      * If you need to reference the table you have
      * * t1 for the base-fields
      * * t2 for the language-fields
+     *
      * @param string $strTable
+     *
      * @return DC_Multilingual_Query current instance
      */
     public function __construct($strTable)
@@ -49,7 +51,7 @@ class DC_Multilingual_Query extends Controller
 
         // add multilingual fields
         foreach ($GLOBALS['TL_DCA'][$this->strTable]['fields'] as $field => $arrData) {
-            if ($arrData['eval']['translatableFor'] == '')continue;
+            if ($arrData['eval']['translatableFor'] == '') continue;
             $this->arrFields[] = "IFNULL(t2.$field, t1.$field) AS $field";
         }
 
@@ -123,6 +125,7 @@ class DC_Multilingual_Query extends Controller
 
     /**
      * Returns the query
+     *
      * @return string
      */
     public function getQuery()
@@ -134,17 +137,17 @@ class DC_Multilingual_Query extends Controller
 SELECT t1.*,
     " . implode(', ', $this->arrFields) . "
 FROM {$this->strTable} AS t1
-LEFT OUTER JOIN {$this->strTable} AS t2 ON (t1.id=t2.$strPid AND t2.$strLang='{$this->language}') ".
-implode(' ',$this->arrJoin) ."
-WHERE t1.$strPid=0".
-(count($this->arrWhere) ? ' AND (' .implode(' AND ',$this->arrWhere).')' : '').
-(count($this->arrOrder) ? ' ORDER BY '.implode(',',$this->arrOrder) : '')
-;
+LEFT OUTER JOIN {$this->strTable} AS t2 ON (t1.id=t2.$strPid AND t2.$strLang='{$this->language}') " .
+        implode(' ', $this->arrJoin) . "
+WHERE t1.$strPid=0" .
+        (count($this->arrWhere) ? ' AND (' . implode(' AND ', $this->arrWhere) . ')' : '') .
+        (count($this->arrOrder) ? ' ORDER BY ' . implode(',', $this->arrOrder) : '');
     }
 
 
     /**
      * Returns the Database_Statement for the query
+     *
      * @return \Database\Statement
      */
     public function getStatement()
