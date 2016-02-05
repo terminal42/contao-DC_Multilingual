@@ -13,8 +13,6 @@ namespace Terminal42\DcMultilingualBundle\QueryBuilder;
 
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Query\QueryBuilder;
-use Terminal42\DcMultilingualBundle\MultilingualQueryBuilder;
-use Terminal42\DcMultilingualBundle\MultilingualQueryBuilderInterface;
 
 class MultilingualQueryBuilderFactory implements MultilingualQueryBuilderFactoryInterface
 {

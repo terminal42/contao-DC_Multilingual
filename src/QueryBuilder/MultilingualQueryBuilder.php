@@ -9,7 +9,7 @@
  * @link       http://github.com/terminal42/contao-dc_multilingual
  */
 
-namespace Terminal42\DcMultilingualBundle;
+namespace Terminal42\DcMultilingualBundle\QueryBuilder;
 
 use Doctrine\DBAL\Query\QueryBuilder;
 

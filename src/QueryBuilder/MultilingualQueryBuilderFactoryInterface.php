@@ -11,8 +11,6 @@
 
 namespace Terminal42\DcMultilingualBundle\QueryBuilder;
 
-use Terminal42\DcMultilingualBundle\MultilingualQueryBuilderInterface;
-
 interface MultilingualQueryBuilderFactoryInterface
 {
     /**
