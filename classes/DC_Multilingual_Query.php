@@ -13,7 +13,7 @@
 /**
  * Create a Query for a DC_Multilingual table
  */
-class DC_Multilingual_Query extends Controller
+class DC_Multilingual_Query
 {
 
     protected $strTable = '';
@@ -29,7 +29,8 @@ class DC_Multilingual_Query extends Controller
 
 
     /**
-     * Construct the querybuilder
+     * Construct the QueryBuilder.
+     *
      * If you need to reference the table you have
      * * t1 for the base-fields
      * * t2 for the language-fields
@@ -40,13 +41,12 @@ class DC_Multilingual_Query extends Controller
      */
     public function __construct($strTable)
     {
-        parent::__construct();
-
         $this->strTable = $strTable;
 
         // Load DataContainer if its not already done
         if (!is_array($GLOBALS['TL_DCA'][$this->strTable])) {
-            $this->loadDataContainer($this->strTable);
+            $loader = new \DcaLoader($strTable);
+            $loader->load();
         }
 
         // add multilingual fields
