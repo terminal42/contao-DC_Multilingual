@@ -8,4 +8,8 @@
  * @license    http://opensource.org/licenses/lgpl-3.0.html LGPL
  * @link       http://github.com/terminal42/contao-dc_multilingual
  */
+
+/**
+ * Contao for now only supports loading drivers from the global namespace.
+ */
 class DC_Multilingual extends \Terminal42\DcMultilingualBundle\Driver {}
