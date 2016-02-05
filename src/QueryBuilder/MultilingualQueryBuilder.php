@@ -104,11 +104,11 @@ class MultilingualQueryBuilder implements MultilingualQueryBuilderInterface
 
         $this->qb->from($this->table, 't1');
         $this->qb->add('join', [
-            [
+            't1' => [
                 'joinType'      => 'left outer',
                 'joinTable'     => $this->table,
                 'joinAlias'     => 't2',
-                'condition'     => "t1.id=t2.{$this->pidColumnName} AND t2.{$this->langColumnName}='$language')"
+                'joinCondition' => "t1.id=t2.{$this->pidColumnName} AND t2.{$this->langColumnName}='$language'"
             ]
         ], true);
 
