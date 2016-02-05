@@ -84,6 +84,11 @@ class Multilingual extends \Model
             $qb->groupBy($options['group']);
         }
 
+        // Having
+        if ($options['having'] !== null) {
+            $qb->having($options['having']);
+        }
+
         // Order by
         if (null !== $options['order']) {
             $qb->add('orderBy', $options['order']);
