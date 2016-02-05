@@ -74,7 +74,7 @@ class MultilingualQueryBuilder implements MultilingualQueryBuilderInterface
     /**
      * Build the query for a simple count query.
      */
-    public function getQueryBuilderForCount()
+    public function buildQueryBuilderForCount()
     {
         $this->qb->resetQueryParts();
 

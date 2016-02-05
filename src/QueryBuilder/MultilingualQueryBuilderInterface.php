@@ -18,7 +18,7 @@ interface MultilingualQueryBuilderInterface
     /**
      * Build the query for a simple count query.
      */
-    public function getQueryBuilderForCount();
+    public function buildQueryBuilderForCount();
 
     /**
      * Build the query builder for a find query.

@@ -29,6 +29,19 @@ class Multilingual extends \Model
 
         static::applyOptionsToQueryBuilder($mlqb->getQueryBuilder(), $options);
 
+        // Use the current language if none provided
+        if (!isset($options['language'])) {
+            $options['language'] = str_replace('-', '_', $GLOBALS['TL_LANGUAGE']);
+        }
+
+        // Consider the fallback language
+        $fallbackLang = static::getFallbackLanguage();
+        if (null !== $fallbackLang && $fallbackLang === $options['language']) {
+            $options['language'] = '';
+        }
+
+        $mlqb->buildQueryBuilderForFind($options['language']);
+
         return $mlqb->getQueryBuilder()->getSQL();
 
     }
@@ -46,6 +59,8 @@ class Multilingual extends \Model
 
         static::applyOptionsToQueryBuilder($mlqb->getQueryBuilder(), $options);
 
+        $mlqb->buildQueryBuilderForCount();
+
         return $mlqb->getQueryBuilder()->getSQL();
     }
 
@@ -57,17 +72,6 @@ class Multilingual extends \Model
      */
     protected static function applyOptionsToQueryBuilder(QueryBuilder $qb, array $options)
     {
-        // Use the current language if none provided
-        if (!isset($options['language'])) {
-            $options['language'] = str_replace('-', '_', $GLOBALS['TL_LANGUAGE']);
-        }
-
-        // Consider the fallback language
-        $fallbackLang = static::getFallbackLanguage();
-        if (null !== $fallbackLang && $fallbackLang === $options['language']) {
-            $options['language'] = '';
-        }
-
         // Columns
         if (null !== $options['column']) {
             if (is_array($options['column'])) {
@@ -75,7 +79,7 @@ class Multilingual extends \Model
                     $qb->andWhere($column);
                 }
             } else {
-                $qb->andWhere($options['table'] . '.' . options['column'] . '=?');
+                $qb->andWhere($options['table'] . '.' . $options['column'] . '=?');
             }
         }
 
