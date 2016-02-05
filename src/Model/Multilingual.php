@@ -31,8 +31,6 @@ class Multilingual extends \Model
     {
         $mlqb = static::getMultilingualQueryBuilder();
 
-        static::applyOptionsToQueryBuilder($mlqb->getQueryBuilder(), $options);
-
         // Use the current language if none provided
         if (!isset($options['language'])) {
             $options['language'] = str_replace('-', '_', $GLOBALS['TL_LANGUAGE']);
@@ -45,6 +43,8 @@ class Multilingual extends \Model
         }
 
         $mlqb->buildQueryBuilderForFind($options['language']);
+
+        static::applyOptionsToQueryBuilder($mlqb->getQueryBuilder(), $options);
 
         return $mlqb->getQueryBuilder();
     }
@@ -64,9 +64,9 @@ class Multilingual extends \Model
     {
         $mlqb = static::getMultilingualQueryBuilder();
 
-        static::applyOptionsToQueryBuilder($mlqb->getQueryBuilder(), $options);
-
         $mlqb->buildQueryBuilderForCount();
+
+        static::applyOptionsToQueryBuilder($mlqb->getQueryBuilder(), $options);
 
         return $mlqb->getQueryBuilder();
     }
@@ -96,7 +96,7 @@ class Multilingual extends \Model
         }
 
         // Having
-        if ($options['having'] !== null) {
+        if (null !== $options['having']) {
             $qb->having($options['having']);
         }
 
