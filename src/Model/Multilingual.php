@@ -25,11 +25,11 @@ class Multilingual extends \Model
      */
     protected static function buildFindQuery(array $options)
     {
-        $qb = static::getQueryBuilder();
+        $mlqb = static::getMultilingualQueryBuilder();
 
-        static::applyOptionsToQueryBuilder($qb, $options);
+        static::applyOptionsToQueryBuilder($mlqb->getQueryBuilder(), $options);
 
-        return $qb->getQueryBuilder()->getSQL();
+        return $mlqb->getQueryBuilder()->getSQL();
 
     }
 
@@ -42,11 +42,11 @@ class Multilingual extends \Model
      */
     protected static function buildCountQuery(array $options)
     {
-        $qb = static::getQueryBuilder();
+        $mlqb = static::getMultilingualQueryBuilder();
 
-        static::applyOptionsToQueryBuilder($qb, $options);
+        static::applyOptionsToQueryBuilder($mlqb->getQueryBuilder(), $options);
 
-        return $qb->getQueryBuilder()->getSQL();
+        return $mlqb->getQueryBuilder()->getSQL();
     }
 
     /**
@@ -96,11 +96,11 @@ class Multilingual extends \Model
     }
 
     /**
-     * Get QueryBuilder.
+     * Get the MultilingualQueryBuilder.
      *
-     * @return \Terminal42\DcMultilingualBundle\MultilingualQueryBuilderInterface
+     * @return \Terminal42\DcMultilingualBundle\QueryBuilder\MultilingualQueryBuilderInterface
      */
-    protected static function getQueryBuilder()
+    protected static function getMultilingualQueryBuilder()
     {
         /** @var MultilingualQueryBuilderFactoryInterface $factory */
         $factory = \System::getContainer()->get('terminal42.dc_multilingual.querybuilder_factory');
