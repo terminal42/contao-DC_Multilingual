@@ -17,11 +17,15 @@ use Terminal42\DcMultilingualBundle\QueryBuilder\MultilingualQueryBuilderFactory
 class Multilingual extends \Model
 {
     /**
-     * Build a query based on the given options
+     * Build a query based on the given options.
+     * The method returns a QueryBuilder instance so you can easily modify
+     * the query in your child class. We can just return the instance as the
+     * QueryBuilder implements the __toString() method so we don't have to call
+     * ->getSql() manually.
      *
      * @param array $options The options array
      *
-     * @return string The query string
+     * @return QueryBuilder
      */
     protected static function buildFindQuery(array $options)
     {
@@ -42,12 +46,15 @@ class Multilingual extends \Model
 
         $mlqb->buildQueryBuilderForFind($options['language']);
 
-        return $mlqb->getQueryBuilder()->getSQL();
-
+        return $mlqb->getQueryBuilder();
     }
 
     /**
-     * Build a query based on the given options to count the number of records
+     * Build a query based on the given options to count the number of records.
+     * The method returns a QueryBuilder instance so you can easily modify
+     * the query in your child class. We can just return the instance as the
+     * QueryBuilder implements the __toString() method so we don't have to call
+     * ->getSql() manually.
      *
      * @param array $options The options array
      *
@@ -61,7 +68,7 @@ class Multilingual extends \Model
 
         $mlqb->buildQueryBuilderForCount();
 
-        return $mlqb->getQueryBuilder()->getSQL();
+        return $mlqb->getQueryBuilder();
     }
 
     /**
