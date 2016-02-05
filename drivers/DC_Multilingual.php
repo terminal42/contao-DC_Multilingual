@@ -190,7 +190,7 @@ class DC_Multilingual extends \DC_Table
         }
 
         // Get the current record
-        $objRow = $this->Database->prepare("SELECT * FROM " . $this->strTable . " WHERE id=?")
+        $objRow = \Database::getInstance()->prepare("SELECT * FROM " . $this->strTable . " WHERE id=?")
             ->limit(1)
             ->executeUncached($this->intId);
 
@@ -248,22 +248,22 @@ class DC_Multilingual extends \DC_Table
         if (strlen($_SESSION['BE_DATA']['language'][$this->strTable][$this->intId])
             && in_array($_SESSION['BE_DATA']['language'][$this->strTable][$this->intId], array_keys($this->arrTranslatableLanguages))
         ) {
-            $objRow = $this->Database->prepare("SELECT * FROM " . $this->strTable . " WHERE {$this->strPidColumn}=? AND {$this->strLangColumn}=?")->execute($this->intId, $_SESSION['BE_DATA']['language'][$this->strTable][$this->intId]);
+            $objRow = \Database::getInstance()->prepare("SELECT * FROM " . $this->strTable . " WHERE {$this->strPidColumn}=? AND {$this->strLangColumn}=?")->execute($this->intId, $_SESSION['BE_DATA']['language'][$this->strTable][$this->intId]);
 
             if (!$objRow->numRows) {
                 // Preserve the "pid" field
-                if ($this->Database->fieldExists('pid', $this->strTable)) {
-                    $objCurrent = $this->Database->prepare("SELECT pid FROM " . $this->strTable . " WHERE id=?")
+                if (\Database::getInstance()->fieldExists('pid', $this->strTable)) {
+                    $objCurrent = \Database::getInstance()->prepare("SELECT pid FROM " . $this->strTable . " WHERE id=?")
                         ->limit(1)
                         ->executeUncached($this->intId);
 
                     $intPid = ($objCurrent->numRows) ? $objCurrent->pid : 0;
-                    $intId = $this->Database->prepare("INSERT INTO " . $this->strTable . " ({$this->strPidColumn},tstamp,{$this->strLangColumn},pid) VALUES (?,?,?,?)")->execute($this->intId, time(), $_SESSION['BE_DATA']['language'][$this->strTable][$this->intId], $intPid)->insertId;
+                    $intId = \Database::getInstance()->prepare("INSERT INTO " . $this->strTable . " ({$this->strPidColumn},tstamp,{$this->strLangColumn},pid) VALUES (?,?,?,?)")->execute($this->intId, time(), $_SESSION['BE_DATA']['language'][$this->strTable][$this->intId], $intPid)->insertId;
                 } else {
-                    $intId = $this->Database->prepare("INSERT INTO " . $this->strTable . " ({$this->strPidColumn},tstamp,{$this->strLangColumn}) VALUES (?,?,?)")->execute($this->intId, time(), $_SESSION['BE_DATA']['language'][$this->strTable][$this->intId])->insertId;
+                    $intId = \Database::getInstance()->prepare("INSERT INTO " . $this->strTable . " ({$this->strPidColumn},tstamp,{$this->strLangColumn}) VALUES (?,?,?)")->execute($this->intId, time(), $_SESSION['BE_DATA']['language'][$this->strTable][$this->intId])->insertId;
                 }
 
-                $objRow = $this->Database->prepare("SELECT * FROM " . $this->strTable . " WHERE id=?")->execute($intId);
+                $objRow = \Database::getInstance()->prepare("SELECT * FROM " . $this->strTable . " WHERE id=?")->execute($intId);
             }
 
             $this->objActiveRecord = $objRow;
@@ -422,7 +422,7 @@ class DC_Multilingual extends \DC_Table
 
         // Check languages
         if (is_array($this->arrTranslatableLanguages) && count($this->arrTranslatableLanguages) > 1) {
-            $arrAvailableLanguages = $this->Database->prepare("SELECT {$this->strLangColumn} FROM " . $this->strTable . " WHERE {$this->strPidColumn}=?")->execute($this->intId)->fetchEach($this->strLangColumn);
+            $arrAvailableLanguages = \Database::getInstance()->prepare("SELECT {$this->strLangColumn} FROM " . $this->strTable . " WHERE {$this->strPidColumn}=?")->execute($this->intId)->fetchEach($this->strLangColumn);
             $arrLanguageLabels = $this->getLanguages();
             $available = ($this->strFallbackLang) ? '' : '<option value="">' . $GLOBALS['TL_LANG']['MSC']['defaultLanguage'] . '</option>';
             $undefined = '';
@@ -574,10 +574,10 @@ class DC_Multilingual extends \DC_Table
 
             // Set the current timestamp (-> DO NOT CHANGE THE ORDER version - timestamp)
             if ($GLOBALS['TL_DCA'][$this->strTable]['config']['dynamicPtable']) {
-                $this->Database->prepare("UPDATE " . $this->strTable . " SET ptable=?, tstamp=? WHERE id=?")
+                \Database::getInstance()->prepare("UPDATE " . $this->strTable . " SET ptable=?, tstamp=? WHERE id=?")
                     ->execute($this->ptable, time(), $this->intId);
             } else {
-                $this->Database->prepare("UPDATE " . $this->strTable . " SET tstamp=? WHERE id=?")
+                \Database::getInstance()->prepare("UPDATE " . $this->strTable . " SET tstamp=? WHERE id=?")
                     ->execute(time(), $this->intId);
             }
 
@@ -622,7 +622,7 @@ class DC_Multilingual extends \DC_Table
                     $strUrl .= '&amp;act=create&amp;mode=1&amp;pid=' . $this->intId;
                 } // Parent view
                 elseif ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 4) {
-                    $strUrl .= $this->Database->fieldExists('sorting', $this->strTable) ? '&amp;act=create&amp;mode=1&amp;pid=' . $this->intId . '&amp;id=' . $this->activeRecord->pid : '&amp;act=create&amp;mode=2&amp;pid=' . $this->activeRecord->pid;
+                    $strUrl .= \Database::getInstance()->fieldExists('sorting', $this->strTable) ? '&amp;act=create&amp;mode=1&amp;pid=' . $this->intId . '&amp;id=' . $this->activeRecord->pid : '&amp;act=create&amp;mode=2&amp;pid=' . $this->activeRecord->pid;
                 } // List view
                 else {
                     $strUrl .= ($this->ptable != '') ? '&amp;act=create&amp;mode=2&amp;pid=' . CURRENT_ID : '&amp;act=create';
@@ -739,13 +739,13 @@ class DC_Multilingual extends \DC_Table
         parent::copyChilds($table, $insertID, $id, $parentId);
 
         $strPidColumn = $GLOBALS['TL_DCA'][$table]['config']['pidColumn'] ? $GLOBALS['TL_DCA'][$table]['config']['pidColumn'] : $this->strPidColumn;
-        $objLanguage = $this->Database->prepare("SELECT id FROM " . $table . " WHERE " . $strPidColumn . "=? AND id>?")
+        $objLanguage = \Database::getInstance()->prepare("SELECT id FROM " . $table . " WHERE " . $strPidColumn . "=? AND id>?")
             ->limit(1)
             ->execute($id, $parentId);
 
         // Update the language pid column
         if ($objLanguage->numRows) {
-            $this->Database->prepare("UPDATE " . $table . " SET " . $strPidColumn . "=? WHERE id=?")
+            \Database::getInstance()->prepare("UPDATE " . $table . " SET " . $strPidColumn . "=? WHERE id=?")
                 ->execute($insertID, $objLanguage->id);
         }
     }
@@ -844,11 +844,11 @@ class DC_Multilingual extends \DC_Table
         }
 
         $margin = ($level * 20);
-        $hasSorting = $this->Database->fieldExists('sorting', $table);
+        $hasSorting = \Database::getInstance()->fieldExists('sorting', $table);
         $arrIds = array();
 
         // Get records
-        $objRows = $this->Database->prepare("SELECT id FROM " . $table . " WHERE " . $this->strPidColumn . "=0 AND pid=?" . ($hasSorting ? " ORDER BY sorting" : ""))
+        $objRows = \Database::getInstance()->prepare("SELECT id FROM " . $table . " WHERE " . $this->strPidColumn . "=0 AND pid=?" . ($hasSorting ? " ORDER BY sorting" : ""))
             ->execute($id);
 
         while ($objRows->next()) {
@@ -865,7 +865,7 @@ class DC_Multilingual extends \DC_Table
         }
 
         for ($i = 0, $c = count($arrIds); $i < $c; $i++) {
-            $return .= ' ' . trim($this->generateTree($table, $arrIds[$i], array('p' => $arrIds[($i - 1)], 'n' => $arrIds[($i + 1)]), $hasSorting, $margin, ($blnClipboard ? $arrClipboard : false), ($id == $arrClipboard ['id'] || (is_array($arrClipboard ['id']) && in_array($id, $arrClipboard ['id'])) || (!$blnPtable && !is_array($arrClipboard['id']) && in_array($id, $this->Database->getChildRecords($arrClipboard['id'], $table)))), $blnProtected));
+            $return .= ' ' . trim($this->generateTree($table, $arrIds[$i], array('p' => $arrIds[($i - 1)], 'n' => $arrIds[($i + 1)]), $hasSorting, $margin, ($blnClipboard ? $arrClipboard : false), ($id == $arrClipboard ['id'] || (is_array($arrClipboard ['id']) && in_array($id, $arrClipboard ['id'])) || (!$blnPtable && !is_array($arrClipboard['id']) && in_array($id, \Database::getInstance()->getChildRecords($arrClipboard['id'], $table)))), $blnProtected));
         }
 
         return $return;
@@ -901,7 +901,7 @@ class DC_Multilingual extends \DC_Table
             $this->redirect(preg_replace('/(&(amp;)?|\?)ptg=[^& ]*/i', '', \Environment::get('request')));
         }
 
-        $objRow = $this->Database->prepare("SELECT * FROM " . $table . " WHERE id=?")
+        $objRow = \Database::getInstance()->prepare("SELECT * FROM " . $table . " WHERE id=?")
             ->limit(1)
             ->execute($id);
 
@@ -925,7 +925,7 @@ class DC_Multilingual extends \DC_Table
             if ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 5 || $this->strTable != $table) {
                 $limitForLanguage = $GLOBALS['TL_DCA'][$table]['config']['dataContainer'] == 'Multilingual';
                 $where = $limitForLanguage ? "  AND {$this->strLangColumn}=''" : '';
-                $objChilds = $this->Database->prepare("SELECT id FROM " . $table . " WHERE pid=?$where" . ($blnHasSorting ? " ORDER BY sorting" : ''))
+                $objChilds = \Database::getInstance()->prepare("SELECT id FROM " . $table . " WHERE pid=?$where" . ($blnHasSorting ? " ORDER BY sorting" : ''))
                     ->execute($id);
 
                 if ($objChilds->numRows) {
@@ -969,7 +969,7 @@ class DC_Multilingual extends \DC_Table
                 list($strKey, $strTable) = explode(':', $v);
                 list($strTable, $strField) = explode('.', $strTable);
 
-                $objRef = $this->Database->prepare("SELECT " . $strField . " FROM " . $strTable . " WHERE id=?")
+                $objRef = \Database::getInstance()->prepare("SELECT " . $strField . " FROM " . $strTable . " WHERE id=?")
                     ->limit(1)
                     ->execute($objRow->$strKey);
 
@@ -1048,7 +1048,7 @@ class DC_Multilingual extends \DC_Table
 
         // Add the records of the table itself
         if ($table != $this->strTable) {
-            $objChilds = $this->Database->prepare("SELECT id FROM " . $this->strTable . " WHERE pid=?" . ($blnHasSorting ? " ORDER BY sorting" : ''))
+            $objChilds = \Database::getInstance()->prepare("SELECT id FROM " . $this->strTable . " WHERE pid=?" . ($blnHasSorting ? " ORDER BY sorting" : ''))
                 ->execute($id);
 
             if ($objChilds->numRows) {
@@ -1096,7 +1096,7 @@ class DC_Multilingual extends \DC_Table
     protected function getNewPosition($mode, $pid = null, $insertInto = false)
     {
         // If there is pid and sorting
-        if ($this->Database->fieldExists('pid', $this->strTable) && $this->Database->fieldExists('sorting', $this->strTable)) {
+        if (\Database::getInstance()->fieldExists('pid', $this->strTable) && \Database::getInstance()->fieldExists('sorting', $this->strTable)) {
             // PID is not set - only valid for duplicated records, as they get the same parent ID as the original record!
             if ($pid === null && $this->intId && $mode == 'copy') {
                 $pid = $this->intId;
@@ -1111,7 +1111,7 @@ class DC_Multilingual extends \DC_Table
                 if ($insertInto) {
                     $newPID = $pid;
 
-                    $objSorting = $this->Database->prepare("SELECT MIN(sorting) AS sorting FROM " . $this->strTable . " WHERE pid=? AND {$this->strPidColumn}=0")
+                    $objSorting = \Database::getInstance()->prepare("SELECT MIN(sorting) AS sorting FROM " . $this->strTable . " WHERE pid=? AND {$this->strPidColumn}=0")
                         ->execute($pid);
 
                     // Select sorting value of the first record
@@ -1120,14 +1120,14 @@ class DC_Multilingual extends \DC_Table
 
                         // Resort if the new sorting value is not an integer or smaller than 1
                         if (($curSorting % 2) != 0 || $curSorting < 1) {
-                            $objNewSorting = $this->Database->prepare("SELECT id FROM " . $this->strTable . " WHERE pid=? AND {$this->strPidColumn}=0 ORDER BY sorting")
+                            $objNewSorting = \Database::getInstance()->prepare("SELECT id FROM " . $this->strTable . " WHERE pid=? AND {$this->strPidColumn}=0 ORDER BY sorting")
                                 ->execute($pid);
 
                             $count = 2;
                             $newSorting = 128;
 
                             while ($objNewSorting->next()) {
-                                $this->Database->prepare("UPDATE " . $this->strTable . " SET sorting=? WHERE id=?")
+                                \Database::getInstance()->prepare("UPDATE " . $this->strTable . " SET sorting=? WHERE id=?")
                                     ->limit(1)
                                     ->execute(($count++ * 128), $objNewSorting->id);
                             }
@@ -1137,7 +1137,7 @@ class DC_Multilingual extends \DC_Table
                     else $newSorting = 128;
                 } // Else insert the current record after the parent record
                 elseif ($pid > 0) {
-                    $objSorting = $this->Database->prepare("SELECT pid, sorting FROM " . $this->strTable . " WHERE id=? AND {$this->strPidColumn}=0")
+                    $objSorting = \Database::getInstance()->prepare("SELECT pid, sorting FROM " . $this->strTable . " WHERE id=? AND {$this->strPidColumn}=0")
                         ->limit(1)
                         ->execute($pid);
 
@@ -1148,7 +1148,7 @@ class DC_Multilingual extends \DC_Table
 
                         // Do not proceed without a parent ID
                         if (is_numeric($newPID)) {
-                            $objNextSorting = $this->Database->prepare("SELECT MIN(sorting) AS sorting FROM " . $this->strTable . " WHERE pid=? AND {$this->strPidColumn}=0 AND sorting>?")
+                            $objNextSorting = \Database::getInstance()->prepare("SELECT MIN(sorting) AS sorting FROM " . $this->strTable . " WHERE pid=? AND {$this->strPidColumn}=0 AND sorting>?")
                                 ->execute($newPID, $curSorting);
 
                             // Select sorting value of the next record
@@ -1159,11 +1159,11 @@ class DC_Multilingual extends \DC_Table
                                 if ((($curSorting + $nxtSorting) % 2) != 0 || $nxtSorting >= 4294967295) {
                                     $count = 1;
 
-                                    $objNewSorting = $this->Database->prepare("SELECT id, sorting FROM " . $this->strTable . " WHERE pid=? AND {$this->strPidColumn}=0 ORDER BY sorting")
+                                    $objNewSorting = \Database::getInstance()->prepare("SELECT id, sorting FROM " . $this->strTable . " WHERE pid=? AND {$this->strPidColumn}=0 ORDER BY sorting")
                                         ->execute($newPID);
 
                                     while ($objNewSorting->next()) {
-                                        $this->Database->prepare("UPDATE " . $this->strTable . " SET sorting=? WHERE id=?")
+                                        \Database::getInstance()->prepare("UPDATE " . $this->strTable . " SET sorting=? WHERE id=?")
                                             ->execute(($count++ * 128), $objNewSorting->id);
 
                                         if ($objNewSorting->sorting == $curSorting) {
@@ -1199,7 +1199,7 @@ class DC_Multilingual extends \DC_Table
      */
     public function delete($blnDoNotRedirect = false)
     {
-        $this->Database->prepare("DELETE FROM " . $this->strTable . " WHERE " . $this->strPidColumn . "=?")
+        \Database::getInstance()->prepare("DELETE FROM " . $this->strTable . " WHERE " . $this->strPidColumn . "=?")
             ->execute($this->intId);
 
         parent::delete($blnDoNotRedirect);
@@ -1222,7 +1222,7 @@ class DC_Multilingual extends \DC_Table
             return;
         }
 
-        $objLanguages = $this->Database->prepare("SELECT id FROM " . $table . " WHERE " . ($GLOBALS['TL_DCA'][$table]['config']['pidColumn'] ? $GLOBALS['TL_DCA'][$table]['config']['pidColumn'] : $this->strPidColumn) . " IN (SELECT id FROM " . $table . " WHERE pid=?)")
+        $objLanguages = \Database::getInstance()->prepare("SELECT id FROM " . $table . " WHERE " . ($GLOBALS['TL_DCA'][$table]['config']['pidColumn'] ? $GLOBALS['TL_DCA'][$table]['config']['pidColumn'] : $this->strPidColumn) . " IN (SELECT id FROM " . $table . " WHERE pid=?)")
             ->execute($id);
 
         while ($objLanguages->next()) {
@@ -1293,7 +1293,7 @@ class DC_Multilingual extends \DC_Table
      */
     protected function getRootPageLanguages()
     {
-        $objPages = $this->Database->execute("SELECT DISTINCT language FROM tl_page WHERE type='root' AND language!=''");
+        $objPages = \Database::getInstance()->execute("SELECT DISTINCT language FROM tl_page WHERE type='root' AND language!=''");
         $languages = $objPages->fetchEach('language');
 
         array_walk(
