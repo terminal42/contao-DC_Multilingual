@@ -9,21 +9,11 @@
  * @link       http://github.com/terminal42/contao-dc_multilingual
  */
 
+namespace Terminal42\DcMultilingualBundle;
 
-/**
- * Class DC_Multilingual
- *
- * Provide methods to handle multilingual DC_Table entries
- *
- * @copyright  terminal42 gmbh 2011-2012
- * @author     Yanick Witschi <yanick.witschi@terminal42.ch>
- * @author     Andreas Schempp <andreas.schempp@terminal42.ch>
- * @author     Kamil Kuzminski <kamil.kuzminski@codefog.pl>
- * @package    dc_multilingual
- */
-class DC_Multilingual extends \DC_Table
+
+class Driver extends \DC_Table
 {
-
     /**
      * True if we are editing a language that is not the fallback
      *
@@ -97,7 +87,7 @@ class DC_Multilingual extends \DC_Table
 
         $GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['filter'][] = array($this->strLangColumn . '=?', '');
 
-        $GLOBALS['TL_CSS'][] = 'system/modules/dc_multilingual/assets/backend.min.css';
+        $GLOBALS['TL_CSS'][] = 'bundles/terminal42dcmultilingual/backend.min.css';
     }
 
 
@@ -885,10 +875,11 @@ class DC_Multilingual extends \DC_Table
      * @param boolean
      * @param boolean
      * @param boolean
+     * @param array
      *
      * @return string
      */
-    protected function generateTree($table, $id, $arrPrevNext, $blnHasSorting, $intMargin = 0, $arrClipboard = null, $blnCircularReference = false, $protectedPage = false, $blnNoRecursion = false)
+    protected function generateTree($table, $id, $arrPrevNext, $blnHasSorting, $intMargin = 0, $arrClipboard = null, $blnCircularReference = false, $protectedPage = false, $blnNoRecursion = false, $arrFound=array())
     {
         $session = $this->Session->getData();
         $node = ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 6) ? $this->strTable . '_' . $table . '_tree' : $this->strTable . '_tree';

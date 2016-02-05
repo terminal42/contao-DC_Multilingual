@@ -15,18 +15,16 @@
         }
     ],
     "require":{
-        "php":">=5.3.2",
-        "contao/core-bundle":"^3.3 || ^4.1",
-        "contao-community-alliance/composer-plugin":"^2.4.0 || 3.*"
+        "php":">=5.4",
+        "contao/core-bundle":"^4.1",
+        "doctrine/orm": "^2.5"
     },
-    "replace": {
-        "contao-legacy/dc_multilingual": "self.version"
-    },
-    "extra":{
-        "contao": {
-            "sources":{
-                "":"system/modules/dc_multilingual"
-            }
+    "autoload": {
+        "classmap": [
+            "src/DC_Multilingual.php"
+        ],
+        "psr-4": {
+            "Terminal42\\DcMultilingualBundle\\": "src"
         }
     }
 }
