@@ -17,7 +17,7 @@
     "require":{
         "php":">=5.4",
         "contao/core-bundle":"^4.1",
-        "doctrine/orm": "^2.5"
+        "doctrine/dbal": "^2.5"
     },
     "autoload": {
         "classmap": [
