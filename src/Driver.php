@@ -55,91 +55,45 @@ class Driver extends \DC_Table
      * @var string
      */
     protected $pidColumnName;
-    
-    /**
-     * Set language specific config
-     *
-     * @param string $strTable the database table
-     */
-    public function __construct($strTable)
-    {
-        parent::__construct($strTable);
 
-        // languages array
-        if (isset($GLOBALS['TL_DCA'][$this->strTable]['config']['languages'])) {
-            $this->translatableLangs = $GLOBALS['TL_DCA'][$this->strTable]['config']['languages'];
+    /**
+     * Initialize the object
+     *
+     * @param string $strTable
+     * @param array  $arrModule
+     */
+    public function __construct($strTable, $arrModule=[])
+    {
+        parent::__construct($strTable, $arrModule);
+
+        $dca = &$GLOBALS['TL_DCA'][$this->strTable];
+
+        // Languages array
+        if (isset($dca['config']['languages'])) {
+            $this->translatableLangs = $dca['config']['languages'];
         } else {
             $this->translatableLangs = $this->getRootPageLanguages();
         }
 
-        // fallback language
-        if (isset($GLOBALS['TL_DCA'][$this->strTable]['config']['fallbackLang'])) {
-            $this->fallbackLang = $GLOBALS['TL_DCA'][$this->strTable]['config']['fallbackLang'];
+        // Fallback language
+        if (isset($dca['config']['fallbackLang'])) {
+            $this->fallbackLang = $dca['config']['fallbackLang'];
 
             if (!in_array($this->fallbackLang, $this->translatableLangs)) {
                 $this->translatableLangs[] = $this->fallbackLang;
             }
         }
 
-        $this->pidColumnName = static::getPidColumnForTable($this->strTable);
-        $this->langColumnName = static::getLanguageColumnForTable($this->strTable);
+        // Column names
+        $this->pidColumnName = $dca['config']['langPid'] ?: 'langPid';
+        $this->langColumnName = $dca['config']['langColumnName'] ?: 'language';
 
-        $GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['filter'][] = array($this->langColumnName . '=?', '');
+        // Filter out translations
+        $dca['sorting']['filter'][] = array($this->langColumnName . '=?', '');
 
+        // Add CSS file to place the language dropdown
         $GLOBALS['TL_CSS'][] = 'bundles/terminal42dcmultilingual/backend.min.css';
     }
-
-
-    /**
-     * Get the language pid column name of particular table
-     *
-     * @param string
-     *
-     * @return string
-     */
-    public static function getPidColumnForTable($strTable)
-    {
-        if ($GLOBALS['TL_DCA'][$strTable]['config']['langPid']) {
-            return $GLOBALS['TL_DCA'][$strTable]['config']['langPid'];
-        }
-
-        return 'langPid';
-    }
-
-
-    /**
-     * Get the language column name of particular table
-     *
-     * @param string
-     *
-     * @return string
-     */
-    public static function getLanguageColumnForTable($strTable)
-    {
-        if ($GLOBALS['TL_DCA'][$strTable]['config']['langColumnName']) {
-            return $GLOBALS['TL_DCA'][$strTable]['config']['langColumnName'];
-        }
-
-        return 'language';
-    }
-
-
-    /**
-     * Get the fallback lang if available
-     *
-     * @param string
-     *
-     * @return string|null
-     */
-    public static function getFallbackLanguageForTable($strTable)
-    {
-        if ($GLOBALS['TL_DCA'][$strTable]['config']['fallbackLang']) {
-            return $GLOBALS['TL_DCA'][$strTable]['config']['fallbackLang'];
-        }
-
-        return null;
-    }
-
 
     /**
      * Auto-generate a form to edit the current database record
@@ -1212,7 +1166,14 @@ class Driver extends \DC_Table
             return;
         }
 
-        $objLanguages = \Database::getInstance()->prepare("SELECT id FROM " . $table . " WHERE " . ($GLOBALS['TL_DCA'][$table]['config']['pidColumn'] ? $GLOBALS['TL_DCA'][$table]['config']['pidColumn'] : $this->pidColumnName) . " IN (SELECT id FROM " . $table . " WHERE pid=?)")
+        // Do not take the config of the current table because $table might
+        // be a child table
+        $pidColumn = $GLOBALS['TL_DCA'][$table]['config']['pidColumn'] ?
+            $GLOBALS['TL_DCA'][$table]['config']['pidColumn'] :
+            $this->pidColumnName;
+
+        $objLanguages = \Database::getInstance()->prepare(
+            "SELECT id FROM " . $table . " WHERE " . $pidColumn . " IN (SELECT id FROM " . $table . " WHERE pid=?)")
             ->execute($id);
 
         while ($objLanguages->next()) {
@@ -1255,7 +1216,7 @@ class Driver extends \DC_Table
 
 
     /**
-     * Get the language column
+     * Get the language column name
      *
      * @return string
      */
@@ -1266,7 +1227,7 @@ class Driver extends \DC_Table
 
 
     /**
-     * Get the parent reference column
+     * Get the PID column name
      *
      * @return string
      */
