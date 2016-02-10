@@ -1183,11 +1183,11 @@ class Driver extends \DC_Table
 
 
     /**
-     * Get all languages
+     * Get translatable languages
      *
      * @return array
      */
-    public function getAllowedLanguages()
+    public function getTranslatableLanguages()
     {
         return $this->translatableLangs;
     }
