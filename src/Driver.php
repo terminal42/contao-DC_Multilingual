@@ -1233,9 +1233,11 @@ class Driver extends \DC_Table
         $modifiedPalette = '';
 
         $legendChunks = trimsplit(';', $palette);
+
         foreach ($legendChunks as $legendChunk) {
 
-            $fieldChunks = trimsplit(',', $legendChunk);
+            $fieldChunks    = trimsplit(',', $legendChunk);
+            $newFieldChunks = [];
 
             foreach ($fieldChunks as $fieldChunk) {
 
@@ -1243,7 +1245,7 @@ class Driver extends \DC_Table
                 if (preg_match('/^\[.*\]$/', $fieldChunk)
                     || preg_match('/^\{.*\}$/', $fieldChunk)
                 ) {
-                    $modifiedPalette .= $fieldChunk;
+                    $newFieldChunks[] = $fieldChunk;
                     continue;
                 }
 
@@ -1260,7 +1262,7 @@ class Driver extends \DC_Table
                 // If editing the fallback or the field should be shown for all
                 // languages, we add it to the palette
                 if ('' === $this->currentLang || '*' === $translatableFor[0]) {
-                    $modifiedPalette .= $fieldChunk;
+                    $newFieldChunks[] = $fieldChunk;
                     continue;
                 }
 
@@ -1270,8 +1272,11 @@ class Driver extends \DC_Table
                     continue;
                 }
 
-                $modifiedPalette .= $fieldChunk;
+                $newFieldChunks[] = $fieldChunk;
             }
+
+            $modifiedPalette .= implode(',', $newFieldChunks) . ';';
+
         }
 
         return $modifiedPalette;
