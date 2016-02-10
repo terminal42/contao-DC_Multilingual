@@ -1167,7 +1167,7 @@ class Driver extends \DC_Table
             $version = '<div class="tl_version_panel"></div>';
         }
 
-        $availableLangs = \Database::getInstance()->prepare("SELECT {$this->langColumnNam} FROM " . $this->strTable . " WHERE {$this->pidColumnName}=?")
+        $availableLangs = \Database::getInstance()->prepare("SELECT {$this->langColumnName} FROM " . $this->strTable . " WHERE {$this->pidColumnName}=?")
             ->execute($this->intId)
             ->fetchEach($this->langColumnName);
         $langLabels = \System::getLanguages();
