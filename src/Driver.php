@@ -717,7 +717,8 @@ class Driver extends \DC_Table
      */
     public function ajaxTreeView($id, $level)
     {
-        if (!\Environment::get('isAjaxRequest')) {
+        if (!\Environment::get('isAjaxRequest'))
+        {
             return '';
         }
 
@@ -726,7 +727,8 @@ class Driver extends \DC_Table
         $blnPtable = false;
 
         // Load parent table
-        if ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 6) {
+        if ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 6)
+        {
             $table = $this->ptable;
 
             \System::loadLanguageFile($table);
@@ -738,34 +740,41 @@ class Driver extends \DC_Table
         $blnProtected = false;
 
         // Check protected pages
-        if ($table == 'tl_page') {
+        if ($table == 'tl_page')
+        {
             $objParent = \PageModel::findWithDetails($id);
             $blnProtected = $objParent->protected ? true : false;
         }
 
         $margin = ($level * 20);
-        $hasSorting = \Database::getInstance()->fieldExists('sorting', $table);
+        $hasSorting = $this->Database->fieldExists('sorting', $table);
         $arrIds = array();
 
         // Get records
-        $objRows = \Database::getInstance()->prepare("SELECT id FROM " . $table . " WHERE " . $this->pidColumnName . "=0 AND pid=?" . ($hasSorting ? " ORDER BY sorting" : ""))
+        $objRows = $this->Database->prepare("SELECT id FROM " . $table . " WHERE " . $this->pidColumnName . "=0 AND pid=?" . ($hasSorting ? " ORDER BY sorting" : ""))
             ->execute($id);
 
-        while ($objRows->next()) {
+        while ($objRows->next())
+        {
             $arrIds[] = $objRows->id;
         }
 
+        /** @var SessionInterface $objSession */
+        $objSession = \System::getContainer()->get('session');
+
         $blnClipboard = false;
-        $arrClipboard = $this->Session->get('CLIPBOARD');
+        $arrClipboard = $objSession->get('CLIPBOARD');
 
         // Check clipboard
-        if (!empty($arrClipboard[$this->strTable])) {
+        if (!empty($arrClipboard[$this->strTable]))
+        {
             $blnClipboard = true;
             $arrClipboard = $arrClipboard[$this->strTable];
         }
 
-        for ($i = 0, $c = count($arrIds); $i < $c; $i++) {
-            $return .= ' ' . trim($this->generateTree($table, $arrIds[$i], array('p' => $arrIds[($i - 1)], 'n' => $arrIds[($i + 1)]), $hasSorting, $margin, ($blnClipboard ? $arrClipboard : false), ($id == $arrClipboard ['id'] || (is_array($arrClipboard ['id']) && in_array($id, $arrClipboard ['id'])) || (!$blnPtable && !is_array($arrClipboard['id']) && in_array($id, \Database::getInstance()->getChildRecords($arrClipboard['id'], $table)))), $blnProtected));
+        for ($i=0, $c=count($arrIds); $i<$c; $i++)
+        {
+            $return .= ' ' . trim($this->generateTree($table, $arrIds[$i], array('p'=>$arrIds[($i-1)], 'n'=>$arrIds[($i+1)]), $hasSorting, $margin, ($blnClipboard ? $arrClipboard : false), ($id == $arrClipboard ['id'] || (is_array($arrClipboard ['id']) && in_array($id, $arrClipboard ['id'])) || (!$blnPtable && !is_array($arrClipboard['id']) && in_array($id, $this->Database->getChildRecords($arrClipboard['id'], $table)))), $blnProtected));
         }
 
         return $return;
