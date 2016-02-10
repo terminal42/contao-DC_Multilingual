@@ -1,14 +1,7 @@
 DC_Multilingual
 ===============
 
-This is a standalone DC driver for contao that allows you to easily make your data translatable.
-
-Contributors:
-
-* Yanick Witschi <yanick.witschi@terminal42.ch>
-* Andreas Schempp <andreas.schempp@terminal42.ch>
-* Kamil Kuzminski <kamil.kuzminski@codefog.pl>
-* weyert, psi-4ward, andreasisaak
+This is a standalone DC driver for Contao Open Source CMS that allows you to easily make your data translatable.
 
 ## DCA configuration
 
@@ -16,8 +9,8 @@ Contributors:
 // Set the driver
 $GLOBALS['TL_DCA']['table']['config']['dataContainer'] = 'Multilingual';
 
-// Languages you want to provide for translation
-$GLOBALS['TL_DCA']['table']['config']['languages'] = array('en', 'de', 'pl');
+// Languages you want to provide for translation (default: Languages of all root pages)
+$GLOBALS['TL_DCA']['table']['config']['languages'] = ['en', 'de', 'pl'];
 
 // Database column that contains the language keys (default: "language")
 $GLOBALS['TL_DCA']['table']['config']['langColumn'] = 'language';
@@ -32,7 +25,7 @@ $GLOBALS['TL_DCA']['table']['config']['fallbackLang'] = 'en';
 $GLOBALS['TL_DCA']['table']['fields']['username']['eval']['translatableFor'] = '*';
 
 // Use an array of language keys to specify for which languages the field is translatable
-$GLOBALS['TL_DCA']['table']['fields']['name']['eval']['translatableFor'] = array('de');
+$GLOBALS['TL_DCA']['table']['fields']['name']['eval']['translatableFor'] = ['de'];
 
 // Note:
 // If you don't use ['eval']['translatableFor'] and the user is not editing the fallback language, then the field will be hidden for all the languages
@@ -62,7 +55,7 @@ $GLOBALS['TL_DCA']['tl_user']['fields']['name']['eval']['translatableFor'] = arr
 ## Querying using the model
 
 ```php
-class UserModel extends \MultilingualModel
+class UserModel extends Terminal42\DcMultilingualBundle\Model\Multilingual
 {
 	protected static $strTable = 'tl_user';
 
@@ -75,31 +68,16 @@ class UserModel extends \MultilingualModel
 }
 ```
 
-## Querying using the DC_Multilingual_Query builder (old)
+## How does it work under the hood
 
-```php
-$objQuery = new DC_Multilingual_Query('table');
-
-// The base query as string.
-// You see the table-alias t1 for the base-fields
-// and t2 for the language-fields.
-echo $objQuery->getQuery();
-
-// Probably you would change the language, default is $GLOBALS['TL_LANGUAGE']
-$objQuery->language = 'en';
-
-// Add some conditions
-$objQuery->addField('CONCAT(t2.firstname," ",t2.lastname") AS fullname')
-         ->addField('joinedTable.anotherField')
-		 ->addJoin('LEFT JOIN joinedTable ON (t1.joinedID = joinedTable.id)');
-
-// Some WHERE and ORDER conditions
-$objQuery->addWhere('t1.published="1"')->addOrder('t2.lastname');
-
-echo $objQuery->getQuery();
-
-// Or get the Database_Statement instance
-$objStatement = $objQuery->getStatement();
-
-$objResult = $objQuery->getStatement()->execute();
-```
+Basically, the driver just stores translations into the same table, building up
+a relationship to its parent entry using the "langPid" (or whatever you
+configured it to be) column. In the back end list and tree view it makes sure
+translations are filtered so you only see the fallback language there.
+When querying using the `Multilingual` model or using the
+`MultilingualQueryBuilder`, the same table is simply joined so we have the
+fallback language aliased as `t1` and the target language (which you specify
+ explicitly or it uses the current page's language) aliased as `t2`. Now, using
+ MySQL's `IFNULL()` function, it checks whether there's a translated value and
+ if not, automatically falls back to the fallback language. This allows you to
+ translate only a subset of fields.
