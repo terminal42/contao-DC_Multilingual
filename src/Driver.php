@@ -11,7 +11,17 @@
 
 namespace Terminal42\DcMultilingualBundle;
 
+use Contao\CoreBundle\Exception\AccessDeniedException;
+use Contao\CoreBundle\Exception\InternalServerErrorException;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Session\SessionInterface;
 
+
+/**
+ * Class Driver
+ *
+ * This class is based on the DC_Table driver of Contao 4.1
+ */
 class Driver extends \DC_Table
 {
     /**
@@ -57,6 +67,13 @@ class Driver extends \DC_Table
     protected $pidColumnName;
 
     /**
+     * Session key
+     *
+     * @var string
+     */
+    protected $sessionKey;
+
+    /**
      * Initialize the object
      *
      * @param string $strTable
@@ -84,6 +101,9 @@ class Driver extends \DC_Table
             }
         }
 
+        // Session key
+        $this->sessionKey = 'dc_multilingual:' . $this->strTable . ':' . $this->intId;
+
         // Column names
         $this->pidColumnName = $dca['config']['langPid'] ?: 'langPid';
         $this->langColumnName = $dca['config']['langColumnName'] ?: 'language';
@@ -98,21 +118,39 @@ class Driver extends \DC_Table
     /**
      * Auto-generate a form to edit the current database record
      *
-     * @param integer
-     * @param integer
+     * @param integer $intId
+     * @param integer $ajaxId
      *
      * @return string
+     *
+     * @throws AccessDeniedException
+     * @throws InternalServerErrorException
      */
-    public function edit($intID = null, $ajaxId = null)
+    public function edit($intId=null, $ajaxId=null)
     {
-        if ($GLOBALS['TL_DCA'][$this->strTable]['config']['notEditable']) {
-            $this->log('Table "' . $this->strTable . '" is not editable', __METHOD__, TL_ERROR);
-            $this->redirect('contao/main.php?act=error');
+        if ($GLOBALS['TL_DCA'][$this->strTable]['config']['notEditable'])
+        {
+            throw new InternalServerErrorException('Table "' . $this->strTable . '" is not editable.');
         }
 
-        if ($intID != '') {
-            $this->intId = $intID;
+        if ($intId != '')
+        {
+            $this->intId = $intId;
+            $this->sessionKey = 'dc_multilingual:' . $this->strTable . ':' . $this->intId;
         }
+
+        // Get the current record
+        $objRow = $this->Database->prepare("SELECT * FROM " . $this->strTable . " WHERE id=?")
+            ->limit(1)
+            ->execute($this->intId);
+
+        // Redirect if there is no record with the given ID
+        if ($objRow->numRows < 1)
+        {
+            throw new AccessDeniedException('Cannot load record "' . $this->strTable . '.id=' . $this->intId . '".');
+        }
+
+        $this->objActiveRecord = $objRow;
 
         $return = '';
         $this->values[] = $this->intId;
@@ -121,100 +159,27 @@ class Driver extends \DC_Table
         $this->blnCreateNewVersion = false;
         $objVersions = new \Versions($this->strTable, $this->intId);
 
-        // Compare versions
-        if (\Input::get('versions')) {
-            $objVersions->compare();
-        }
-
-        // Restore a version
-        if (\Input::post('FORM_SUBMIT') == 'tl_version' && \Input::post('version') != '') {
-            $objVersions->restore(\Input::post('version'));
-            $this->reload();
-        }
-
-        // Get the current record
-        $objRow = \Database::getInstance()->prepare("SELECT * FROM " . $this->strTable . " WHERE id=?")
-            ->limit(1)
-            ->executeUncached($this->intId);
-
-        // Redirect if there is no record with the given ID
-        if ($objRow->numRows < 1) {
-            $this->log('Could not load record ID ' . $this->intId . ' of table "' . $this->strTable . '"', __METHOD__, TL_ERROR);
-            $this->redirect('contao/main.php?act=error');
-        } // ID of a language record is not allowed
-        elseif ($objRow->{$this->langColumnName} != '') {
-            $this->log('Cannot edit language record ID "' . $this->intId . '" of table "' . $this->strTable . '"!', __METHOD__, TL_ERROR);
-            $this->redirect('contao/main.php?act=error');
-        }
-
-        $this->objActiveRecord = $objRow;
-
-        // Incomplete records can't be translated (see #17)
-        if (!$objRow->tstamp) {
-            $this->translatableLangs = array();
-        }
-
-        if (!empty($this->translatableLangs)) {
-            $blnLanguageUpdated = false;
-            $session = $this->Session->getData();
-
-            if (\Input::post('FORM_SUBMIT') == 'tl_language') {
-                if (in_array(\Input::post('language'), $this->translatableLangs)) {
-                    $session['language'][$this->strTable][$this->intId] = \Input::post('language');
-                } else {
-                    unset($session['language'][$this->strTable][$this->intId]);
-                }
-
-                $blnLanguageUpdated = true;
-            } elseif (\Input::post('FORM_SUBMIT') == $this->strTable && isset($_POST['deleteLanguage'])) {
-                \Database::getInstance()
-                    ->prepare(
-                        "DELETE FROM " . $this->strTable . "
-                         WHERE {$this->pidColumnName}=? AND {$this->langColumnName}=?"
-                    )
-                    ->execute(
-                        $this->intId,
-                        $session['language'][$this->strTable][$this->intId]
-                    );
-
-                unset($session['language'][$this->strTable][$this->intId]);
-                $blnLanguageUpdated = true;
+        if (!$GLOBALS['TL_DCA'][$this->strTable]['config']['hideVersionMenu'])
+        {
+            // Compare versions
+            if (\Input::get('versions'))
+            {
+                $objVersions->compare();
             }
 
-            if ($blnLanguageUpdated) {
-                $this->Session->setData($session);
-                $_SESSION['TL_INFO'] = '';
-                \Controller::reload();
+            // Restore a version
+            if (\Input::post('FORM_SUBMIT') == 'tl_version' && \Input::post('version') != '')
+            {
+                $objVersions->restore(\Input::post('version'));
+                $this->reload();
             }
         }
 
-        if (strlen($_SESSION['BE_DATA']['language'][$this->strTable][$this->intId])
-            && in_array($_SESSION['BE_DATA']['language'][$this->strTable][$this->intId], array_keys($this->translatableLangs))
-        ) {
-            $objRow = \Database::getInstance()->prepare("SELECT * FROM " . $this->strTable . " WHERE {$this->pidColumnName}=? AND {$this->langColumnName}=?")->execute($this->intId, $_SESSION['BE_DATA']['language'][$this->strTable][$this->intId]);
+        // Handle language change or deletion
+        $this->handleLanguageOperation();
 
-            if (!$objRow->numRows) {
-                // Preserve the "pid" field
-                if (\Database::getInstance()->fieldExists('pid', $this->strTable)) {
-                    $objCurrent = \Database::getInstance()->prepare("SELECT pid FROM " . $this->strTable . " WHERE id=?")
-                        ->limit(1)
-                        ->executeUncached($this->intId);
-
-                    $intPid = ($objCurrent->numRows) ? $objCurrent->pid : 0;
-                    $intId = \Database::getInstance()->prepare("INSERT INTO " . $this->strTable . " ({$this->pidColumnName},tstamp,{$this->langColumnName},pid) VALUES (?,?,?,?)")->execute($this->intId, time(), $_SESSION['BE_DATA']['language'][$this->strTable][$this->intId], $intPid)->insertId;
-                } else {
-                    $intId = \Database::getInstance()->prepare("INSERT INTO " . $this->strTable . " ({$this->pidColumnName},tstamp,{$this->langColumnName}) VALUES (?,?,?)")->execute($this->intId, time(), $_SESSION['BE_DATA']['language'][$this->strTable][$this->intId])->insertId;
-                }
-
-                $objRow = \Database::getInstance()->prepare("SELECT * FROM " . $this->strTable . " WHERE id=?")->execute($intId);
-            }
-
-            $this->objActiveRecord = $objRow;
-            $this->values = array($this->intId, $_SESSION['BE_DATA']['language'][$this->strTable][$this->intId]);
-            $this->procedure = array($this->pidColumnName . '=?', $this->langColumnName . '=?');
-            $this->editLang = true;
-            $this->currentLang = $_SESSION['BE_DATA']['language'][$this->strTable][$this->intId];
-        }
+        // Load the language record
+        $this->loadCurrentLanguageRecord();
 
         $objVersions->initialize();
 
@@ -223,80 +188,82 @@ class Driver extends \DC_Table
         $boxes = trimsplit(';', $this->strPalette);
         $legends = array();
 
-        if (!empty($boxes)) {
-            foreach ($boxes as $k => $v) {
+        if (!empty($boxes))
+        {
+            foreach ($boxes as $k=>$v)
+            {
                 $eCount = 1;
                 $boxes[$k] = trimsplit(',', $v);
 
-                foreach ($boxes[$k] as $kk => $vv) {
-                    if (preg_match('/^\[.*\]$/', $vv)) {
+                foreach ($boxes[$k] as $kk=>$vv)
+                {
+                    if (preg_match('/^\[.*\]$/', $vv))
+                    {
                         ++$eCount;
                         continue;
                     }
 
-                    if (preg_match('/^\{.*\}$/', $vv)) {
+                    if (preg_match('/^\{.*\}$/', $vv))
+                    {
                         $legends[$k] = substr($vv, 1, -1);
                         unset($boxes[$k][$kk]);
-                    } elseif ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$vv]['exclude'] || !is_array($GLOBALS['TL_DCA'][$this->strTable]['fields'][$vv])) {
+                    }
+                    elseif ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$vv]['exclude'] || !is_array($GLOBALS['TL_DCA'][$this->strTable]['fields'][$vv]))
+                    {
                         unset($boxes[$k][$kk]);
                     }
 
-                    // unset fields that are not translatable for the current language
-                    $translatableFor = $GLOBALS['TL_DCA'][$this->strTable]['fields'][$vv]['eval']['translatableFor'];
 
-                    // if editing the fallback or the field should be shown for all languages, we don't unset anything at all
-                    if ($this->currentLang == '' || $translatableFor[0] == '*') {
-                        continue;
-                    }
-
-                    // if translatableFor is not set we unset it for every language
-                    if (!isset($translatableFor)) {
-                        unset($boxes[$k][$kk]);
-                        continue;
-                    }
-
-                    // we check if the field is not editable for the current language
-                    if (!in_array($this->currentLang, $translatableFor)) {
-                        unset($boxes[$k][$kk]);
-                    }
                 }
 
                 // Unset a box if it does not contain any fields
-                if (count($boxes[$k]) < $eCount) {
+                if (count($boxes[$k]) < $eCount)
+                {
                     unset($boxes[$k]);
                 }
             }
 
+            /** @var SessionInterface $objSessionBag */
+            $objSessionBag = \System::getContainer()->get('session')->getBag('contao_backend');
+
             $class = 'tl_tbox';
-            $fs = $this->Session->get('fieldset_states');
+            $fs = $objSessionBag->get('fieldset_states');
             $blnIsFirst = true;
 
             // Render boxes
-            foreach ($boxes as $k => $v) {
+            foreach ($boxes as $k=>$v)
+            {
                 $strAjax = '';
                 $blnAjax = false;
                 $key = '';
                 $cls = '';
                 $legend = '';
 
-                if (isset($legends[$k])) {
+                if (isset($legends[$k]))
+                {
                     list($key, $cls) = explode(':', $legends[$k]);
                     $legend = "\n" . '<legend onclick="AjaxRequest.toggleFieldset(this,\'' . $key . '\',\'' . $this->strTable . '\')">' . (isset($GLOBALS['TL_LANG'][$this->strTable][$key]) ? $GLOBALS['TL_LANG'][$this->strTable][$key] : $key) . '</legend>';
                 }
 
-                if (isset($fs[$this->strTable][$key])) {
+                if (isset($fs[$this->strTable][$key]))
+                {
                     $class .= ($fs[$this->strTable][$key] ? '' : ' collapsed');
-                } else {
+                }
+                else
+                {
                     $class .= (($cls && $legend) ? ' ' . $cls : '');
                 }
 
-                $return .= "\n\n" . '<fieldset' . ($key ? ' id="pal_' . $key . '"' : '') . ' class="' . $class . ($legend ? '' : ' nolegend') . '">' . $legend;
+                $return .= "\n\n" . '<fieldset' . ($key ? ' id="pal_'.$key.'"' : '') . ' class="' . $class . ($legend ? '' : ' nolegend') . '">' . $legend;
 
                 // Build rows of the current box
-                foreach ($v as $vv) {
-                    if ($vv == '[EOF]') {
-                        if ($blnAjax && \Environment::get('isAjaxRequest')) {
-                            return $strAjax . '<input type="hidden" name="FORM_FIELDS[]" value="' . specialchars($this->strPalette) . '">';
+                foreach ($v as $vv)
+                {
+                    if ($vv == '[EOF]')
+                    {
+                        if ($blnAjax && \Environment::get('isAjaxRequest'))
+                        {
+                            return $strAjax . '<input type="hidden" name="FORM_FIELDS[]" value="'.specialchars($this->strPalette).'">';
                         }
 
                         $blnAjax = false;
@@ -305,10 +272,11 @@ class Driver extends \DC_Table
                         continue;
                     }
 
-                    if (preg_match('/^\[.*\]$/', $vv)) {
+                    if (preg_match('/^\[.*\]$/', $vv))
+                    {
                         $thisId = 'sub_' . substr($vv, 1, -1);
                         $blnAjax = ($ajaxId == $thisId && \Environment::get('isAjaxRequest')) ? true : false;
-                        $return .= "\n" . '<div id="' . $thisId . '">';
+                        $return .= "\n" . '<div id="'.$thisId.'">';
 
                         continue;
                     }
@@ -318,23 +286,30 @@ class Driver extends \DC_Table
                     $this->varValue = $objRow->$vv;
 
                     // Autofocus the first field
-                    if ($blnIsFirst && $GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['inputType'] == 'text') {
+                    if ($blnIsFirst && $GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['inputType'] == 'text')
+                    {
                         $GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['eval']['autofocus'] = 'autofocus';
                         $blnIsFirst = false;
                     }
 
                     // Convert CSV fields (see #2890)
-                    if ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['eval']['multiple'] && isset($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['eval']['csv'])) {
+                    if ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['eval']['multiple'] && isset($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['eval']['csv']))
+                    {
                         $this->varValue = trimsplit($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['eval']['csv'], $this->varValue);
                     }
 
                     // Call load_callback
-                    if (is_array($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['load_callback'])) {
-                        foreach ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['load_callback'] as $callback) {
-                            if (is_array($callback)) {
+                    if (is_array($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['load_callback']))
+                    {
+                        foreach ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['load_callback'] as $callback)
+                        {
+                            if (is_array($callback))
+                            {
                                 $this->import($callback[0]);
-                                $this->varValue = $this->$callback[0]->$callback[1]($this->varValue, $this);
-                            } elseif (is_callable($callback)) {
+                                $this->varValue = $this->{$callback[0]}->{$callback[1]}($this->varValue, $this);
+                            }
+                            elseif (is_callable($callback))
+                            {
                                 $this->varValue = $callback($this->varValue, $this);
                             }
                         }
@@ -353,79 +328,40 @@ class Driver extends \DC_Table
         }
 
         // Versions overview
-        $version = '';
-        if ($GLOBALS['TL_DCA'][$this->strTable]['config']['enableVersioning']) {
+        if ($GLOBALS['TL_DCA'][$this->strTable]['config']['enableVersioning'] && !$GLOBALS['TL_DCA'][$this->strTable]['config']['hideVersionMenu'])
+        {
             $version = $objVersions->renderDropdown();
         }
-
-        // Make sure there's always a panel to replace
-        if ('' === $version) {
-            $version = '<div class="tl_version_panel"></div>';
+        else
+        {
+            $version = '';
         }
 
-        // Check languages
-        if (is_array($this->translatableLangs) && count($this->translatableLangs) > 1) {
-            $arrAvailableLanguages = \Database::getInstance()->prepare("SELECT {$this->langColumnName} FROM " . $this->strTable . " WHERE {$this->pidColumnName}=?")->execute($this->intId)->fetchEach($this->langColumnName);
-            $arrLanguageLabels = $this->getLanguages();
-            $available = ($this->fallbackLang) ? '' : '<option value="">' . $GLOBALS['TL_LANG']['MSC']['defaultLanguage'] . '</option>';
-            $undefined = '';
-
-            foreach ($this->translatableLangs as $language) {
-                $value = ($this->fallbackLang == $language) ? '' : $language;
-                $label = ($this->fallbackLang == $language) ? ($arrLanguageLabels[$language] . ' (' . $GLOBALS['TL_LANG']['MSC']['defaultLanguage'] . ')') : $arrLanguageLabels[$language];
-                $selected = $this->currentLang == $language || ($this->fallbackLang && $this->currentLang == '' && $this->fallbackLang == $language);
-
-                // show the languages that are already translated (fallback is always "translated")
-                if (in_array($language, $arrAvailableLanguages) || ($language == $this->fallbackLang)) {
-                    $available .= sprintf('<option value="%s"%s>%s</option>',
-                        $value,
-                        ($selected) ? ' selected="selected"' : '',
-                        $label);
-
-                    // add translation hint
-                    if ($selected && (($this->fallbackLang && $this->fallbackLang != $language) || (!$this->fallbackLang && $this->currentLang != ''))) {
-                        $_SESSION['TL_INFO'] = array($GLOBALS['TL_LANG']['MSC']['editingLanguage']);
-                    }
-                } else {
-                    $undefined .= '<option value="' . $value . '">' . $label . ' (' . $GLOBALS['TL_LANG']['MSC']['undefinedLanguage'] . ')' . '</option>';
-                }
-            }
-
-            $version = str_replace(
-                '<div class="tl_version_panel">',
-                '<div class="tl_version_panel language_panel">
-<form action="' . ampersand(\Environment::get('request'), true) . '" id="tl_language" class="tl_form" method="post">
-<div class="tl_formbody">
-<input type="hidden" name="FORM_SUBMIT" value="tl_language">
-<input type="hidden" name="REQUEST_TOKEN" value="' . REQUEST_TOKEN . '">
-<select name="language" class="tl_select' . (strlen($_SESSION['BE_DATA']['language'][$this->strTable][$this->intId]) ? ' active' : '') . '" onchange="document.id(this).getParent(\'form\').submit()">
-    ' . $available . $undefined . '
-</select>
-<noscript>
-<input type="submit" name="editLang" class="tl_submit" value="' . specialchars($GLOBALS['TL_LANG']['MSC']['editLang']) . '">
-</noscript>
-</div>
-</form>',
-                $version
-            );
-        }
+        // Add language switch panel
+        $version = $this->addLanguageSwitchPanel($version);
 
         // Submit buttons
         $arrButtons = array();
-        $arrButtons['save'] = '<input type="submit" name="save" id="save" class="tl_submit" accesskey="s" value="' . specialchars($GLOBALS['TL_LANG']['MSC']['save']) . '">';
+        $arrButtons['save'] = '<button type="submit" name="save" id="save" class="tl_submit" accesskey="s">'.$GLOBALS['TL_LANG']['MSC']['save'].'</button>';
 
-        if (!\Input::get('nb')) {
-            $arrButtons['saveNclose'] = '<input type="submit" name="saveNclose" id="saveNclose" class="tl_submit" accesskey="c" value="' . specialchars($GLOBALS['TL_LANG']['MSC']['saveNclose']) . '">';
+        if (!\Input::get('nb'))
+        {
+            $arrButtons['saveNclose'] = '<button type="submit" name="saveNclose" id="saveNclose" class="tl_submit" accesskey="c">'.$GLOBALS['TL_LANG']['MSC']['saveNclose'].'</button>';
         }
 
-        if (!\Input::get('popup') && !$GLOBALS['TL_DCA'][$this->strTable]['config']['closed'] && !$GLOBALS['TL_DCA'][$this->strTable]['config']['notCreatable']) {
-            $arrButtons['saveNcreate'] = '<input type="submit" name="saveNcreate" id="saveNcreate" class="tl_submit" accesskey="n" value="' . specialchars($GLOBALS['TL_LANG']['MSC']['saveNcreate']) . '">';
+        if (!\Input::get('popup') && !$GLOBALS['TL_DCA'][$this->strTable]['config']['closed'] && !$GLOBALS['TL_DCA'][$this->strTable]['config']['notCreatable'])
+        {
+            $arrButtons['saveNcreate'] = '<button type="submit" name="saveNcreate" id="saveNcreate" class="tl_submit" accesskey="n">'.$GLOBALS['TL_LANG']['MSC']['saveNcreate'].'</button>';
         }
 
-        if (\Input::get('s2e')) {
-            $arrButtons['saveNedit'] = '<input type="submit" name="saveNedit" id="saveNedit" class="tl_submit" accesskey="e" value="' . specialchars($GLOBALS['TL_LANG']['MSC']['saveNedit']) . '">';
-        } elseif (!\Input::get('popup') && ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 4 || strlen($this->ptable) || $GLOBALS['TL_DCA'][$this->strTable]['config']['switchToEdit'])) {
-            $arrButtons['saveNback'] = '<input type="submit" name="saveNback" id="saveNback" class="tl_submit" accesskey="g" value="' . specialchars($GLOBALS['TL_LANG']['MSC']['saveNback']) . '">';
+        if ($GLOBALS['TL_DCA'][$this->strTable]['config']['switchToEdit'])
+        {
+            $arrButtons['saveNedit'] = '<button type="submit" name="saveNedit" id="saveNedit" class="tl_submit" accesskey="e">'.$GLOBALS['TL_LANG']['MSC']['saveNedit'].'</button>';
+        }
+
+        if (!\Input::get('popup') && ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 4 || strlen($this->ptable) || $GLOBALS['TL_DCA'][$this->strTable]['config']['switchToEdit']))
+        {
+            $arrButtons['saveNback'] = '<button type="submit" name="saveNback" id="saveNback" class="tl_submit" accesskey="g">'.$GLOBALS['TL_LANG']['MSC']['saveNback'].'</button>';
         }
 
         if ($this->editLang) {
@@ -433,12 +369,17 @@ class Driver extends \DC_Table
         }
 
         // Call the buttons_callback (see #4691)
-        if (is_array($GLOBALS['TL_DCA'][$this->strTable]['edit']['buttons_callback'])) {
-            foreach ($GLOBALS['TL_DCA'][$this->strTable]['edit']['buttons_callback'] as $callback) {
-                if (is_array($callback)) {
+        if (is_array($GLOBALS['TL_DCA'][$this->strTable]['edit']['buttons_callback']))
+        {
+            foreach ($GLOBALS['TL_DCA'][$this->strTable]['edit']['buttons_callback'] as $callback)
+            {
+                if (is_array($callback))
+                {
                     $this->import($callback[0]);
-                    $arrButtons = $this->$callback[0]->$callback[1]($arrButtons, $this);
-                } elseif (is_callable($callback)) {
+                    $arrButtons = $this->{$callback[0]}->{$callback[1]}($arrButtons, $this);
+                }
+                elseif (is_callable($callback))
+                {
                     $arrButtons = $callback($arrButtons, $this);
                 }
             }
@@ -459,115 +400,145 @@ class Driver extends \DC_Table
 
 <script>
   window.addEvent(\'domready\', function() {
-    Theme.focusInput("' . $this->strTable . '");
+    Theme.focusInput("'.$this->strTable.'");
   });
 </script>';
 
         // Begin the form (-> DO NOT CHANGE THIS ORDER -> this way the onsubmit attribute of the form can be changed by a field)
         $return = $version . '
 <div id="tl_buttons">' . (\Input::get('nb') ? '&nbsp;' : '
-<a href="' . $this->getReferer(true) . '" class="header_back" title="' . specialchars($GLOBALS['TL_LANG']['MSC']['backBTTitle']) . '" accesskey="b" onclick="Backend.getScrollOffset()">' . $GLOBALS['TL_LANG']['MSC']['backBT'] . '</a>') . '
+<a href="'.$this->getReferer(true).'" class="header_back" title="'.specialchars($GLOBALS['TL_LANG']['MSC']['backBTTitle']).'" accesskey="b" onclick="Backend.getScrollOffset()">'.$GLOBALS['TL_LANG']['MSC']['backBT'].'</a>') . '
 </div>
-
-<h2 class="sub_headline">' . sprintf($GLOBALS['TL_LANG']['MSC']['editRecord'], ($this->intId ? 'ID ' . $this->intId : '')) . '</h2>
-' . \Message::generate() . '
-<form action="' . ampersand(\Environment::get('request'), true) . '" id="' . $this->strTable . '" class="tl_form" method="post" enctype="' . ($this->blnUploadable ? 'multipart/form-data' : 'application/x-www-form-urlencoded') . '"' . (!empty($this->onsubmit) ? ' onsubmit="' . implode(' ', $this->onsubmit) . '"' : '') . '>
+'.\Message::generate().'
+<form action="'.ampersand(\Environment::get('request'), true).'" id="'.$this->strTable.'" class="tl_form" method="post" enctype="' . ($this->blnUploadable ? 'multipart/form-data' : 'application/x-www-form-urlencoded') . '"'.(!empty($this->onsubmit) ? ' onsubmit="'.implode(' ', $this->onsubmit).'"' : '').'>
 <div class="tl_formbody_edit">
-<input type="hidden" name="FORM_SUBMIT" value="' . specialchars($this->strTable) . '">
-<input type="hidden" name="REQUEST_TOKEN" value="' . REQUEST_TOKEN . '">
-<input type="hidden" name="FORM_FIELDS[]" value="' . specialchars($this->strPalette) . '">' . ($this->noReload ? '
+<input type="hidden" name="FORM_SUBMIT" value="'.$this->strTable.'">
+<input type="hidden" name="REQUEST_TOKEN" value="'.REQUEST_TOKEN.'">
+<input type="hidden" name="FORM_FIELDS[]" value="'.specialchars($this->strPalette).'">'.($this->noReload ? '
 
-<p class="tl_error">' . $GLOBALS['TL_LANG']['ERR']['general'] . '</p>' : '') . $return;
+<p class="tl_error">'.$GLOBALS['TL_LANG']['ERR']['general'].'</p>' : '').$return;
 
         // Reload the page to prevent _POST variables from being sent twice
-        if (\Input::post('FORM_SUBMIT') == $this->strTable && !$this->noReload) {
+        if (\Input::post('FORM_SUBMIT') == $this->strTable && !$this->noReload)
+        {
             $arrValues = $this->values;
             array_unshift($arrValues, time());
 
             // Trigger the onsubmit_callback
-            if (is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['onsubmit_callback'])) {
-                foreach ($GLOBALS['TL_DCA'][$this->strTable]['config']['onsubmit_callback'] as $callback) {
-                    if (is_array($callback)) {
+            if (is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['onsubmit_callback']))
+            {
+                foreach ($GLOBALS['TL_DCA'][$this->strTable]['config']['onsubmit_callback'] as $callback)
+                {
+                    if (is_array($callback))
+                    {
                         $this->import($callback[0]);
-                        $this->$callback[0]->$callback[1]($this);
-                    } elseif (is_callable($callback)) {
+                        $this->{$callback[0]}->{$callback[1]}($this);
+                    }
+                    elseif (is_callable($callback))
+                    {
                         $callback($this);
                     }
                 }
             }
 
             // Save the current version
-            if ($this->blnCreateNewVersion) {
+            if ($this->blnCreateNewVersion)
+            {
                 $objVersions->create();
 
                 // Call the onversion_callback
-                if (is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['onversion_callback'])) {
-                    foreach ($GLOBALS['TL_DCA'][$this->strTable]['config']['onversion_callback'] as $callback) {
-                        if (is_array($callback)) {
+                if (is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['onversion_callback']))
+                {
+                    foreach ($GLOBALS['TL_DCA'][$this->strTable]['config']['onversion_callback'] as $callback)
+                    {
+                        if (is_array($callback))
+                        {
                             $this->import($callback[0]);
-                            $this->$callback[0]->$callback[1]($this->strTable, $this->intId, $this);
-                        } elseif (is_callable($callback)) {
+                            $this->{$callback[0]}->{$callback[1]}($this->strTable, $this->intId, $this);
+                        }
+                        elseif (is_callable($callback))
+                        {
                             $callback($this->strTable, $this->intId, $this);
                         }
                     }
                 }
 
-                $this->log('A new version of record "' . $this->strTable . '.id=' . $this->intId . '" has been created' . $this->getParentEntries($this->strTable, $this->intId), __METHOD__, TL_GENERAL);
+                $this->log('A new version of record "'.$this->strTable.'.id='.$this->intId.'" has been created'.$this->getParentEntries($this->strTable, $this->intId), __METHOD__, TL_GENERAL);
             }
 
             // Set the current timestamp (-> DO NOT CHANGE THE ORDER version - timestamp)
-            if ($GLOBALS['TL_DCA'][$this->strTable]['config']['dynamicPtable']) {
-                \Database::getInstance()->prepare("UPDATE " . $this->strTable . " SET ptable=?, tstamp=? WHERE id=?")
+            if ($GLOBALS['TL_DCA'][$this->strTable]['config']['dynamicPtable'])
+            {
+                $this->Database->prepare("UPDATE " . $this->strTable . " SET ptable=?, tstamp=? WHERE id=?")
                     ->execute($this->ptable, time(), $this->intId);
-            } else {
-                \Database::getInstance()->prepare("UPDATE " . $this->strTable . " SET tstamp=? WHERE id=?")
+            }
+            else
+            {
+                $this->Database->prepare("UPDATE " . $this->strTable . " SET tstamp=? WHERE id=?")
                     ->execute(time(), $this->intId);
             }
 
             // Redirect
-            if (isset($_POST['saveNclose'])) {
+            if (isset($_POST['saveNclose']))
+            {
                 \Message::reset();
                 \System::setCookie('BE_PAGE_OFFSET', 0, 0);
 
                 $this->redirect($this->getReferer());
-            } elseif (isset($_POST['saveNedit'])) {
+            }
+            elseif (isset($_POST['saveNedit']))
+            {
                 \Message::reset();
                 \System::setCookie('BE_PAGE_OFFSET', 0, 0);
 
-                $strUrl = $this->addToUrl($GLOBALS['TL_DCA'][$this->strTable]['list']['operations']['edit']['href'], false);
-                $strUrl = preg_replace('/(&amp;)?(s2e|act)=[^&]*/i', '', $strUrl);
-
-                $this->redirect($strUrl);
-            } elseif (isset($_POST['saveNback'])) {
+                $this->redirect($this->addToUrl($GLOBALS['TL_DCA'][$this->strTable]['list']['operations']['edit']['href'], false, array('s2e', 'act')));
+            }
+            elseif (isset($_POST['saveNback']))
+            {
                 \Message::reset();
                 \System::setCookie('BE_PAGE_OFFSET', 0, 0);
 
-                if ($this->ptable == '') {
+                if ($this->ptable == '')
+                {
                     $this->redirect(TL_SCRIPT . '?do=' . \Input::get('do'));
-                } // TODO: try to abstract this
-                elseif (($this->ptable == 'tl_theme' && $this->strTable == 'tl_style_sheet') || ($this->ptable == 'tl_page' && $this->strTable == 'tl_article')) {
+                }
+                // TODO: try to abstract this
+                elseif (($this->ptable == 'tl_theme' && $this->strTable == 'tl_style_sheet') || ($this->ptable == 'tl_page' && $this->strTable == 'tl_article'))
+                {
                     $this->redirect($this->getReferer(false, $this->strTable));
-                } else {
+                }
+                else
+                {
                     $this->redirect($this->getReferer(false, $this->ptable));
                 }
-            } elseif (isset($_POST['saveNcreate'])) {
+            }
+            elseif (isset($_POST['saveNcreate']))
+            {
                 \Message::reset();
                 \System::setCookie('BE_PAGE_OFFSET', 0, 0);
 
                 $strUrl = TL_SCRIPT . '?do=' . \Input::get('do');
 
-                if (isset($_GET['table'])) {
+                if (isset($_GET['table']))
+                {
                     $strUrl .= '&amp;table=' . \Input::get('table');
                 }
 
                 // Tree view
-                if ($this->treeView) {
+                if ($this->treeView)
+                {
                     $strUrl .= '&amp;act=create&amp;mode=1&amp;pid=' . $this->intId;
-                } // Parent view
-                elseif ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 4) {
-                    $strUrl .= \Database::getInstance()->fieldExists('sorting', $this->strTable) ? '&amp;act=create&amp;mode=1&amp;pid=' . $this->intId . '&amp;id=' . $this->activeRecord->pid : '&amp;act=create&amp;mode=2&amp;pid=' . $this->activeRecord->pid;
-                } // List view
-                else {
+                }
+
+                // Parent view
+                elseif ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 4)
+                {
+                    $strUrl .= $this->Database->fieldExists('sorting', $this->strTable) ? '&amp;act=create&amp;mode=1&amp;pid=' . $this->intId . '&amp;id=' . $this->activeRecord->pid : '&amp;act=create&amp;mode=2&amp;pid=' . $this->activeRecord->pid;
+                }
+
+                // List view
+                else
+                {
                     $strUrl .= ($this->ptable != '') ? '&amp;act=create&amp;mode=2&amp;pid=' . CURRENT_ID : '&amp;act=create';
                 }
 
@@ -578,7 +549,8 @@ class Driver extends \DC_Table
         }
 
         // Set the focus if there is an error
-        if ($this->noReload) {
+        if ($this->noReload)
+        {
             $return .= '
 
 <script>
@@ -1255,5 +1227,232 @@ class Driver extends \DC_Table
         );
 
         return $languages;
+    }
+
+    /**
+     * Handles the language dropdown change and the delete action
+     */
+    protected function handleLanguageOperation()
+    {
+        // Incomplete records can't be translated (see #17)
+        if (!$this->objActiveRecord->tstamp) {
+            $this->translatableLangs = [];
+        }
+
+        /** @var SessionInterface $objSessionBag */
+        $objSessionBag = \System::getContainer()->get('session')->getBag('contao_backend');
+
+        /** @var Request $request */
+        $request = \System::getContainer()->get('request_stack')->getCurrentRequest();
+
+        if (0 !== count($this->translatableLangs)) {
+            $needsReload = false;
+
+            if ('tl_language' === $request->request->get('FORM_SUBMIT')) {
+                $language = $request->request->get('language');
+
+                if (in_array($language, $this->translatableLangs)) {
+                    $objSessionBag->set($this->sessionKey, $language);
+                } else {
+                    $objSessionBag->remove($this->sessionKey);
+                }
+
+                $needsReload = true;
+            } elseif ($this->strTable === $request->request->get('FORM_SUBMIT')
+                && $request->request->has('deleteLanguage')
+            ) {
+                \Database::getInstance()
+                    ->prepare(
+                        "DELETE FROM " . $this->strTable . "
+                         WHERE {$this->pidColumnName}=? AND {$this->langColumnName}=?"
+                    )
+                    ->execute(
+                        $this->intId,
+                        $objSessionBag->get($this->sessionKey)
+                    );
+
+                $objSessionBag->remove($this->sessionKey);
+                $needsReload = true;
+            }
+
+            if ($needsReload) {
+                $_SESSION['TL_INFO'] = '';
+                \Controller::reload();
+            }
+        }
+    }
+
+    /**
+     * Load the current language record if available.
+     */
+    protected function loadCurrentLanguageRecord()
+    {
+        /** @var SessionInterface $objSessionBag */
+        $objSessionBag = \System::getContainer()->get('session')->getBag('contao_backend');
+
+        $language = $objSessionBag->get($this->sessionKey);
+
+        if (null === $language || !in_array($language, $this->translatableLangs)) {
+
+            return;
+        }
+
+        $objRow = \Database::getInstance()->prepare("SELECT * FROM " . $this->strTable . " WHERE {$this->pidColumnName}=? AND {$this->langColumnName}=?")->execute($this->intId, $language);
+
+        if (!$objRow->numRows) {
+            // Preserve the "pid" field
+            if (\Database::getInstance()->fieldExists('pid', $this->strTable)) {
+                $objCurrent = \Database::getInstance()->prepare("SELECT pid FROM " . $this->strTable . " WHERE id=?")
+                    ->limit(1)
+                    ->execute($this->intId);
+
+                $intPid = ($objCurrent->numRows) ? $objCurrent->pid : 0;
+                $intId = \Database::getInstance()->prepare("INSERT INTO " . $this->strTable . " ({$this->pidColumnName},tstamp,{$this->langColumnName},pid) VALUES (?,?,?,?)")
+                    ->execute($this->intId, time(), $language, $intPid)
+                    ->insertId;
+            } else {
+                $intId = \Database::getInstance()->prepare("INSERT INTO " . $this->strTable . " ({$this->pidColumnName},tstamp,{$this->langColumnName}) VALUES (?,?,?)")
+                    ->execute($this->intId, time(), $language)
+                    ->insertId;
+            }
+
+            $objRow = \Database::getInstance()->prepare("SELECT * FROM " . $this->strTable . " WHERE id=?")->execute($intId);
+        }
+
+        $this->objActiveRecord  = $objRow;
+        $this->procedure        = [$this->pidColumnName . '=?', $this->langColumnName . '=?'];
+        $this->values           =  [$this->intId, $language];
+        $this->editLang         = true;
+        $this->currentLang      = $language;
+    }
+
+    /**
+     * Replace the version panel and add the language panel to it.
+     *
+     * @param string $version
+     *
+     * @return mixed
+     */
+    protected function addLanguageSwitchPanel($version)
+    {
+        // Check languages
+        if (!is_array($this->translatableLangs) || count($this->translatableLangs) <= 1) {
+
+            return $version;
+        }
+
+        // Make sure there's always a panel to replace
+        if ('' === $version) {
+            $version = '<div class="tl_version_panel"></div>';
+        }
+
+        $availableLangs = \Database::getInstance()->prepare("SELECT {$this->strLangColumn} FROM " . $this->strTable . " WHERE {$this->strPidColumn}=?")
+            ->execute($this->intId)
+            ->fetchEach($this->langColumnName);
+        $langLabels = \System::getLanguages();
+        $available = ($this->fallbackLang) ? '' : '<option value="">' . $GLOBALS['TL_LANG']['MSC']['defaultLanguage'] . '</option>';
+        $undefined = '';
+
+        foreach ($this->translatableLangs as $language) {
+            $value = ($this->fallbackLang == $language) ? '' : $language;
+            $label = ($this->fallbackLang == $language) ? ($langLabels[$language] . ' (' . $GLOBALS['TL_LANG']['MSC']['defaultLanguage'] . ')') : $langLabels[$language];
+            $selected = $this->currentLang == $language || ($this->fallbackLang && $this->currentLang == '' && $this->fallbackLang == $language);
+
+            // Show the languages that are already translated (fallback is always "translated")
+            if (in_array($language, $availableLangs) || ($language == $this->fallbackLang)) {
+                $available .= sprintf('<option value="%s"%s>%s</option>',
+                    $value,
+                    ($selected) ? ' selected="selected"' : '',
+                    $label);
+
+                // Add translation hint
+                if ($selected
+                    && (
+                        ($this->fallbackLang && $this->fallbackLang != $language)
+                        || (!$this->fallbackLang && $this->currentLang != '')
+                    )
+                ) {
+                    $_SESSION['TL_INFO'] = array($GLOBALS['TL_LANG']['MSC']['editingLanguage']);
+                }
+            }
+            else {
+                $undefined .= '<option value="' . $value . '">' . $label . ' ('.$GLOBALS['TL_LANG']['MSC']['undefinedLanguage'].')' . '</option>';
+            }
+        }
+
+
+        return str_replace(
+            '<div class="tl_version_panel">',
+            '<div class="tl_version_panel language_panel">
+<form action="' . ampersand(\Environment::get('request'), true) . '" id="tl_language" class="tl_form" method="post">
+<div class="tl_formbody">
+<input type="hidden" name="FORM_SUBMIT" value="tl_language">
+<input type="hidden" name="REQUEST_TOKEN" value="' . REQUEST_TOKEN . '">
+<select name="language" class="tl_select' . (strlen($_SESSION['BE_DATA']['language'][$this->strTable][$this->intId]) ? ' active' : '') . '" onchange="document.id(this).getParent(\'form\').submit()">
+' . $available . $undefined . '
+</select>
+<noscript>
+<input type="submit" name="editLanguage" class="tl_submit" value="' . specialchars($GLOBALS['TL_LANG']['MSC']['editLanguage']) . '">
+</noscript>
+</div>
+</form>',
+            $version
+        );
+    }
+
+    /**
+     * Override palette to get rid of fields that should not be displayed
+     * because of translation settings.
+     *
+     * @return string
+     */
+    public function getPalette()
+    {
+        $palette = parent::getPalette();
+        $modifiedPalette = '';
+
+        $legendChunks = trimsplit(';', $palette);
+        foreach ($legendChunks as $legendChunk) {
+
+            $fieldChunks = trimsplit(',', $legendChunk);
+
+            foreach ($fieldChunks as $fieldChunk) {
+
+                // Do not handle any special stuff like legends
+                if (preg_match('/^\[.*\]$/', $fieldChunk)
+                    || preg_match('/^\{.*\}$/', $fieldChunk)
+                ) {
+                    $modifiedPalette .= $fieldChunk;
+                    continue;
+                }
+
+                // Now we only have regular fields here and we check if we
+                // need should display them in the palette or not
+                $translatableFor = $GLOBALS['TL_DCA'][$this->strTable]['fields'][$fieldChunk]['eval']['translatableFor'];
+
+                // If translatableFor is not set at all and we are
+                // editing a language, we don't add it to the palette
+                if (!isset($translatableFor) && $this->editLang) {
+                    continue;
+                }
+
+                // If editing the fallback or the field should be shown for all
+                // languages, we add it to the palette
+                if ('' === $this->currentLang || '*' === $translatableFor[0]) {
+                    $modifiedPalette .= $fieldChunk;
+                    continue;
+                }
+
+                // Also we don't add it if the current language is not in the
+                // translatableFor setting
+                if (!in_array($this->currentLang, $translatableFor)) {
+                    continue;
+                }
+
+                $modifiedPalette .= $fieldChunk;
+            }
+        }
+
+        return $modifiedPalette;
     }
 }
