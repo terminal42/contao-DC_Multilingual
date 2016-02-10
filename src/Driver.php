@@ -19,44 +19,43 @@ class Driver extends \DC_Table
      *
      * @param boolean
      */
-    protected $blnEditLanguage = false;
+    protected $editLang = false;
 
     /**
      * Array containing all languages that are translatable
      *
      * @var array
      */
-    protected $arrTranslatableLanguages = array();
+    protected $translatableLangs = [];
 
     /**
      * Fallback language
      *
      * @var string
      */
-    protected $strFallbackLang = '';
+    protected $fallbackLang = '';
 
     /**
      * Language we are currently editing
      *
      * @var string
      */
-    protected $strCurrentLang = '';
+    protected $currentLang = '';
 
     /**
-     * Language column
+     * Language column name
      *
      * @var string
      */
-    protected $strLangColumn;
+    protected $langColumnName;
 
     /**
-     * pid column
+     * Language PID column name
      *
      * @var string
      */
-    protected $strPidColumn;
-
-
+    protected $pidColumnName;
+    
     /**
      * Set language specific config
      *
@@ -68,24 +67,24 @@ class Driver extends \DC_Table
 
         // languages array
         if (isset($GLOBALS['TL_DCA'][$this->strTable]['config']['languages'])) {
-            $this->arrTranslatableLanguages = $GLOBALS['TL_DCA'][$this->strTable]['config']['languages'];
+            $this->translatableLangs = $GLOBALS['TL_DCA'][$this->strTable]['config']['languages'];
         } else {
-            $this->arrTranslatableLanguages = $this->getRootPageLanguages();
+            $this->translatableLangs = $this->getRootPageLanguages();
         }
 
         // fallback language
         if (isset($GLOBALS['TL_DCA'][$this->strTable]['config']['fallbackLang'])) {
-            $this->strFallbackLang = $GLOBALS['TL_DCA'][$this->strTable]['config']['fallbackLang'];
+            $this->fallbackLang = $GLOBALS['TL_DCA'][$this->strTable]['config']['fallbackLang'];
 
-            if (!in_array($this->strFallbackLang, $this->arrTranslatableLanguages)) {
-                $this->arrTranslatableLanguages[] = $this->strFallbackLang;
+            if (!in_array($this->fallbackLang, $this->translatableLangs)) {
+                $this->translatableLangs[] = $this->fallbackLang;
             }
         }
 
-        $this->strPidColumn = static::getPidColumnForTable($this->strTable);
-        $this->strLangColumn = static::getLanguageColumnForTable($this->strTable);
+        $this->pidColumnName = static::getPidColumnForTable($this->strTable);
+        $this->langColumnName = static::getLanguageColumnForTable($this->strTable);
 
-        $GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['filter'][] = array($this->strLangColumn . '=?', '');
+        $GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['filter'][] = array($this->langColumnName . '=?', '');
 
         $GLOBALS['TL_CSS'][] = 'bundles/terminal42dcmultilingual/backend.min.css';
     }
@@ -117,8 +116,8 @@ class Driver extends \DC_Table
      */
     public static function getLanguageColumnForTable($strTable)
     {
-        if ($GLOBALS['TL_DCA'][$strTable]['config']['langColumn']) {
-            return $GLOBALS['TL_DCA'][$strTable]['config']['langColumn'];
+        if ($GLOBALS['TL_DCA'][$strTable]['config']['langColumnName']) {
+            return $GLOBALS['TL_DCA'][$strTable]['config']['langColumnName'];
         }
 
         return 'language';
@@ -189,7 +188,7 @@ class Driver extends \DC_Table
             $this->log('Could not load record ID ' . $this->intId . ' of table "' . $this->strTable . '"', __METHOD__, TL_ERROR);
             $this->redirect('contao/main.php?act=error');
         } // ID of a language record is not allowed
-        elseif ($objRow->{$this->strLangColumn} != '') {
+        elseif ($objRow->{$this->langColumnName} != '') {
             $this->log('Cannot edit language record ID "' . $this->intId . '" of table "' . $this->strTable . '"!', __METHOD__, TL_ERROR);
             $this->redirect('contao/main.php?act=error');
         }
@@ -198,15 +197,15 @@ class Driver extends \DC_Table
 
         // Incomplete records can't be translated (see #17)
         if (!$objRow->tstamp) {
-            $this->arrTranslatableLanguages = array();
+            $this->translatableLangs = array();
         }
 
-        if (!empty($this->arrTranslatableLanguages)) {
+        if (!empty($this->translatableLangs)) {
             $blnLanguageUpdated = false;
             $session = $this->Session->getData();
 
             if (\Input::post('FORM_SUBMIT') == 'tl_language') {
-                if (in_array(\Input::post('language'), $this->arrTranslatableLanguages)) {
+                if (in_array(\Input::post('language'), $this->translatableLangs)) {
                     $session['language'][$this->strTable][$this->intId] = \Input::post('language');
                 } else {
                     unset($session['language'][$this->strTable][$this->intId]);
@@ -217,7 +216,7 @@ class Driver extends \DC_Table
                 \Database::getInstance()
                     ->prepare(
                         "DELETE FROM " . $this->strTable . "
-                         WHERE {$this->strPidColumn}=? AND {$this->strLangColumn}=?"
+                         WHERE {$this->pidColumnName}=? AND {$this->langColumnName}=?"
                     )
                     ->execute(
                         $this->intId,
@@ -236,9 +235,9 @@ class Driver extends \DC_Table
         }
 
         if (strlen($_SESSION['BE_DATA']['language'][$this->strTable][$this->intId])
-            && in_array($_SESSION['BE_DATA']['language'][$this->strTable][$this->intId], array_keys($this->arrTranslatableLanguages))
+            && in_array($_SESSION['BE_DATA']['language'][$this->strTable][$this->intId], array_keys($this->translatableLangs))
         ) {
-            $objRow = \Database::getInstance()->prepare("SELECT * FROM " . $this->strTable . " WHERE {$this->strPidColumn}=? AND {$this->strLangColumn}=?")->execute($this->intId, $_SESSION['BE_DATA']['language'][$this->strTable][$this->intId]);
+            $objRow = \Database::getInstance()->prepare("SELECT * FROM " . $this->strTable . " WHERE {$this->pidColumnName}=? AND {$this->langColumnName}=?")->execute($this->intId, $_SESSION['BE_DATA']['language'][$this->strTable][$this->intId]);
 
             if (!$objRow->numRows) {
                 // Preserve the "pid" field
@@ -248,9 +247,9 @@ class Driver extends \DC_Table
                         ->executeUncached($this->intId);
 
                     $intPid = ($objCurrent->numRows) ? $objCurrent->pid : 0;
-                    $intId = \Database::getInstance()->prepare("INSERT INTO " . $this->strTable . " ({$this->strPidColumn},tstamp,{$this->strLangColumn},pid) VALUES (?,?,?,?)")->execute($this->intId, time(), $_SESSION['BE_DATA']['language'][$this->strTable][$this->intId], $intPid)->insertId;
+                    $intId = \Database::getInstance()->prepare("INSERT INTO " . $this->strTable . " ({$this->pidColumnName},tstamp,{$this->langColumnName},pid) VALUES (?,?,?,?)")->execute($this->intId, time(), $_SESSION['BE_DATA']['language'][$this->strTable][$this->intId], $intPid)->insertId;
                 } else {
-                    $intId = \Database::getInstance()->prepare("INSERT INTO " . $this->strTable . " ({$this->strPidColumn},tstamp,{$this->strLangColumn}) VALUES (?,?,?)")->execute($this->intId, time(), $_SESSION['BE_DATA']['language'][$this->strTable][$this->intId])->insertId;
+                    $intId = \Database::getInstance()->prepare("INSERT INTO " . $this->strTable . " ({$this->pidColumnName},tstamp,{$this->langColumnName}) VALUES (?,?,?)")->execute($this->intId, time(), $_SESSION['BE_DATA']['language'][$this->strTable][$this->intId])->insertId;
                 }
 
                 $objRow = \Database::getInstance()->prepare("SELECT * FROM " . $this->strTable . " WHERE id=?")->execute($intId);
@@ -258,9 +257,9 @@ class Driver extends \DC_Table
 
             $this->objActiveRecord = $objRow;
             $this->values = array($this->intId, $_SESSION['BE_DATA']['language'][$this->strTable][$this->intId]);
-            $this->procedure = array($this->strPidColumn . '=?', $this->strLangColumn . '=?');
-            $this->blnEditLanguage = true;
-            $this->strCurrentLang = $_SESSION['BE_DATA']['language'][$this->strTable][$this->intId];
+            $this->procedure = array($this->pidColumnName . '=?', $this->langColumnName . '=?');
+            $this->editLang = true;
+            $this->currentLang = $_SESSION['BE_DATA']['language'][$this->strTable][$this->intId];
         }
 
         $objVersions->initialize();
@@ -292,7 +291,7 @@ class Driver extends \DC_Table
                     $translatableFor = $GLOBALS['TL_DCA'][$this->strTable]['fields'][$vv]['eval']['translatableFor'];
 
                     // if editing the fallback or the field should be shown for all languages, we don't unset anything at all
-                    if ($this->strCurrentLang == '' || $translatableFor[0] == '*') {
+                    if ($this->currentLang == '' || $translatableFor[0] == '*') {
                         continue;
                     }
 
@@ -303,7 +302,7 @@ class Driver extends \DC_Table
                     }
 
                     // we check if the field is not editable for the current language
-                    if (!in_array($this->strCurrentLang, $translatableFor)) {
+                    if (!in_array($this->currentLang, $translatableFor)) {
                         unset($boxes[$k][$kk]);
                     }
                 }
@@ -411,26 +410,26 @@ class Driver extends \DC_Table
         }
 
         // Check languages
-        if (is_array($this->arrTranslatableLanguages) && count($this->arrTranslatableLanguages) > 1) {
-            $arrAvailableLanguages = \Database::getInstance()->prepare("SELECT {$this->strLangColumn} FROM " . $this->strTable . " WHERE {$this->strPidColumn}=?")->execute($this->intId)->fetchEach($this->strLangColumn);
+        if (is_array($this->translatableLangs) && count($this->translatableLangs) > 1) {
+            $arrAvailableLanguages = \Database::getInstance()->prepare("SELECT {$this->langColumnName} FROM " . $this->strTable . " WHERE {$this->pidColumnName}=?")->execute($this->intId)->fetchEach($this->langColumnName);
             $arrLanguageLabels = $this->getLanguages();
-            $available = ($this->strFallbackLang) ? '' : '<option value="">' . $GLOBALS['TL_LANG']['MSC']['defaultLanguage'] . '</option>';
+            $available = ($this->fallbackLang) ? '' : '<option value="">' . $GLOBALS['TL_LANG']['MSC']['defaultLanguage'] . '</option>';
             $undefined = '';
 
-            foreach ($this->arrTranslatableLanguages as $language) {
-                $value = ($this->strFallbackLang == $language) ? '' : $language;
-                $label = ($this->strFallbackLang == $language) ? ($arrLanguageLabels[$language] . ' (' . $GLOBALS['TL_LANG']['MSC']['defaultLanguage'] . ')') : $arrLanguageLabels[$language];
-                $selected = $this->strCurrentLang == $language || ($this->strFallbackLang && $this->strCurrentLang == '' && $this->strFallbackLang == $language);
+            foreach ($this->translatableLangs as $language) {
+                $value = ($this->fallbackLang == $language) ? '' : $language;
+                $label = ($this->fallbackLang == $language) ? ($arrLanguageLabels[$language] . ' (' . $GLOBALS['TL_LANG']['MSC']['defaultLanguage'] . ')') : $arrLanguageLabels[$language];
+                $selected = $this->currentLang == $language || ($this->fallbackLang && $this->currentLang == '' && $this->fallbackLang == $language);
 
                 // show the languages that are already translated (fallback is always "translated")
-                if (in_array($language, $arrAvailableLanguages) || ($language == $this->strFallbackLang)) {
+                if (in_array($language, $arrAvailableLanguages) || ($language == $this->fallbackLang)) {
                     $available .= sprintf('<option value="%s"%s>%s</option>',
                         $value,
                         ($selected) ? ' selected="selected"' : '',
                         $label);
 
                     // add translation hint
-                    if ($selected && (($this->strFallbackLang && $this->strFallbackLang != $language) || (!$this->strFallbackLang && $this->strCurrentLang != ''))) {
+                    if ($selected && (($this->fallbackLang && $this->fallbackLang != $language) || (!$this->fallbackLang && $this->currentLang != ''))) {
                         $_SESSION['TL_INFO'] = array($GLOBALS['TL_LANG']['MSC']['editingLanguage']);
                     }
                 } else {
@@ -449,7 +448,7 @@ class Driver extends \DC_Table
     ' . $available . $undefined . '
 </select>
 <noscript>
-<input type="submit" name="editLanguage" class="tl_submit" value="' . specialchars($GLOBALS['TL_LANG']['MSC']['editLanguage']) . '">
+<input type="submit" name="editLang" class="tl_submit" value="' . specialchars($GLOBALS['TL_LANG']['MSC']['editLang']) . '">
 </noscript>
 </div>
 </form>',
@@ -475,7 +474,7 @@ class Driver extends \DC_Table
             $arrButtons['saveNback'] = '<input type="submit" name="saveNback" id="saveNback" class="tl_submit" accesskey="g" value="' . specialchars($GLOBALS['TL_LANG']['MSC']['saveNback']) . '">';
         }
 
-        if ($this->blnEditLanguage) {
+        if ($this->editLang) {
             $arrButtons['deleteLanguage'] = '<input type="submit" name="deleteLanguage" class="tl_submit" style="float:right" value="' . specialchars($GLOBALS['TL_LANG']['MSC']['deleteLanguage']) . '" onclick="return confirm(\'' . $GLOBALS['TL_LANG']['MSC']['deleteLanguageConfirm'] . '\')">';
         }
 
@@ -657,7 +656,7 @@ class Driver extends \DC_Table
             ->prepare(
                 "SELECT *
                  FROM " . $this->strTable . "
-                 WHERE " . $this->strPidColumn . "=? AND " . $this->strLangColumn . "!=''"
+                 WHERE " . $this->pidColumnName . "=? AND " . $this->langColumnName . "!=''"
             )
             ->execute($this->intId);
 
@@ -700,8 +699,8 @@ class Driver extends \DC_Table
             }
 
             $set['tstamp'] = $time;
-            $set[$this->strPidColumn] = $insertId;
-            $set[$this->strLangColumn] = $objTranslations->{$this->strLangColumn};
+            $set[$this->pidColumnName] = $insertId;
+            $set[$this->langColumnName] = $objTranslations->{$this->langColumnName};
             unset($set['id']);
 
             \Database::getInstance()->prepare("INSERT INTO {$this->strTable} %s")->set($set)->execute();
@@ -728,14 +727,14 @@ class Driver extends \DC_Table
     {
         parent::copyChilds($table, $insertID, $id, $parentId);
 
-        $strPidColumn = $GLOBALS['TL_DCA'][$table]['config']['pidColumn'] ? $GLOBALS['TL_DCA'][$table]['config']['pidColumn'] : $this->strPidColumn;
-        $objLanguage = \Database::getInstance()->prepare("SELECT id FROM " . $table . " WHERE " . $strPidColumn . "=? AND id>?")
+        $pidColumnName = $GLOBALS['TL_DCA'][$table]['config']['pidColumn'] ? $GLOBALS['TL_DCA'][$table]['config']['pidColumn'] : $this->pidColumnName;
+        $objLanguage = \Database::getInstance()->prepare("SELECT id FROM " . $table . " WHERE " . $pidColumnName . "=? AND id>?")
             ->limit(1)
             ->execute($id, $parentId);
 
         // Update the language pid column
         if ($objLanguage->numRows) {
-            \Database::getInstance()->prepare("UPDATE " . $table . " SET " . $strPidColumn . "=? WHERE id=?")
+            \Database::getInstance()->prepare("UPDATE " . $table . " SET " . $pidColumnName . "=? WHERE id=?")
                 ->execute($insertID, $objLanguage->id);
         }
     }
@@ -748,7 +747,7 @@ class Driver extends \DC_Table
      */
     public function showAll()
     {
-        $this->procedure[] = "{$this->strLangColumn}=''";
+        $this->procedure[] = "{$this->langColumnName}=''";
         return parent::showAll();
     }
 
@@ -768,13 +767,13 @@ class Driver extends \DC_Table
             $table = $GLOBALS['TL_DCA'][$this->strTable]['config']['ptable'];
 
             if ($GLOBALS['TL_DCA'][$table]['config']['dataContainer'] == 'Multilingual') {
-                $where[] = "$this->strLangColumn=''";
+                $where[] = "$this->langColumnName=''";
             }
 
         } else {
 
             $table = $this->strTable;
-            $where[] = "$this->strLangColumn=''";
+            $where[] = "$this->langColumnName=''";
         }
 
         if (is_array($this->root) && count($this->root)) {
@@ -838,7 +837,7 @@ class Driver extends \DC_Table
         $arrIds = array();
 
         // Get records
-        $objRows = \Database::getInstance()->prepare("SELECT id FROM " . $table . " WHERE " . $this->strPidColumn . "=0 AND pid=?" . ($hasSorting ? " ORDER BY sorting" : ""))
+        $objRows = \Database::getInstance()->prepare("SELECT id FROM " . $table . " WHERE " . $this->pidColumnName . "=0 AND pid=?" . ($hasSorting ? " ORDER BY sorting" : ""))
             ->execute($id);
 
         while ($objRows->next()) {
@@ -915,7 +914,7 @@ class Driver extends \DC_Table
         if (!$blnNoRecursion) {
             if ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 5 || $this->strTable != $table) {
                 $limitForLanguage = $GLOBALS['TL_DCA'][$table]['config']['dataContainer'] == 'Multilingual';
-                $where = $limitForLanguage ? "  AND {$this->strLangColumn}=''" : '';
+                $where = $limitForLanguage ? "  AND {$this->langColumnName}=''" : '';
                 $objChilds = \Database::getInstance()->prepare("SELECT id FROM " . $table . " WHERE pid=?$where" . ($blnHasSorting ? " ORDER BY sorting" : ''))
                     ->execute($id);
 
@@ -1102,7 +1101,7 @@ class Driver extends \DC_Table
                 if ($insertInto) {
                     $newPID = $pid;
 
-                    $objSorting = \Database::getInstance()->prepare("SELECT MIN(sorting) AS sorting FROM " . $this->strTable . " WHERE pid=? AND {$this->strPidColumn}=0")
+                    $objSorting = \Database::getInstance()->prepare("SELECT MIN(sorting) AS sorting FROM " . $this->strTable . " WHERE pid=? AND {$this->pidColumnName}=0")
                         ->execute($pid);
 
                     // Select sorting value of the first record
@@ -1111,7 +1110,7 @@ class Driver extends \DC_Table
 
                         // Resort if the new sorting value is not an integer or smaller than 1
                         if (($curSorting % 2) != 0 || $curSorting < 1) {
-                            $objNewSorting = \Database::getInstance()->prepare("SELECT id FROM " . $this->strTable . " WHERE pid=? AND {$this->strPidColumn}=0 ORDER BY sorting")
+                            $objNewSorting = \Database::getInstance()->prepare("SELECT id FROM " . $this->strTable . " WHERE pid=? AND {$this->pidColumnName}=0 ORDER BY sorting")
                                 ->execute($pid);
 
                             $count = 2;
@@ -1128,7 +1127,7 @@ class Driver extends \DC_Table
                     else $newSorting = 128;
                 } // Else insert the current record after the parent record
                 elseif ($pid > 0) {
-                    $objSorting = \Database::getInstance()->prepare("SELECT pid, sorting FROM " . $this->strTable . " WHERE id=? AND {$this->strPidColumn}=0")
+                    $objSorting = \Database::getInstance()->prepare("SELECT pid, sorting FROM " . $this->strTable . " WHERE id=? AND {$this->pidColumnName}=0")
                         ->limit(1)
                         ->execute($pid);
 
@@ -1139,7 +1138,7 @@ class Driver extends \DC_Table
 
                         // Do not proceed without a parent ID
                         if (is_numeric($newPID)) {
-                            $objNextSorting = \Database::getInstance()->prepare("SELECT MIN(sorting) AS sorting FROM " . $this->strTable . " WHERE pid=? AND {$this->strPidColumn}=0 AND sorting>?")
+                            $objNextSorting = \Database::getInstance()->prepare("SELECT MIN(sorting) AS sorting FROM " . $this->strTable . " WHERE pid=? AND {$this->pidColumnName}=0 AND sorting>?")
                                 ->execute($newPID, $curSorting);
 
                             // Select sorting value of the next record
@@ -1150,7 +1149,7 @@ class Driver extends \DC_Table
                                 if ((($curSorting + $nxtSorting) % 2) != 0 || $nxtSorting >= 4294967295) {
                                     $count = 1;
 
-                                    $objNewSorting = \Database::getInstance()->prepare("SELECT id, sorting FROM " . $this->strTable . " WHERE pid=? AND {$this->strPidColumn}=0 ORDER BY sorting")
+                                    $objNewSorting = \Database::getInstance()->prepare("SELECT id, sorting FROM " . $this->strTable . " WHERE pid=? AND {$this->pidColumnName}=0 ORDER BY sorting")
                                         ->execute($newPID);
 
                                     while ($objNewSorting->next()) {
@@ -1190,7 +1189,7 @@ class Driver extends \DC_Table
      */
     public function delete($blnDoNotRedirect = false)
     {
-        \Database::getInstance()->prepare("DELETE FROM " . $this->strTable . " WHERE " . $this->strPidColumn . "=?")
+        \Database::getInstance()->prepare("DELETE FROM " . $this->strTable . " WHERE " . $this->pidColumnName . "=?")
             ->execute($this->intId);
 
         parent::delete($blnDoNotRedirect);
@@ -1213,7 +1212,7 @@ class Driver extends \DC_Table
             return;
         }
 
-        $objLanguages = \Database::getInstance()->prepare("SELECT id FROM " . $table . " WHERE " . ($GLOBALS['TL_DCA'][$table]['config']['pidColumn'] ? $GLOBALS['TL_DCA'][$table]['config']['pidColumn'] : $this->strPidColumn) . " IN (SELECT id FROM " . $table . " WHERE pid=?)")
+        $objLanguages = \Database::getInstance()->prepare("SELECT id FROM " . $table . " WHERE " . ($GLOBALS['TL_DCA'][$table]['config']['pidColumn'] ? $GLOBALS['TL_DCA'][$table]['config']['pidColumn'] : $this->pidColumnName) . " IN (SELECT id FROM " . $table . " WHERE pid=?)")
             ->execute($id);
 
         while ($objLanguages->next()) {
@@ -1229,7 +1228,7 @@ class Driver extends \DC_Table
      */
     public function getAllowedLanguages()
     {
-        return $this->arrTranslatableLanguages;
+        return $this->translatableLangs;
     }
 
 
@@ -1240,7 +1239,7 @@ class Driver extends \DC_Table
      */
     public function getFallbackLanguage()
     {
-        return $this->strFallbackLang;
+        return $this->fallbackLang;
     }
 
 
@@ -1251,7 +1250,7 @@ class Driver extends \DC_Table
      */
     public function getCurrentLanguage()
     {
-        return $this->strCurrentLang;
+        return $this->currentLang;
     }
 
 
@@ -1262,7 +1261,7 @@ class Driver extends \DC_Table
      */
     public function getLanguageColumn()
     {
-        return $this->strLangColumn;
+        return $this->langColumnName;
     }
 
 
@@ -1273,7 +1272,7 @@ class Driver extends \DC_Table
      */
     public function getPidColumn()
     {
-        return $this->strPidColumn;
+        return $this->pidColumnName;
     }
 
 
