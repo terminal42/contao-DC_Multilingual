@@ -571,8 +571,6 @@ class Driver extends \DC_Table
      * @param  bool
      *
      * @return int|bool
-     *
-     * @see DC_Table from contao/core@3.2.13
      */
     public function copy($blnDoNotRedirect = false)
     {
@@ -664,19 +662,6 @@ class Driver extends \DC_Table
                 ->execute($insertID, $objLanguage->id);
         }
     }
-
-
-    /**
-     * List all records of a particular table
-     *
-     * @return string
-     */
-    public function showAll()
-    {
-        $this->procedure[] = "{$this->langColumnName}=''";
-        return parent::showAll();
-    }
-
 
     /**
      * List all records of the current table as tree and return them as HTML
