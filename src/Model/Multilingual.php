@@ -229,6 +229,8 @@ class Multilingual extends \Model
      */
     protected static function getTranslatableFields()
     {
+        static::ensureDataContainerIsLoaded();
+
         $fields = [];
 
         foreach ($GLOBALS['TL_DCA'][static::getTable()]['fields'] as $field => $data) {
@@ -249,6 +251,8 @@ class Multilingual extends \Model
      */
     protected static function getPidColumn()
     {
+        static::ensureDataContainerIsLoaded();
+
         if ($GLOBALS['TL_DCA'][static::getTable()]['config']['langPid']) {
 
             return $GLOBALS['TL_DCA'][static::getTable()]['config']['langPid'];
@@ -264,6 +268,8 @@ class Multilingual extends \Model
      */
     public static function getLangColumn()
     {
+        static::ensureDataContainerIsLoaded();
+
         if ($GLOBALS['TL_DCA'][static::getTable()]['config']['langColumn']) {
 
             return $GLOBALS['TL_DCA'][static::getTable()]['config']['langColumn'];
@@ -279,11 +285,24 @@ class Multilingual extends \Model
      */
     public static function getFallbackLanguage()
     {
+        static::ensureDataContainerIsLoaded();
+
         if ($GLOBALS['TL_DCA'][static::getTable()]['config']['fallbackLang']) {
 
             return $GLOBALS['TL_DCA'][static::getTable()]['config']['fallbackLang'];
         }
 
         return null;
+    }
+
+    /**
+     * Ensure the data container is loaded.
+     */
+    protected static function ensureDataContainerIsLoaded()
+    {
+        if (!isset($GLOBALS['TL_DCA'][static::getTable()])) {
+            $loader = new \DcaLoader(static::getTable());
+            $loader->load();
+        }
     }
 }
