@@ -284,7 +284,7 @@ class Driver extends \DC_Table
 
                     $this->strField = $vv;
                     $this->strInputName = $vv;
-                    $this->varValue = $objRow->$vv;
+                    $this->varValue = $this->objActiveRecord->$vv; // Original DC_Table uses $objRow here!
 
                     // Autofocus the first field
                     if ($blnIsFirst && $GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['inputType'] == 'text')
