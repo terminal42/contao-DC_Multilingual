@@ -81,3 +81,52 @@ fallback language aliased as `t1` and the target language (which you specify
  MySQL's `IFNULL()` function, it checks whether there's a translated value and
  if not, automatically falls back to the fallback language. This allows you to
  translate only a subset of fields.
+
+
+## Alias handling
+
+You can share the alias for all translations, so you'd have something like this:
+
+    * EN: domain.com/my-post/my-beautiful-alias.html
+    * DE: domain.de/mein-artikel/my-beautiful-alias.html
+    * FR: domain.fr/mon-post/my-beautiful-alias.html
+
+This can be achieved by using the regular alias handling you may know from
+other modules such as news etc. in the back end and for the front end you simply
+use the `findByAlias()` method which the `Multilingual` model provides:
+
+```php
+MyModel::findByAlias($alias);
+```
+
+However, there are many situations where you would like to have your aliases
+translated so you end up with something like this:
+
+    * EN: domain.com/my-post/my-beautiful-alias.html
+    * DE: domain.de/mein-artikel/mein-wunderschoenes-alias.html
+    * FR: domain.fr/mon-post/mon-alias-magnifique.html
+
+In the back end it's slightly more difficult now because it does not make sense
+to check for duplicate aliases within the whole table but only within the whole
+table **and** the same language. To make this as easy as possible for you, simply
+use the following `eval` definitions on your `alias` field:
+
+```php
+'eval'      => [
+    'maxlength'                 => 255,
+    'rgxp'                      => 'alias',
+    'translatableFor'           => '*',
+    'isMultilingualAlias'       => true,
+    'generateAliasFromField'    => 'title' // optional ("title" is default)
+],
+```
+
+It will automatically generate an alias if not present yet and check for
+duplicates within the same language.
+
+In the front end you can then search by a multilingual alias like this:
+
+```php
+MyModel::findByMultilingualAlias($alias);
+```
+

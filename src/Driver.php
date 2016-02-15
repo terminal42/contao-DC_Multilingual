@@ -928,6 +928,52 @@ class Driver extends \DC_Table
         }
     }
 
+    /**
+     * Save the current value. Support multilingual aliases
+     *
+     * @param mixed $varValue
+     *
+     * @throws \Exception
+     */
+    protected function save($varValue)
+    {
+        if (\Input::post('FORM_SUBMIT') != $this->strTable) {
+            return;
+        }
+
+        $data = $GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField];
+
+        if (!isset($data['eval']['isMultilingualAlias'])) {
+            parent::save($varValue);
+            return;
+        }
+
+        $fromField = $data['eval']['generateAliasFromField'] ?: 'title';
+        $autoAlias = false;
+
+        // Generate $varValue alias if there is none
+        if ('' === $varValue) {
+            $autoAlias = true;
+            $varValue = \StringUtil::generateAlias($this->objActiveRecord->{$fromField});
+        }
+
+        // Check for duplicates in current language
+        $objAlias = \Database::getInstance()->prepare(
+            "SELECT id FROM {$this->strTable} WHERE id!=? AND {$this->strField}=? AND {$this->langColumnName}=?"
+        )->execute($this->intId, $varValue, $this->currentLang);
+
+        // Check whether the alias exists
+        if ($objAlias->numRows > 1) {
+            if (!$autoAlias) {
+                throw new \InvalidArgumentException(sprintf($GLOBALS['TL_LANG']['ERR']['aliasExists'], $varValue));
+            }
+
+            $varValue .= '-' . $this->intId;
+        }
+
+        parent::save($varValue);
+    }
+
 
     /**
      * Delete record and associated translations
