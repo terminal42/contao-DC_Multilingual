@@ -56,6 +56,29 @@ class Multilingual extends \Model
     }
 
     /**
+     * Find a model by its alias.
+     *
+     * @param        $alias
+     * @param string $aliasColumnName
+     * @param array  $options
+     *
+     * @return mixed
+     */
+    public static function findByAlias($alias, $aliasColumnName = 'alias', $options = [])
+    {
+        $options = array_merge([
+            'limit'  => 1,
+            'column' => ["(t1.$aliasColumnName=? OR t2.$aliasColumnName=?)"],
+            'value'  => [$alias, $alias],
+            'return' => 'Model'
+        ],
+            $options
+        );
+
+        return static::find($options);
+    }
+    
+    /**
      * Build a query based on the given options.
      * The method returns a QueryBuilder instance so you can easily modify
      * the query in your child class. We can just return the instance as the
