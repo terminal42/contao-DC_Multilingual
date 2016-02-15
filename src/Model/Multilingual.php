@@ -17,6 +17,45 @@ use Terminal42\DcMultilingualBundle\QueryBuilder\MultilingualQueryBuilderFactory
 class Multilingual extends \Model
 {
     /**
+     * Get the alias of a multilingual model.
+     *
+     * @param string $language
+     * @param string $aliasColumnName
+     *
+     * @return mixed
+     */
+    public function getAlias($language, $aliasColumnName = 'alias')
+    {
+        // Do not load any translation if already target language
+        $langColumn = static::getLangColumn();
+
+        if ($language === $this->{$langColumn}) {
+
+            return $this->{$aliasColumnName};
+        }
+
+        // Try to load the translated model
+        $translatedModel = static::findByPk($this->id, ['language' => $language]);
+
+        if (null === $translatedModel) {
+
+            // Get fallback
+            $fallbackLang = static::getFallbackLanguage();
+
+            if ($language === $fallbackLang) {
+
+                return $this->{$aliasColumnName};
+            }
+
+            $fallbackModel = static::findByPk($this->id, ['language' => $fallbackLang]);
+
+            return $fallbackModel->{$aliasColumnName};
+        }
+
+        return $translatedModel->{$aliasColumnName};
+    }
+
+    /**
      * Build a query based on the given options.
      * The method returns a QueryBuilder instance so you can easily modify
      * the query in your child class. We can just return the instance as the
