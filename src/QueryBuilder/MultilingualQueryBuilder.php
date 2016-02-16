@@ -78,9 +78,9 @@ class MultilingualQueryBuilder implements MultilingualQueryBuilderInterface
     {
         $this->qb->resetQueryParts();
 
-        $this->qb->addSelect('COUNT(id) AS count')
-            ->from($this->table)
-            ->where("{$this->pidColumnName}=0");
+        $this->qb->addSelect('COUNT(t1.id) AS count')
+            ->from($this->table, 't1')
+            ->where("t1.{$this->pidColumnName}=0");
     }
 
     /**
