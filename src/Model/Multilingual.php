@@ -17,6 +17,21 @@ use Terminal42\DcMultilingualBundle\QueryBuilder\MultilingualQueryBuilderFactory
 class Multilingual extends \Model
 {
     /**
+     * Returns the ID of the fallback language.
+     */
+    public function getLanguageId()
+    {
+        $langColumn = static::getLangColumn();
+
+        if ($this->{$langColumn} > 0) {
+
+            return $this->{$langColumn};
+        }
+
+        return $this->id;
+    }
+
+    /**
      * Get the alias of a multilingual model.
      *
      * @param string $language
