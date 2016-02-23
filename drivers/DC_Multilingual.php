@@ -1088,7 +1088,11 @@ class DC_Multilingual extends \DC_Table
         // Shorten the label if it is too long
         if ($GLOBALS['TL_DCA'][$table]['list']['label']['maxCharacters'] > 0 && $GLOBALS['TL_DCA'][$table]['list']['label']['maxCharacters'] < utf8_strlen(strip_tags($label)))
         {
-            $label = trim(\String::substrHtml($label, $GLOBALS['TL_DCA'][$table]['list']['label']['maxCharacters'])) . ' …';
+            if (version_compare(VERSION . '.' . BUILD, '3.5.1', '<')) {
+                $label = trim(\String::substrHtml($label, $GLOBALS['TL_DCA'][$table]['list']['label']['maxCharacters'])) . ' …';
+            } else {
+                $label = trim(\StringUtil::substrHtml($label, $GLOBALS['TL_DCA'][$table]['list']['label']['maxCharacters'])) . ' …';
+            }
         }
 
         $label = preg_replace('/\(\) ?|\[\] ?|\{\} ?|<> ?/', '', $label);
