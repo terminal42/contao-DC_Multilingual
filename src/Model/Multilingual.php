@@ -186,7 +186,8 @@ class Multilingual extends \Model
                     $qb->andWhere($column);
                 }
             } else {
-                $qb->andWhere($options['table'] . '.' . $options['column'] . '=?');
+                // Default is likely t1
+                $qb->andWhere('t1.' . $options['column'] . '=?');
             }
         }
 
