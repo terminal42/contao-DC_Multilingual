@@ -158,7 +158,7 @@ class Multilingual extends \Model
      *
      * @param array $options The options array
      *
-     * @return string The query string
+     * @return QueryBuilder
      */
     protected static function buildCountQuery(array $options)
     {
