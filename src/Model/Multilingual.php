@@ -21,11 +21,11 @@ class Multilingual extends \Model
      */
     public function getLanguageId()
     {
-        $langColumn = static::getLangColumn();
+        $pidColumn = static::getPidColumn();
 
-        if ($this->{$langColumn} > 0) {
+        if ($this->{$pidColumn} > 0) {
 
-            return $this->{$langColumn};
+            return $this->{$pidColumn};
         }
 
         return $this->id;
