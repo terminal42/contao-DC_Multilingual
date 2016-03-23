@@ -17,6 +17,17 @@
  */
 abstract class MultilingualModel extends \Model
 {
+    /**
+     * Prevent the model from saving
+     *
+     * @param \Database\Result $objResult An optional database result
+     */
+    public function __construct(\Database\Result $objResult)
+    {
+        parent::__construct($objResult);
+
+        $this->preventSaving(false);
+    }
 
     /**
      * Use the multilingual query
