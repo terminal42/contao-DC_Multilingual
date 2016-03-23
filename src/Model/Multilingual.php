@@ -17,6 +17,18 @@ use Terminal42\DcMultilingualBundle\QueryBuilder\MultilingualQueryBuilderFactory
 class Multilingual extends \Model
 {
     /**
+     * Prevent the model from saving
+     *
+     * @param \Database\Result $objResult An optional database result
+     */
+    public function __construct(\Database\Result $objResult)
+    {
+        parent::__construct($objResult);
+
+        $this->preventSaving(false);
+    }
+
+    /**
      * Returns the ID of the fallback language.
      */
     public function getLanguageId()
