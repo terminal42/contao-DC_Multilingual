@@ -652,7 +652,18 @@ class Driver extends \DC_Table
     {
         parent::copyChilds($table, $insertID, $id, $parentId);
 
-        $pidColumnName = $GLOBALS['TL_DCA'][$table]['config']['pidColumn'] ? $GLOBALS['TL_DCA'][$table]['config']['pidColumn'] : $this->pidColumnName;
+        if ($GLOBALS['TL_DCA'][$table]['config']['langPid']) {
+            $pidColumnName = $GLOBALS['TL_DCA'][$table]['config']['langPid'];
+        } elseif ($GLOBALS['TL_DCA'][$table]['config']['pidColumn']) {
+            $pidColumnName = $GLOBALS['TL_DCA'][$table]['config']['pidColumn'];
+
+            // The pidColumn is deprecated
+            // @todo - deprecated, remove in 3.0
+            trigger_error('The "pidColumn" setting is deprecated, use "langPid" instead.', E_USER_NOTICE);
+        } else {
+            $pidColumnName = $this->pidColumnName;
+        }
+
         $objLanguage = \Database::getInstance()->prepare("SELECT id FROM " . $table . " WHERE " . $pidColumnName . "=? AND id>?")
             ->limit(1)
             ->execute($id, $parentId);
@@ -1007,12 +1018,20 @@ class Driver extends \DC_Table
 
         // Do not take the config of the current table because $table might
         // be a child table
-        $pidColumn = $GLOBALS['TL_DCA'][$table]['config']['pidColumn'] ?
-            $GLOBALS['TL_DCA'][$table]['config']['pidColumn'] :
-            $this->pidColumnName;
+        if ($GLOBALS['TL_DCA'][$table]['config']['langPid']) {
+            $pidColumnName = $GLOBALS['TL_DCA'][$table]['config']['langPid'];
+        } elseif ($GLOBALS['TL_DCA'][$table]['config']['pidColumn']) {
+            $pidColumnName = $GLOBALS['TL_DCA'][$table]['config']['pidColumn'];
+
+            // The pidColumn is deprecated
+            // @todo - deprecated, remove in 3.0
+            trigger_error('The "pidColumn" setting is deprecated, use "langPid" instead.', E_USER_NOTICE);
+        } else {
+            $pidColumnName = $this->pidColumnName;
+        }
 
         $objLanguages = \Database::getInstance()->prepare(
-            "SELECT id FROM " . $table . " WHERE " . $pidColumn . " IN (SELECT id FROM " . $table . " WHERE pid=?)")
+            "SELECT id FROM " . $table . " WHERE " . $pidColumnName . " IN (SELECT id FROM " . $table . " WHERE pid=?)")
             ->execute($id);
 
         while ($objLanguages->next()) {
