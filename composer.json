@@ -26,5 +26,8 @@
         "psr-4": {
             "Terminal42\\DcMultilingualBundle\\": "src"
         }
+    },
+    "replace": {
+        "contao-legacy/dc_multilingual": "self.version"
     }
 }
