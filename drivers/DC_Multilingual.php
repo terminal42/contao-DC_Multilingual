@@ -109,6 +109,11 @@ class DC_Multilingual extends \DC_Table
             return $GLOBALS['TL_DCA'][$strTable]['config']['langPid'];
         }
 
+        // Legacy support
+        if ($GLOBALS['TL_DCA'][$strTable]['config']['pidColumn']) {
+            return $GLOBALS['TL_DCA'][$strTable]['config']['pidColumn'];
+        }
+
         return 'langPid';
     }
 
@@ -820,14 +825,13 @@ class DC_Multilingual extends \DC_Table
     {
         parent::copyChilds($table, $insertID, $id, $parentId);
 
-        $strPidColumn = $GLOBALS['TL_DCA'][$table]['config']['pidColumn'] ? $GLOBALS['TL_DCA'][$table]['config']['pidColumn'] : $this->strPidColumn;
+        $strPidColumn = static::getPidColumnForTable($table);
         $objLanguage = $this->Database->prepare("SELECT id FROM " . $table . " WHERE " . $strPidColumn . "=? AND id>?")
                                       ->limit(1)
                                       ->execute($id, $parentId);
 
         // Update the language pid column
-        if ($objLanguage->numRows)
-        {
+        if ($objLanguage->numRows) {
             $this->Database->prepare("UPDATE " . $table . " SET " . $strPidColumn . "=? WHERE id=?")
                            ->execute($insertID, $objLanguage->id);
         }
@@ -1374,16 +1378,15 @@ class DC_Multilingual extends \DC_Table
         parent::deleteChilds($table, $id, $delete);
 
         // Do not delete record if there is no parent table
-        if ($GLOBALS['TL_DCA'][$table]['config']['ptable'] == '')
-        {
+        if ($GLOBALS['TL_DCA'][$table]['config']['ptable'] == '') {
             return;
         }
 
-        $objLanguages = $this->Database->prepare("SELECT id FROM " . $table . " WHERE " . ($GLOBALS['TL_DCA'][$table]['config']['pidColumn'] ? $GLOBALS['TL_DCA'][$table]['config']['pidColumn'] : $this->strPidColumn) . " IN (SELECT id FROM " . $table . " WHERE pid=?)")
+        $strPidColumn = static::getPidColumnForTable($table);
+        $objLanguages = $this->Database->prepare("SELECT id FROM " . $table . " WHERE " . $strPidColumn . " IN (SELECT id FROM " . $table . " WHERE pid=?)")
                                        ->execute($id);
 
-        while ($objLanguages->next())
-        {
+        while ($objLanguages->next()) {
             $delete[$table][] = $objLanguages->id;
         }
     }
