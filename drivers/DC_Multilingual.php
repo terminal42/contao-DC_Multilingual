@@ -109,6 +109,11 @@ class DC_Multilingual extends \DC_Table
             return $GLOBALS['TL_DCA'][$strTable]['config']['langPid'];
         }
 
+        // Legacy support
+        if ($GLOBALS['TL_DCA'][$strTable]['config']['pidColumn']) {
+            return $GLOBALS['TL_DCA'][$strTable]['config']['pidColumn'];
+        }
+
         return 'langPid';
     }
 
@@ -820,8 +825,7 @@ class DC_Multilingual extends \DC_Table
     {
         parent::copyChilds($table, $insertID, $id, $parentId);
 
-        $strPidColumn = $GLOBALS['TL_DCA'][$table]['config']['pidColumn'] ? $GLOBALS['TL_DCA'][$table]['config']['pidColumn'] : $this->strPidColumn;
-        $objLanguage = $this->Database->prepare("SELECT id FROM " . $table . " WHERE " . $strPidColumn . "=? AND id>?")
+        $objLanguage = $this->Database->prepare("SELECT id FROM " . $table . " WHERE " . $this->strPidColumn . "=? AND id>?")
                                       ->limit(1)
                                       ->execute($id, $parentId);
 
@@ -1379,7 +1383,7 @@ class DC_Multilingual extends \DC_Table
             return;
         }
 
-        $objLanguages = $this->Database->prepare("SELECT id FROM " . $table . " WHERE " . ($GLOBALS['TL_DCA'][$table]['config']['pidColumn'] ? $GLOBALS['TL_DCA'][$table]['config']['pidColumn'] : $this->strPidColumn) . " IN (SELECT id FROM " . $table . " WHERE pid=?)")
+        $objLanguages = $this->Database->prepare("SELECT id FROM " . $table . " WHERE " . $this->strPidColumn . " IN (SELECT id FROM " . $table . " WHERE pid=?)")
                                        ->execute($id);
 
         while ($objLanguages->next())
