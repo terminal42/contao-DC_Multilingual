@@ -22,7 +22,7 @@ abstract class MultilingualModel extends \Model
      *
      * @param \Database\Result $objResult An optional database result
      */
-    public function __construct(\Database\Result $objResult)
+    public function __construct(\Database\Result $objResult = null)
     {
         parent::__construct($objResult);
 
