@@ -110,7 +110,9 @@ class Driver extends \DC_Table
         $this->langColumnName = $dca['config']['langColumnName'] ?: 'language';
 
         // Filter out translations
-        $dca['list']['sorting']['filter'][] = array($this->langColumnName . '=?', '');
+        if ($dca['list']['sorting']['mode'] !== 5) {
+            $dca['list']['sorting']['filter'][] = array($this->langColumnName.'=?', '');
+        }
 
         // Add CSS file to place the language dropdown
         $GLOBALS['TL_CSS'][] = 'bundles/terminal42dcmultilingual/backend.min.css';
@@ -815,7 +817,6 @@ class Driver extends \DC_Table
         // Check whether there are child records
         if (!$blnNoRecursion) {
             if ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 5 || $this->strTable != $table) {
-                $limitForLanguage = $GLOBALS['TL_DCA'][$table]['config']['dataContainer'] === 'Multilingual';
                 $langColumn = $GLOBALS['TL_DCA'][$table]['config']['langColumnName'] ?: 'language';
 
                 // Now that there's $arrFound we can just add all that main languages to the found array
