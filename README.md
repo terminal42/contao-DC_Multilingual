@@ -13,7 +13,7 @@ $GLOBALS['TL_DCA']['table']['config']['dataContainer'] = 'Multilingual';
 $GLOBALS['TL_DCA']['table']['config']['languages'] = ['en', 'de', 'pl'];
 
 // Database column that contains the language keys (default: "language")
-$GLOBALS['TL_DCA']['table']['config']['langColumn'] = 'language';
+$GLOBALS['TL_DCA']['table']['config']['langColumnName'] = 'language';
 
 // Database column that contains the reference id (default: "langPid")
 $GLOBALS['TL_DCA']['table']['config']['langPid'] = 'langPid';
