@@ -110,7 +110,7 @@ class Driver extends \DC_Table
         $this->langColumnName = $dca['config']['langColumnName'] ?: 'language';
 
         // Filter out translations
-        if ($dca['list']['sorting']['mode'] !== 5) {
+        if ($dca['list']['sorting']['mode'] !== 5 && $dca['list']['sorting']['mode'] !== 6) {
             $dca['list']['sorting']['filter'][] = array($this->langColumnName.'=?', '');
         }
 
@@ -816,7 +816,7 @@ class Driver extends \DC_Table
     {
         // Check whether there are child records
         if (!$blnNoRecursion) {
-            if ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 5 || $this->strTable != $table) {
+            if ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] === 5 || $GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] === 6 || $this->strTable != $table) {
                 $langColumn = $GLOBALS['TL_DCA'][$table]['config']['langColumnName'] ?: 'language';
 
                 // Now that there's $arrFound we can just add all that main languages to the found array
