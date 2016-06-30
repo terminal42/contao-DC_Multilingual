@@ -1,0 +1,14 @@
+.tl_version_panel.language_panel:after {
+    content: "";
+    display: table;
+    clear: both;
+}
+
+.tl_version_panel.language_panel #tl_language {
+    float:left;
+    margin-left:20px;
+}
+
+.tl_version_panel.language_panel #tl_version {
+    float: right;
+}

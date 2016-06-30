@@ -1,0 +1,5 @@
+services:
+    terminal42.dc_multilingual.querybuilder_factory:
+        class: Terminal42\DcMultilingualBundle\QueryBuilder\MultilingualQueryBuilderFactory
+        arguments:
+            - "@database_connection"
