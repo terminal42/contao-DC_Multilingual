@@ -828,6 +828,23 @@ class Driver extends \DC_Table
                     ->fetchEach('id');
 
                 $arrFound = array_merge($arrFound, $translationIds);
+
+                // Do not display the language records in the child list
+                if ($table === $this->strTable && $GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] === 6) {
+                    static $languageRecords;
+
+                    if (!is_array($languageRecords)) {
+                        $languageRecords = \Database::getInstance()->execute("SELECT id FROM $table WHERE $langColumn=''")
+                            ->fetchEach('id');
+
+                        $languageRecords = array_map('intval', $languageRecords);
+                    }
+
+                    // Return an empty string if the ID is a langauge record
+                    if (!in_array((int)$id, $languageRecords, true)) {
+                        return '';
+                    }
+                }
             }
         }
 
