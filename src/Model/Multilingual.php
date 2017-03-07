@@ -1,9 +1,9 @@
 <?php
 
-/**
+/*
  * dc_multilingual Extension for Contao Open Source CMS
  *
- * @copyright  Copyright (c) 2011-2016, terminal42 gmbh
+ * @copyright  Copyright (c) 2011-2017, terminal42 gmbh
  * @author     terminal42 gmbh <info@terminal42.ch>
  * @license    http://opensource.org/licenses/lgpl-3.0.html LGPL
  * @link       http://github.com/terminal42/contao-dc_multilingual
@@ -17,7 +17,7 @@ use Terminal42\DcMultilingualBundle\QueryBuilder\MultilingualQueryBuilderFactory
 class Multilingual extends \Model
 {
     /**
-     * Prevent the model from saving
+     * Prevent the model from saving.
      *
      * @param \Database\Result $objResult An optional database result
      */
@@ -36,7 +36,6 @@ class Multilingual extends \Model
         $pidColumn = static::getPidColumn();
 
         if ($this->{$pidColumn} > 0) {
-
             return $this->{$pidColumn};
         }
 
@@ -57,7 +56,6 @@ class Multilingual extends \Model
         $langColumn = static::getLangColumn();
 
         if ($language === $this->{$langColumn}) {
-
             return $this->{$aliasColumnName};
         }
 
@@ -65,12 +63,10 @@ class Multilingual extends \Model
         $translatedModel = static::findByPk($this->id, ['language' => $language]);
 
         if (null === $translatedModel) {
-
             // Get fallback
             $fallbackLang = static::getFallbackLanguage();
 
             if ($language === $fallbackLang) {
-
                 return $this->{$aliasColumnName};
             }
 
@@ -94,10 +90,10 @@ class Multilingual extends \Model
     public static function findByAlias($alias, $aliasColumnName = 'alias', $options = [])
     {
         $options = array_merge([
-                'limit'  => 1,
+                'limit' => 1,
                 'column' => ["(t1.$aliasColumnName=?"],
-                'value'  => [$alias],
-                'return' => 'Model'
+                'value' => [$alias],
+                'return' => 'Model',
             ],
             $options
         );
@@ -117,15 +113,47 @@ class Multilingual extends \Model
     public static function findByMultilingualAlias($alias, $aliasColumnName = 'alias', $options = [])
     {
         $options = array_merge([
-                'limit'  => 1,
+                'limit' => 1,
                 'column' => ["(t1.$aliasColumnName=? OR t2.$aliasColumnName=?)"],
-                'value'  => [$alias, $alias],
-                'return' => 'Model'
+                'value' => [$alias, $alias],
+                'return' => 'Model',
             ],
             $options
         );
 
         return static::find($options);
+    }
+
+    /**
+     * Get the language column.
+     *
+     * @return string
+     */
+    public static function getLangColumn()
+    {
+        static::ensureDataContainerIsLoaded();
+
+        if ($GLOBALS['TL_DCA'][static::getTable()]['config']['langColumn']) {
+            return $GLOBALS['TL_DCA'][static::getTable()]['config']['langColumn'];
+        }
+
+        return 'language';
+    }
+
+    /**
+     * Get the fallback language if available.
+     *
+     * @return string|null
+     */
+    public static function getFallbackLanguage()
+    {
+        static::ensureDataContainerIsLoaded();
+
+        if ($GLOBALS['TL_DCA'][static::getTable()]['config']['fallbackLang']) {
+            return $GLOBALS['TL_DCA'][static::getTable()]['config']['fallbackLang'];
+        }
+
+        return null;
     }
 
     /**
@@ -199,7 +227,7 @@ class Multilingual extends \Model
                 }
             } else {
                 // Default is likely t1
-                $qb->andWhere('t1.' . $options['column'] . '=?');
+                $qb->andWhere('t1.'.$options['column'].'=?');
             }
         }
 
@@ -239,7 +267,7 @@ class Multilingual extends \Model
     }
 
     /**
-     * Get the regular fields
+     * Get the regular fields.
      *
      * @return array
      */
@@ -282,45 +310,10 @@ class Multilingual extends \Model
         static::ensureDataContainerIsLoaded();
 
         if ($GLOBALS['TL_DCA'][static::getTable()]['config']['langPid']) {
-
             return $GLOBALS['TL_DCA'][static::getTable()]['config']['langPid'];
         }
 
         return 'langPid';
-    }
-
-    /**
-     * Get the language column.
-     *
-     * @return string
-     */
-    public static function getLangColumn()
-    {
-        static::ensureDataContainerIsLoaded();
-
-        if ($GLOBALS['TL_DCA'][static::getTable()]['config']['langColumn']) {
-
-            return $GLOBALS['TL_DCA'][static::getTable()]['config']['langColumn'];
-        }
-
-        return 'language';
-    }
-
-    /**
-     * Get the fallback language if available.
-     *
-     * @return string|null
-     */
-    public static function getFallbackLanguage()
-    {
-        static::ensureDataContainerIsLoaded();
-
-        if ($GLOBALS['TL_DCA'][static::getTable()]['config']['fallbackLang']) {
-
-            return $GLOBALS['TL_DCA'][static::getTable()]['config']['fallbackLang'];
-        }
-
-        return null;
     }
 
     /**

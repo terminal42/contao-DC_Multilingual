@@ -15,9 +15,19 @@
         }
     ],
     "require":{
-        "php":">=5.4",
+        "php":">=5.5",
         "contao/core-bundle":"^4.1",
         "doctrine/dbal": "^2.5"
+    },
+    "require-dev": {
+        "contao/manager-plugin": "^2.0",
+        "friendsofphp/php-cs-fixer": "^2.1"
+    },
+    "conflict": {
+        "contao/manager-plugin": "<2.0 || >=3.0"
+    },
+    "replace": {
+        "contao-legacy/dc_multilingual": "self.version"
     },
     "autoload": {
         "classmap": [
@@ -27,7 +37,7 @@
             "Terminal42\\DcMultilingualBundle\\": "src"
         }
     },
-    "replace": {
-        "contao-legacy/dc_multilingual": "self.version"
+    "extra": {
+        "contao-manager-plugin": "Terminal42\\DcMultilingualBundle\\ContaoManager\\Plugin"
     }
 }
