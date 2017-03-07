@@ -963,19 +963,22 @@ class DC_Multilingual extends \DC_Table
 
 
     /**
-     * Recursively generate the tree and return it as HTML string (taken from Contao 2.11.2)
-     * @param string
-     * @param integer
-     * @param array
-     * @param boolean
-     * @param integer
-     * @param array
-     * @param boolean
-     * @param boolean
-     * @param boolean
+     * Recursively generate the tree and return it as HTML string
+     *
+     * @param string  $table
+     * @param integer $id
+     * @param array   $arrPrevNext
+     * @param boolean $blnHasSorting
+     * @param integer $intMargin
+     * @param array   $arrClipboard
+     * @param boolean $blnCircularReference
+     * @param boolean $protectedPage
+     * @param boolean $blnNoRecursion
+     * @param array   $arrFound
+     *
      * @return string
      */
-    protected function generateTree($table, $id, $arrPrevNext, $blnHasSorting, $intMargin=0, $arrClipboard=null, $blnCircularReference=false, $protectedPage=false, $blnNoRecursion=false)
+    protected function generateTree($table, $id, $arrPrevNext, $blnHasSorting, $intMargin=0, $arrClipboard=null, $blnCircularReference=false, $protectedPage=false, $blnNoRecursion=false, $arrFound=null)
     {
         $session = $this->Session->getData();
         $node = ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 6) ? $this->strTable.'_'.$table.'_tree' : $this->strTable.'_tree';
@@ -1015,9 +1018,8 @@ class DC_Multilingual extends \DC_Table
         {
             if ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 5 || $this->strTable != $table)
             {
-                $limitForLanguage = $GLOBALS['TL_DCA'][$table]['config']['dataContainer'] == 'Multilingual';
-                $where = $limitForLanguage ? "  AND {$this->strLangColumn}=''" : '';
-                $objChilds = $this->Database->prepare("SELECT id FROM " . $table . " WHERE pid=?$where" . ($blnHasSorting ? " ORDER BY sorting" : ''))
+                $where = $GLOBALS['TL_DCA'][$table]['config']['dataContainer'] === 'Multilingual' ? "  AND {$this->strLangColumn}=''" : '';
+                $objChilds = $this->Database->prepare("SELECT id FROM " . $table . " WHERE pid=?$where" . ((null !== $arrFound && !empty($arrFound)) ? " AND id IN(" . implode(',', array_map('intval', $arrFound)) . ")" : '') . ($blnHasSorting ? " ORDER BY sorting" : ''))
                     ->execute($id);
 
                 if ($objChilds->numRows)
@@ -1036,9 +1038,9 @@ class DC_Multilingual extends \DC_Table
         }
 
         $session[$node][$id] = (is_int($session[$node][$id])) ? $session[$node][$id] : 0;
-        $mouseover = ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 5 || $table == $this->strTable) ? ' onmouseover="Theme.hoverDiv(this,1)" onmouseout="Theme.hoverDiv(this,0)" onclick="Theme.toggleSelect(this)"' : '';
+        $mouseover = ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 5 || $table == $this->strTable) ? ' toggle_select hover-div" onmouseover="Theme.hoverDiv(this,1)" onmouseout="Theme.hoverDiv(this,0)" onclick="Theme.toggleSelect(this)' : '';
 
-        $return .= "\n  " . '<li class="'.((($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 5 && $objRow->type == 'root') || $table != $this->strTable) ? 'tl_folder' : 'tl_file').' click2edit"'.$mouseover.'><div class="tl_left" style="padding-left:'.($intMargin + $intSpacing).'px">';
+        $return .= "\n  " . '<li class="'.((($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 5 && $objRow->type == 'root') || $table != $this->strTable) ? 'tl_folder' : 'tl_file').' click2edit cf'.$mouseover.'"><div class="tl_left" style="padding-left:'.($intMargin + $intSpacing).'px">';
 
         // Calculate label and add a toggle button
         $args = array();
@@ -1049,8 +1051,8 @@ class DC_Multilingual extends \DC_Table
         if (!empty($childs))
         {
             $folderAttribute = '';
-            $img = ($session[$node][$id] == 1) ? 'folMinus.gif' : 'folPlus.gif';
-            $alt = ($session[$node][$id] == 1) ? $GLOBALS['TL_LANG']['MSC']['collapseNode'] : $GLOBALS['TL_LANG']['MSC']['expandNode'];
+            $img = ((null !== $arrFound && !empty($arrFound)) || $session[$node][$id] == 1) ? 'folMinus.gif' : 'folPlus.gif';
+            $alt = ((null !== $arrFound && !empty($arrFound)) || $session[$node][$id] == 1) ? $GLOBALS['TL_LANG']['MSC']['collapseNode'] : $GLOBALS['TL_LANG']['MSC']['expandNode'];
             $return .= '<a href="'.$this->addToUrl('ptg='.$id).'" title="'.specialchars($alt).'" onclick="Backend.getScrollOffset();return AjaxRequest.toggleStructure(this,\''.$node.'_'.$id.'\','.$level.','.$GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'].')">'.\Image::getHtml($img, '', 'style="margin-right:2px"').'</a>';
         }
 
@@ -1183,7 +1185,7 @@ class DC_Multilingual extends \DC_Table
 
                 for ($j=0, $c=count($ids); $j<$c; $j++)
                 {
-                    $return .= $this->generateTree($this->strTable, $ids[$j], array('pp'=>$ids[($j-1)], 'nn'=>$ids[($j+1)]), $blnHasSorting, ($intMargin + $intSpacing + 20), $arrClipboard, false, ($j<(count($ids)-1) || !empty($childs)));
+                    $return .= $this->generateTree($this->strTable, $ids[$j], array('pp'=>$ids[($j-1)], 'nn'=>$ids[($j+1)]), $blnHasSorting, ($intMargin + $intSpacing + 20), $arrClipboard, false, ($j<(count($ids)-1) || !empty($childs)), $blnNoRecursion, $arrFound);
                 }
             }
         }
@@ -1191,25 +1193,25 @@ class DC_Multilingual extends \DC_Table
         // Begin a new submenu
         if (!$blnNoRecursion)
         {
-            if (!empty($childs) && $session[$node][$id] == 1)
+            if ((null !== $arrFound && !empty($arrFound)) || !empty($childs) && $session[$node][$id] == 1)
             {
                 $return .= '<li class="parent" id="'.$node.'_'.$id.'"><ul class="level_'.$level.'">';
             }
 
             // Add the records of the parent table
-            if ($session[$node][$id] == 1)
+            if ((null !== $arrFound && !empty($arrFound)) || $session[$node][$id] == 1)
             {
                 if (is_array($childs))
                 {
                     for ($k=0, $c=count($childs); $k<$c; $k++)
                     {
-                        $return .= $this->generateTree($table, $childs[$k], array('p'=>$childs[($k-1)], 'n'=>$childs[($k+1)]), $blnHasSorting, ($intMargin + $intSpacing), $arrClipboard, ((($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 5 && $childs[$k] == $arrClipboard['id']) || $blnCircularReference) ? true : false), ($blnProtected || $protectedPage));
+                        $return .= $this->generateTree($table, $childs[$k], array('p'=>$childs[($k-1)], 'n'=>$childs[($k+1)]), $blnHasSorting, ($intMargin + $intSpacing), $arrClipboard, ((($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 5 && $childs[$k] == $arrClipboard['id']) || $blnCircularReference) ? true : false), ($blnProtected || $protectedPage), $blnNoRecursion, $arrFound);
                     }
                 }
             }
 
             // Close the submenu
-            if (!empty($childs) && $session[$node][$id] == 1)
+            if ((null !== $arrFound && !empty($arrFound)) || !empty($childs) && $session[$node][$id] == 1)
             {
                 $return .= '</ul></li>';
             }

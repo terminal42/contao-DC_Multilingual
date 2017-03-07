@@ -12,6 +12,12 @@
 .tl_version_panel.language_panel #tl_language {
     float:left;
     margin-left:20px;
+    width: 50%;
+    text-align: left
+}
+
+.tl_version_panel.language_panel #tl_language .tl_formbody {
+    float: none;
 }
 
 .tl_version_panel.language_panel #tl_version {
