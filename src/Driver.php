@@ -1,9 +1,9 @@
 <?php
 
-/**
+/*
  * dc_multilingual Extension for Contao Open Source CMS
  *
- * @copyright  Copyright (c) 2011-2016, terminal42 gmbh
+ * @copyright  Copyright (c) 2011-2017, terminal42 gmbh
  * @author     terminal42 gmbh <info@terminal42.ch>
  * @license    http://opensource.org/licenses/lgpl-3.0.html LGPL
  * @link       http://github.com/terminal42/contao-dc_multilingual
@@ -14,9 +14,7 @@ namespace Terminal42\DcMultilingualBundle;
 use Contao\CoreBundle\Exception\AccessDeniedException;
 use Contao\CoreBundle\Exception\InternalServerErrorException;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Session\Attribute\AttributeBagInterface;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
-
 
 /**
  * Class Driver
@@ -28,7 +26,7 @@ class Driver extends \DC_Table
     /**
      * True if we are editing a language that is not the fallback
      *
-     * @param boolean
+     * @param bool
      */
     protected $editLang = false;
 
@@ -215,8 +213,6 @@ class Driver extends \DC_Table
                     {
                         unset($boxes[$k][$kk]);
                     }
-
-
                 }
 
                 // Unset a box if it does not contain any fields
@@ -724,8 +720,8 @@ class Driver extends \DC_Table
     /**
      * Generate a particular subpart of the tree and return it as HTML string
      *
-     * @param integer
-     * @param integer
+     * @param integer $id
+     * @param integer $level
      *
      * @return string
      */
@@ -793,7 +789,6 @@ class Driver extends \DC_Table
 
         return $return;
     }
-
 
 
     /**

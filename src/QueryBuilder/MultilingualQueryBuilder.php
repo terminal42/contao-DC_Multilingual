@@ -1,9 +1,9 @@
 <?php
 
-/**
+/*
  * dc_multilingual Extension for Contao Open Source CMS
  *
- * @copyright  Copyright (c) 2011-2016, terminal42 gmbh
+ * @copyright  Copyright (c) 2011-2017, terminal42 gmbh
  * @author     terminal42 gmbh <info@terminal42.ch>
  * @license    http://opensource.org/licenses/lgpl-3.0.html LGPL
  * @link       http://github.com/terminal42/contao-dc_multilingual
@@ -105,11 +105,11 @@ class MultilingualQueryBuilder implements MultilingualQueryBuilderInterface
         $this->qb->from($this->table, 't1');
         $this->qb->add('join', [
             't1' => [
-                'joinType'      => 'left outer',
-                'joinTable'     => $this->table,
-                'joinAlias'     => 't2',
-                'joinCondition' => "t1.id=t2.{$this->pidColumnName} AND t2.{$this->langColumnName}='$language'"
-            ]
+                'joinType' => 'left outer',
+                'joinTable' => $this->table,
+                'joinAlias' => 't2',
+                'joinCondition' => "t1.id=t2.{$this->pidColumnName} AND t2.{$this->langColumnName}='$language'",
+            ],
         ], true);
 
         $this->qb->where("t1.{$this->pidColumnName}=0");
