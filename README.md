@@ -38,7 +38,7 @@ $GLOBALS['TL_DCA']['table']['fields']['name']['eval']['translatableFor'] = ['de'
 $GLOBALS['TL_DCA']['tl_user']['config']['dataContainer'] = 'Multilingual';
 $GLOBALS['TL_DCA']['tl_user']['config']['languages'] = array('en', 'de', 'pl');
 $GLOBALS['TL_DCA']['tl_user']['config']['langPid'] = 'langPid';
-$GLOBALS['TL_DCA']['tl_user']['config']['langColumn'] = 'language';
+$GLOBALS['TL_DCA']['tl_user']['config']['langColumnName'] = 'language';
 $GLOBALS['TL_DCA']['tl_user']['config']['fallbackLang'] = 'en';
 
 // Add the language fields
@@ -59,10 +59,9 @@ class UserModel extends Terminal42\DcMultilingualBundle\Model\Multilingual
 {
 	protected static $strTable = 'tl_user';
 
-	public function findActive()
+	public static function findActive()
 	{
-		$t = static::$strTable;
-		$arrColumns = array("$t.disable=''");
+		$arrColumns = array("t1.disable=''");
 		return static::findBy($arrColumns, null);
 	}
 }
