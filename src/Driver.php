@@ -984,10 +984,10 @@ class Driver extends \DC_Table
         // Check for duplicates in current language
         $objAlias = \Database::getInstance()->prepare(
             "SELECT id FROM {$this->strTable} WHERE id!=? AND {$this->strField}=? AND {$this->langColumnName}=?"
-        )->execute($this->intId, $varValue, $this->currentLang);
+        )->execute($this->objActiveRecord->id, $varValue, $this->currentLang);
 
         // Check whether the alias exists
-        if ($objAlias->numRows > 1) {
+        if ($objAlias->numRows > 0) {
             if (!$autoAlias) {
                 throw new \InvalidArgumentException(sprintf($GLOBALS['TL_LANG']['ERR']['aliasExists'], $varValue));
             }
