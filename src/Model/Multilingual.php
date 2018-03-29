@@ -89,9 +89,10 @@ class Multilingual extends \Model
      */
     public static function findByAlias($alias, $aliasColumnName = 'alias', $options = [])
     {
+        $table   = static::getTable();
         $options = array_merge([
                 'limit' => 1,
-                'column' => ["(t1.$aliasColumnName=?"],
+                'column' => ["($table.$aliasColumnName=?"],
                 'value' => [$alias],
                 'return' => 'Model',
             ],
@@ -112,9 +113,10 @@ class Multilingual extends \Model
      */
     public static function findByMultilingualAlias($alias, $aliasColumnName = 'alias', $options = [])
     {
+        $table   = static::getTable();
         $options = array_merge([
                 'limit' => 1,
-                'column' => ["(t1.$aliasColumnName=? OR t2.$aliasColumnName=?)"],
+                'column' => ["($table.$aliasColumnName=? OR t2.$aliasColumnName=?)"],
                 'value' => [$alias, $alias],
                 'return' => 'Model',
             ],
@@ -226,8 +228,9 @@ class Multilingual extends \Model
                     $qb->andWhere($column);
                 }
             } else {
-                // Default is likely t1
-                $qb->andWhere('t1.'.$options['column'].'=?');
+                // Default is likely fallback table
+                $table = static::getTable();
+                $qb->andWhere("$table.{$options['column']}=?");
             }
         }
 
