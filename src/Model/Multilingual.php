@@ -91,7 +91,7 @@ class Multilingual extends \Model
     {
         $options = array_merge([
                 'limit' => 1,
-                'column' => ["(t1.$aliasColumnName=?"],
+                'column' => ["t1.$aliasColumnName=?"],
                 'value' => [$alias],
                 'return' => 'Model',
             ],
