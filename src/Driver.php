@@ -811,7 +811,11 @@ class Driver extends \DC_Table
     {
         // Check whether there are child records
         if (!$blnNoRecursion) {
-            if ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] === 5 || $GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] === 6 || $this->strTable != $table) {
+            \Controller::loadDataContainer($table);
+
+            if ($GLOBALS['TL_DCA'][$table]['config']['dataContainer'] === 'Multilingual'
+                && ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] === 5 || $GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] === 6 || $this->strTable != $table)
+            ) {
                 $langColumn = $GLOBALS['TL_DCA'][$table]['config']['langColumnName'] ?: 'language';
 
                 // Now that there's $arrFound we can just add all that main languages to the found array
