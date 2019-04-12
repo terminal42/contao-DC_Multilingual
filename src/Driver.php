@@ -395,13 +395,18 @@ class Driver extends \DC_Table
 </div>
 
 </div>
-</form>
+</form>';
 
+        // Set the focus if there is an error
+        if ($this->noReload)
+        {
+            $return .= '
 <script>
   window.addEvent(\'domready\', function() {
-    Theme.focusInput("'.$this->strTable.'");
+    Backend.vScrollTo(($(\'' . $this->strTable . '\').getElement(\'label.error\').getPosition().y - 20));
   });
 </script>';
+        }
 
         // Begin the form (-> DO NOT CHANGE THIS ORDER -> this way the onsubmit attribute of the form can be changed by a field)
         $return = $version . '
