@@ -11,6 +11,7 @@
 
 namespace Terminal42\DcMultilingualBundle\Model;
 
+use Contao\Database;
 use Doctrine\DBAL\Query\QueryBuilder;
 use Terminal42\DcMultilingualBundle\QueryBuilder\MultilingualQueryBuilderFactoryInterface;
 
@@ -276,9 +277,10 @@ class Multilingual extends \Model
      */
     protected static function getRegularFields()
     {
-        $extractor = \DcaExtractor::getInstance(static::getTable());
+        $extractor    = \DcaExtractor::getInstance(static::getTable());
+        $tableColumns = Database::getInstance()->getFieldNames(static::getTable());
 
-        return array_keys($extractor->getFields());
+        return array_intersect($tableColumns, array_keys($extractor->getFields()));
     }
 
     /**
@@ -290,10 +292,11 @@ class Multilingual extends \Model
     {
         static::ensureDataContainerIsLoaded();
 
-        $fields = [];
+        $fields       = [];
+        $tableColumns = Database::getInstance()->getFieldNames(static::getTable());
 
         foreach ($GLOBALS['TL_DCA'][static::getTable()]['fields'] as $field => $data) {
-            if (!isset($data['eval']['translatableFor'])) {
+            if (!isset($data['eval']['translatableFor']) || !in_array($field, $tableColumns, true)) {
                 continue;
             }
 
