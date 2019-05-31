@@ -134,8 +134,8 @@ class Multilingual extends \Model
     {
         static::ensureDataContainerIsLoaded();
 
-        if ($GLOBALS['TL_DCA'][static::getTable()]['config']['langColumn']) {
-            return $GLOBALS['TL_DCA'][static::getTable()]['config']['langColumn'];
+        if ($GLOBALS['TL_DCA'][static::getTable()]['config']['langColumnName']) {
+            return $GLOBALS['TL_DCA'][static::getTable()]['config']['langColumnName'];
         }
 
         return 'language';
