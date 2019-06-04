@@ -57,12 +57,12 @@ $GLOBALS['TL_DCA']['tl_news']['fields']['subheadline']['eval']['translatableFor'
 ```php
 class NewsModel extends Terminal42\DcMultilingualBundle\Model\Multilingual
 {
-	protected static $strTable = 'tl_news';
+    protected static $strTable = 'tl_news';
 
-	public static function findPublished()
-	{
-		return static::findBy(['t1.published=?'], [1]);
-	}
+    public static function findPublished()
+    {
+        return static::findBy(['t1.published=?'], [1]);
+    }
 }
 ```
 
