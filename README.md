@@ -133,4 +133,4 @@ MyModel::findByMultilingualAlias($alias);
 1. Sometimes a table you want to make multilingual already contains the `language` field (e.g. `tl_user`), 
 which may lead to unexpected results. In such cases you have to make sure that data container's property
 `$GLOBALS['TL_DCA']['tl_table']['config']['langColumnName']` is set to something else than `language`. 
-See #53 for more details.
+See [#53](https://github.com/terminal42/contao-DC_Multilingual/issues/53) for more details.
