@@ -486,21 +486,30 @@ class Driver extends \DC_Table
             if (isset($_POST['saveNclose']))
             {
                 \Message::reset();
-                \System::setCookie('BE_PAGE_OFFSET', 0, 0);
+
+                if (version_compare(VERSION, '4.8', '<')) {
+                    \System::setCookie('BE_PAGE_OFFSET', 0, 0);
+                }
 
                 $this->redirect($this->getReferer());
             }
             elseif (isset($_POST['saveNedit']))
             {
                 \Message::reset();
-                \System::setCookie('BE_PAGE_OFFSET', 0, 0);
+
+                if (version_compare(VERSION, '4.8', '<')) {
+                    \System::setCookie('BE_PAGE_OFFSET', 0, 0);
+                }
 
                 $this->redirect($this->addToUrl($GLOBALS['TL_DCA'][$this->strTable]['list']['operations']['edit']['href'], false, array('s2e', 'act')));
             }
             elseif (isset($_POST['saveNback']))
             {
                 \Message::reset();
-                \System::setCookie('BE_PAGE_OFFSET', 0, 0);
+
+                if (version_compare(VERSION, '4.8', '<')) {
+                    \System::setCookie('BE_PAGE_OFFSET', 0, 0);
+                }
 
                 if ($this->ptable == '')
                 {
@@ -519,7 +528,10 @@ class Driver extends \DC_Table
             elseif (isset($_POST['saveNcreate']))
             {
                 \Message::reset();
-                \System::setCookie('BE_PAGE_OFFSET', 0, 0);
+
+                if (version_compare(VERSION, '4.8', '<')) {
+                    \System::setCookie('BE_PAGE_OFFSET', 0, 0);
+                }
 
                 $strUrl = TL_SCRIPT . '?do=' . \Input::get('do');
 
