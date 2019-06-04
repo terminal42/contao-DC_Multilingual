@@ -669,12 +669,6 @@ class Driver extends \DC_Table
 
         if ($GLOBALS['TL_DCA'][$table]['config']['langPid']) {
             $pidColumnName = $GLOBALS['TL_DCA'][$table]['config']['langPid'];
-        } elseif ($GLOBALS['TL_DCA'][$table]['config']['pidColumn']) {
-            $pidColumnName = $GLOBALS['TL_DCA'][$table]['config']['pidColumn'];
-
-            // The pidColumn is deprecated
-            // @todo - deprecated, remove in 3.0
-            trigger_error('The "pidColumn" setting is deprecated, use "langPid" instead.', E_USER_NOTICE);
         } else {
             $pidColumnName = $this->pidColumnName;
         }
@@ -1054,12 +1048,6 @@ class Driver extends \DC_Table
         // be a child table
         if ($GLOBALS['TL_DCA'][$table]['config']['langPid']) {
             $pidColumnName = $GLOBALS['TL_DCA'][$table]['config']['langPid'];
-        } elseif ($GLOBALS['TL_DCA'][$table]['config']['pidColumn']) {
-            $pidColumnName = $GLOBALS['TL_DCA'][$table]['config']['pidColumn'];
-
-            // The pidColumn is deprecated
-            // @todo - deprecated, remove in 3.0
-            trigger_error('The "pidColumn" setting is deprecated, use "langPid" instead.', E_USER_NOTICE);
         } else {
             $pidColumnName = $this->pidColumnName;
         }
