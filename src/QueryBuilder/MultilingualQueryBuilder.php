@@ -84,6 +84,21 @@ class MultilingualQueryBuilder implements MultilingualQueryBuilderInterface
     }
 
     /**
+     * Build the query for a simple count query with a subquery.
+     *
+     * @param QueryBuilder $queryBuilder
+     */
+    public function buildQueryBuilderForCountWithSubQuery(QueryBuilder $queryBuilder)
+    {
+        $this->qb->resetQueryParts();
+
+        $this->qb->addSelect("COUNT(t1.id) AS count")
+            ->from($this->table, 't1')
+            ->join('t1', sprintf('(%s)', $queryBuilder->getSQL()), 't3', "t1.id = t3.id")
+        ;
+    }
+
+    /**
      * Build the query builder for a find query.
      *
      * @param string $language
@@ -93,13 +108,13 @@ class MultilingualQueryBuilder implements MultilingualQueryBuilderInterface
         $this->qb->resetQueryParts();
 
         // Regular fields
-        foreach ($this->regularFields as $field) {
+        foreach (array_diff($this->regularFields, $this->translatableFields) as $field) {
             $this->qb->addSelect("{$this->table}.$field");
         }
 
         // Translatable fields
-        foreach ($this->translatableFields as $field) {
-            $this->qb->addSelect("IFNULL(t2.$field, {$this->table}.$field) AS $field");
+        foreach (array_intersect($this->translatableFields, $this->regularFields) as $field) {
+            $this->qb->addSelect("IFNULL(translation.$field, {$this->table}.$field) AS $field");
         }
 
         $this->qb->from($this->table, $this->table);
@@ -107,8 +122,8 @@ class MultilingualQueryBuilder implements MultilingualQueryBuilderInterface
             $this->table => [
                 'joinType' => 'left outer',
                 'joinTable' => $this->table,
-                'joinAlias' => 't2',
-                'joinCondition' => "{$this->table}.id=t2.{$this->pidColumnName} AND t2.{$this->langColumnName}='$language'",
+                'joinAlias' => 'translation',
+                'joinCondition' => "{$this->table}.id=translation.{$this->pidColumnName} AND translation.{$this->langColumnName}='$language'",
             ],
         ], true);
 

@@ -108,7 +108,7 @@ class Multilingual extends Model
         $table   = static::getTable();
         $options = array_merge([
                 'limit' => 1,
-                'column' => ["($table.$aliasColumnName=? OR t2.$aliasColumnName=?)"],
+                'column' => ["($table.$aliasColumnName=? OR translation.$aliasColumnName=?)"],
                 'value' => [$alias, $alias],
                 'return' => 'Model',
             ],
@@ -198,9 +198,12 @@ class Multilingual extends Model
     {
         $mlqb = static::getMultilingualQueryBuilder();
 
-        $mlqb->buildQueryBuilderForCount();
-
-        static::applyOptionsToQueryBuilder($mlqb->getQueryBuilder(), $options);
+        if (isset($options['having'])) {
+            $mlqb->buildQueryBuilderForCountWithSubQuery(static::buildFindQuery($options));
+        } else {
+            $mlqb->buildQueryBuilderForCount();
+            static::applyOptionsToQueryBuilder($mlqb->getQueryBuilder(), $options);
+        }
 
         return $mlqb->getQueryBuilder();
     }

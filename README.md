@@ -75,7 +75,7 @@ translations are filtered so you only see the fallback language there.
 When querying using the `Multilingual` model or using the
 `MultilingualQueryBuilder`, the same table is simply joined so we have the
 fallback language aliased as `t1` and the target language (which you specify
- explicitly or it uses the current page's language) aliased as `t2`. Now, using
+ explicitly or it uses the current page's language) aliased as `translation`. Now, using
  MySQL's `IFNULL()` function, it checks whether there's a translated value and
  if not, automatically falls back to the fallback language. This allows you to
  translate only a subset of fields.
