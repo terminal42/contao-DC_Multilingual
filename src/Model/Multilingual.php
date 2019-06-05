@@ -20,9 +20,6 @@ use Terminal42\DcMultilingualBundle\QueryBuilder\MultilingualQueryBuilderFactory
 
 class Multilingual extends Model
 {
-
-    private static $preventSaving = false;
-
     /**
      * Returns the ID of the fallback language.
      */
@@ -182,7 +179,6 @@ class Multilingual extends Model
         $mlqb->buildQueryBuilderForFind($options['language']);
 
         static::applyOptionsToQueryBuilder($mlqb->getQueryBuilder(), $options);
-        static::$preventSaving = true;
 
         return $mlqb->getQueryBuilder();
     }
@@ -219,10 +215,7 @@ class Multilingual extends Model
     protected static function createModelFromDbResult(Result $objResult)
     {
         $model = new static($objResult);
-
-        if (true === self::$preventSaving) {
-            $model->preventSaving(false);
-        }
+        $model->preventSaving(false);
 
         return $model;
     }
@@ -239,11 +232,9 @@ class Multilingual extends Model
     {
         $collection = new Collection($arrModels, $strTable);
 
-        if (true === self::$preventSaving) {
-            /** @var self $model */
-            foreach ($collection as $model) {
-                $model->preventSaving(false);
-            }
+        /** @var self $model */
+        foreach ($collection as $model) {
+            $model->preventSaving(false);
         }
 
         return $collection->reset();
@@ -261,11 +252,9 @@ class Multilingual extends Model
     {
         $collection = Collection::createFromDbResult($objResult, $strTable);
 
-        if (true === self::$preventSaving) {
-            /** @var self $model */
-            foreach ($collection as $model) {
-                $model->preventSaving(false);
-            }
+        /** @var self $model */
+        foreach ($collection as $model) {
+            $model->preventSaving(false);
         }
 
         return $collection->reset();
