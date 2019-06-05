@@ -12,22 +12,16 @@
 namespace Terminal42\DcMultilingualBundle\Model;
 
 use Contao\Database;
+use Contao\Database\Result;
+use Contao\Model;
+use Contao\Model\Collection;
 use Doctrine\DBAL\Query\QueryBuilder;
 use Terminal42\DcMultilingualBundle\QueryBuilder\MultilingualQueryBuilderFactoryInterface;
 
-class Multilingual extends \Model
+class Multilingual extends Model
 {
-    /**
-     * Prevent the model from saving.
-     *
-     * @param \Database\Result $objResult An optional database result
-     */
-    public function __construct(\Database\Result $objResult = null)
-    {
-        parent::__construct($objResult);
 
-        $this->preventSaving(false);
-    }
+    private static $preventSaving = false;
 
     /**
      * Returns the ID of the fallback language.
@@ -188,6 +182,7 @@ class Multilingual extends \Model
         $mlqb->buildQueryBuilderForFind($options['language']);
 
         static::applyOptionsToQueryBuilder($mlqb->getQueryBuilder(), $options);
+        static::$preventSaving = true;
 
         return $mlqb->getQueryBuilder();
     }
@@ -212,6 +207,68 @@ class Multilingual extends \Model
         static::applyOptionsToQueryBuilder($mlqb->getQueryBuilder(), $options);
 
         return $mlqb->getQueryBuilder();
+    }
+
+    /**
+     * Prevent model from saving when creating a model from a database result
+     *
+     * @param Result $objResult The database result object
+     *
+     * @return static The model
+     */
+    protected static function createModelFromDbResult(Result $objResult)
+    {
+        $model = new static($objResult);
+
+        if (true === self::$preventSaving) {
+            $model->preventSaving(false);
+        }
+
+        return $model;
+    }
+
+    /**
+     * Prevent new models from saving when creating a Collection object
+     *
+     * @param array  $arrModels An array of models
+     * @param string $strTable  The table name
+     *
+     * @return Collection The Collection object
+     */
+    protected static function createCollection(array $arrModels, $strTable)
+    {
+        $collection = new Collection($arrModels, $strTable);
+
+        if (true === self::$preventSaving) {
+            /** @var self $model */
+            foreach ($collection as $model) {
+                $model->preventSaving(false);
+            }
+        }
+
+        return $collection->reset();
+    }
+
+    /**
+     * Prevent new models from saving when creating a new collection from a database result
+     *
+     * @param Result $objResult The database result object
+     * @param string $strTable  The table name
+     *
+     * @return Collection The model collection
+     */
+    protected static function createCollectionFromDbResult(Result $objResult, $strTable)
+    {
+        $collection = Collection::createFromDbResult($objResult, $strTable);
+
+        if (true === self::$preventSaving) {
+            /** @var self $model */
+            foreach ($collection as $model) {
+                $model->preventSaving(false);
+            }
+        }
+
+        return $collection->reset();
     }
 
     /**
