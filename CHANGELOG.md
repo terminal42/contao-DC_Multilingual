@@ -14,3 +14,4 @@ See also the [GitHub releases page](https://github.com/terminal42/contao-DC_Mult
 * Allow to count records using subqueries, e.g. with `HAVING` clause.
 * **BC break:** Removed the deprecated `pidColumn` configuration. Use `langPid` instead.
 * **BC break:** Added the new interface method `MultilingualQueryBuilderInterface::buildQueryBuilderForCountWithSubQuery()`.
+* **BC break:** Renamed the translation table alias from `t2` to `translation`.
