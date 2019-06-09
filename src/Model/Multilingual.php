@@ -209,7 +209,7 @@ class Multilingual extends Model
     }
 
     /**
-     * Prevent model from saving when creating a model from a database result
+     * Prevent model from saving when creating a model from a database result. See #51
      *
      * @param Result $objResult The database result object
      *
@@ -224,27 +224,7 @@ class Multilingual extends Model
     }
 
     /**
-     * Prevent new models from saving when creating a Collection object
-     *
-     * @param array  $arrModels An array of models
-     * @param string $strTable  The table name
-     *
-     * @return Collection The Collection object
-     */
-    protected static function createCollection(array $arrModels, $strTable)
-    {
-        $collection = new Collection($arrModels, $strTable);
-
-        /** @var self $model */
-        foreach ($collection as $model) {
-            $model->preventSaving(false);
-        }
-
-        return $collection->reset();
-    }
-
-    /**
-     * Prevent new models from saving when creating a new collection from a database result
+     * Prevent new models from saving when creating a new collection from a database result. See #51
      *
      * @param Result $objResult The database result object
      * @param string $strTable  The table name
