@@ -1253,9 +1253,16 @@ class Driver extends \DC_Table
                     ->execute($this->intId);
 
                 $intPid = ($objCurrent->numRows) ? $objCurrent->pid : 0;
-                $intId = \Database::getInstance()->prepare("INSERT INTO " . $this->strTable . " ({$this->pidColumnName},tstamp,{$this->langColumnName},pid) VALUES (?,?,?,?)")
-                    ->execute($this->intId, time(), $language, $intPid)
-                    ->insertId;
+
+                if ($GLOBALS['TL_DCA'][$this->strTable]['config']['dynamicPtable']) {
+                    $intId = \Database::getInstance()->prepare("INSERT INTO " . $this->strTable . " ({$this->pidColumnName},tstamp,{$this->langColumnName},pid,ptable) VALUES (?,?,?,?,?)")
+                        ->execute($this->intId, time(), $language, $intPid, $this->ptable)
+                        ->insertId;
+                } else {
+                    $intId = \Database::getInstance()->prepare("INSERT INTO " . $this->strTable . " ({$this->pidColumnName},tstamp,{$this->langColumnName},pid) VALUES (?,?,?,?)")
+                        ->execute($this->intId, time(), $language, $intPid)
+                        ->insertId;
+                }
             } else {
                 $intId = \Database::getInstance()->prepare("INSERT INTO " . $this->strTable . " ({$this->pidColumnName},tstamp,{$this->langColumnName}) VALUES (?,?,?)")
                     ->execute($this->intId, time(), $language)
