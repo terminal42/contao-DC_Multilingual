@@ -12,10 +12,11 @@
 namespace Terminal42\DcMultilingualBundle\Model;
 
 use Contao\Database;
+use Contao\Model;
 use Doctrine\DBAL\Query\QueryBuilder;
 use Terminal42\DcMultilingualBundle\QueryBuilder\MultilingualQueryBuilderFactoryInterface;
 
-class Multilingual extends \Model
+class Multilingual extends Model
 {
     /**
      * Prevent the model from saving.
