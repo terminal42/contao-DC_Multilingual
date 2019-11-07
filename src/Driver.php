@@ -486,21 +486,30 @@ class Driver extends \DC_Table
             if (isset($_POST['saveNclose']))
             {
                 \Message::reset();
-                \System::setCookie('BE_PAGE_OFFSET', 0, 0);
+
+                if (version_compare(VERSION, '4.8', '<')) {
+                    \System::setCookie('BE_PAGE_OFFSET', 0, 0);
+                }
 
                 $this->redirect($this->getReferer());
             }
             elseif (isset($_POST['saveNedit']))
             {
                 \Message::reset();
-                \System::setCookie('BE_PAGE_OFFSET', 0, 0);
+
+                if (version_compare(VERSION, '4.8', '<')) {
+                    \System::setCookie('BE_PAGE_OFFSET', 0, 0);
+                }
 
                 $this->redirect($this->addToUrl($GLOBALS['TL_DCA'][$this->strTable]['list']['operations']['edit']['href'], false, array('s2e', 'act')));
             }
             elseif (isset($_POST['saveNback']))
             {
                 \Message::reset();
-                \System::setCookie('BE_PAGE_OFFSET', 0, 0);
+
+                if (version_compare(VERSION, '4.8', '<')) {
+                    \System::setCookie('BE_PAGE_OFFSET', 0, 0);
+                }
 
                 if ($this->ptable == '')
                 {
@@ -519,7 +528,10 @@ class Driver extends \DC_Table
             elseif (isset($_POST['saveNcreate']))
             {
                 \Message::reset();
-                \System::setCookie('BE_PAGE_OFFSET', 0, 0);
+
+                if (version_compare(VERSION, '4.8', '<')) {
+                    \System::setCookie('BE_PAGE_OFFSET', 0, 0);
+                }
 
                 $strUrl = TL_SCRIPT . '?do=' . \Input::get('do');
 
@@ -657,12 +669,6 @@ class Driver extends \DC_Table
 
         if ($GLOBALS['TL_DCA'][$table]['config']['langPid']) {
             $pidColumnName = $GLOBALS['TL_DCA'][$table]['config']['langPid'];
-        } elseif ($GLOBALS['TL_DCA'][$table]['config']['pidColumn']) {
-            $pidColumnName = $GLOBALS['TL_DCA'][$table]['config']['pidColumn'];
-
-            // The pidColumn is deprecated
-            // @todo - deprecated, remove in 3.0
-            trigger_error('The "pidColumn" setting is deprecated, use "langPid" instead.', E_USER_NOTICE);
         } else {
             $pidColumnName = $this->pidColumnName;
         }
@@ -990,10 +996,25 @@ class Driver extends \DC_Table
             $varValue = \StringUtil::generateAlias($this->objActiveRecord->{$fromField});
         }
 
+        $records = \Database::getInstance()
+            ->prepare("SELECT id FROM {$this->strTable} WHERE {$this->pidColumnName}=?")
+            ->execute(($this->objActiveRecord->{$this->pidColumnName} > 0) ? $this->objActiveRecord->{$this->pidColumnName} : $this->objActiveRecord->id)
+        ;
+
+        $excludedIds = $records->fetchEach('id');
+
+        if ($this->objActiveRecord->{$this->pidColumnName} > 0) {
+            $excludedIds[] = $this->objActiveRecord->{$this->pidColumnName};
+        } else {
+            $excludedIds[] = $this->objActiveRecord->id;
+        }
+
         // Check for duplicates in current language
         $objAlias = \Database::getInstance()->prepare(
-            "SELECT id FROM {$this->strTable} WHERE id!=? AND {$this->strField}=? AND {$this->langColumnName}=?"
-        )->execute($this->objActiveRecord->id, $varValue, $this->currentLang);
+            "SELECT id FROM {$this->strTable} WHERE id NOT IN (" . implode(',', $excludedIds) . ") AND {$this->strField}=? AND {$this->langColumnName}=?"
+        )->execute($varValue, $this->currentLang);
+
+        $skipAliasValidation = false;
 
         // Check whether the alias exists
         if ($objAlias->numRows > 0) {
@@ -1001,7 +1022,30 @@ class Driver extends \DC_Table
                 throw new \InvalidArgumentException(sprintf($GLOBALS['TL_LANG']['ERR']['aliasExists'], $varValue));
             }
 
-            $varValue .= '-' . $this->intId;
+            // For child record take the parent record alias
+            if ($this->objActiveRecord->{$this->pidColumnName} > 0) {
+                $parent = \Database::getInstance()
+                    ->prepare("SELECT {$this->strField} FROM {$this->strTable} WHERE id=?")
+                    ->execute($this->objActiveRecord->{$this->pidColumnName})
+                ;
+
+                if ($parent->numRows) {
+                    $varValue = $parent->{$this->strField};
+                    $skipAliasValidation = true;
+                }
+            } else {
+                $varValue .= '-' . $this->intId;
+            }
+        } else {
+            $skipAliasValidation = true;
+        }
+
+        // Skip the further alias validation
+        if ($skipAliasValidation) {
+            $GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['eval']['unique'] = false;
+
+            // Avoid alias validation in callbacks as well
+            unset($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['save_callback']);
         }
 
         parent::save($varValue);
@@ -1042,12 +1086,6 @@ class Driver extends \DC_Table
         // be a child table
         if ($GLOBALS['TL_DCA'][$table]['config']['langPid']) {
             $pidColumnName = $GLOBALS['TL_DCA'][$table]['config']['langPid'];
-        } elseif ($GLOBALS['TL_DCA'][$table]['config']['pidColumn']) {
-            $pidColumnName = $GLOBALS['TL_DCA'][$table]['config']['pidColumn'];
-
-            // The pidColumn is deprecated
-            // @todo - deprecated, remove in 3.0
-            trigger_error('The "pidColumn" setting is deprecated, use "langPid" instead.', E_USER_NOTICE);
         } else {
             $pidColumnName = $this->pidColumnName;
         }

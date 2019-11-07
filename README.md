@@ -34,36 +34,35 @@ $GLOBALS['TL_DCA']['table']['fields']['name']['eval']['translatableFor'] = ['de'
 ## Example usage
 
 ```php
-// Update tl_user configuration
-$GLOBALS['TL_DCA']['tl_user']['config']['dataContainer'] = 'Multilingual';
-$GLOBALS['TL_DCA']['tl_user']['config']['languages'] = array('en', 'de', 'pl');
-$GLOBALS['TL_DCA']['tl_user']['config']['langPid'] = 'langPid';
-$GLOBALS['TL_DCA']['tl_user']['config']['langColumnName'] = 'language';
-$GLOBALS['TL_DCA']['tl_user']['config']['fallbackLang'] = 'en';
+// Update tl_news configuration
+$GLOBALS['TL_DCA']['tl_news']['config']['dataContainer'] = 'Multilingual';
+$GLOBALS['TL_DCA']['tl_news']['config']['languages'] = ['en', 'de', 'pl'];
+$GLOBALS['TL_DCA']['tl_news']['config']['langPid'] = 'langPid';
+$GLOBALS['TL_DCA']['tl_news']['config']['langColumnName'] = 'language';
+$GLOBALS['TL_DCA']['tl_news']['config']['fallbackLang'] = 'en';
 
 // Add the language fields
-$GLOBALS['TL_DCA']['tl_user']['config']['sql']['keys']['langPid'] = 'index';
-$GLOBALS['TL_DCA']['tl_user']['config']['sql']['keys']['language'] = 'index';
-$GLOBALS['TL_DCA']['tl_user']['fields']['langPid']['sql'] = "int(10) unsigned NOT NULL default '0'";
-$GLOBALS['TL_DCA']['tl_user']['fields']['language']['sql'] = "varchar(2) NOT NULL default ''";
+$GLOBALS['TL_DCA']['tl_news']['config']['sql']['keys']['langPid'] = 'index';
+$GLOBALS['TL_DCA']['tl_news']['config']['sql']['keys']['language'] = 'index';
+$GLOBALS['TL_DCA']['tl_news']['fields']['langPid']['sql'] = "int(10) unsigned NOT NULL default '0'";
+$GLOBALS['TL_DCA']['tl_news']['fields']['language']['sql'] = "varchar(2) NOT NULL default ''";
 
 // Make some fields translatable
-$GLOBALS['TL_DCA']['tl_user']['fields']['username']['eval']['translatableFor'] = '*';
-$GLOBALS['TL_DCA']['tl_user']['fields']['name']['eval']['translatableFor'] = array('de');
+$GLOBALS['TL_DCA']['tl_news']['fields']['headline']['eval']['translatableFor'] = '*';
+$GLOBALS['TL_DCA']['tl_news']['fields']['subheadline']['eval']['translatableFor'] = ['de'];
 ```
 
 ## Querying using the model
 
 ```php
-class UserModel extends Terminal42\DcMultilingualBundle\Model\Multilingual
+class NewsModel extends Terminal42\DcMultilingualBundle\Model\Multilingual
 {
-	protected static $strTable = 'tl_user';
+    protected static $strTable = 'tl_news';
 
-	public static function findActive()
-	{
-		$arrColumns = array("t1.disable=''");
-		return static::findBy($arrColumns, null);
-	}
+    public static function findPublished()
+    {
+        return static::findBy(['t1.published=?'], [1]);
+    }
 }
 ```
 
@@ -76,7 +75,7 @@ translations are filtered so you only see the fallback language there.
 When querying using the `Multilingual` model or using the
 `MultilingualQueryBuilder`, the same table is simply joined so we have the
 fallback language aliased as `t1` and the target language (which you specify
- explicitly or it uses the current page's language) aliased as `t2`. Now, using
+ explicitly or it uses the current page's language) aliased as `translation`. Now, using
  MySQL's `IFNULL()` function, it checks whether there's a translated value and
  if not, automatically falls back to the fallback language. This allows you to
  translate only a subset of fields.
@@ -129,3 +128,9 @@ In the front end you can then search by a multilingual alias like this:
 MyModel::findByMultilingualAlias($alias);
 ```
 
+## Useful notes
+
+1. Sometimes a table you want to make multilingual already contains the `language` field (e.g. `tl_user`), 
+which may lead to unexpected results. In such cases you have to make sure that data container's property
+`$GLOBALS['TL_DCA']['tl_table']['config']['langColumnName']` is set to something else than `language`. 
+See [#53](https://github.com/terminal42/contao-DC_Multilingual/issues/53) for more details.

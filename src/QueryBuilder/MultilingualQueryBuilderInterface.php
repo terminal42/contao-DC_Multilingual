@@ -21,6 +21,13 @@ interface MultilingualQueryBuilderInterface
     public function buildQueryBuilderForCount();
 
     /**
+     * Build the query for a simple count query.
+     *
+     * @param QueryBuilder $queryBuilder
+     */
+    public function buildQueryBuilderForCountWithSubQuery(QueryBuilder $queryBuilder);
+
+    /**
      * Build the query builder for a find query.
      *
      * @param string $language

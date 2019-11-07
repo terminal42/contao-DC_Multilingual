@@ -78,9 +78,24 @@ class MultilingualQueryBuilder implements MultilingualQueryBuilderInterface
     {
         $this->qb->resetQueryParts();
 
-        $this->qb->addSelect('COUNT(t1.id) AS count')
+        $this->qb->addSelect("COUNT({$this->table}.id) AS count")
+            ->from($this->table, $this->table)
+            ->where("{$this->table}.{$this->pidColumnName}=0");
+    }
+
+    /**
+     * Build the query for a simple count query with a subquery.
+     *
+     * @param QueryBuilder $queryBuilder
+     */
+    public function buildQueryBuilderForCountWithSubQuery(QueryBuilder $queryBuilder)
+    {
+        $this->qb->resetQueryParts();
+
+        $this->qb->addSelect("COUNT(t1.id) AS count")
             ->from($this->table, 't1')
-            ->where("t1.{$this->pidColumnName}=0");
+            ->join('t1', sprintf('(%s)', $queryBuilder->getSQL()), 't3', "t1.id = t3.id")
+        ;
     }
 
     /**
@@ -93,26 +108,26 @@ class MultilingualQueryBuilder implements MultilingualQueryBuilderInterface
         $this->qb->resetQueryParts();
 
         // Regular fields
-        foreach ($this->regularFields as $field) {
-            $this->qb->addSelect("t1.$field");
+        foreach (array_diff($this->regularFields, $this->translatableFields) as $field) {
+            $this->qb->addSelect("{$this->table}.$field");
         }
 
         // Translatable fields
-        foreach ($this->translatableFields as $field) {
-            $this->qb->addSelect("IFNULL(t2.$field, t1.$field) AS $field");
+        foreach (array_intersect($this->translatableFields, $this->regularFields) as $field) {
+            $this->qb->addSelect("IFNULL(translation.$field, {$this->table}.$field) AS $field");
         }
 
-        $this->qb->from($this->table, 't1');
+        $this->qb->from($this->table, $this->table);
         $this->qb->add('join', [
-            't1' => [
+            $this->table => [
                 'joinType' => 'left outer',
                 'joinTable' => $this->table,
-                'joinAlias' => 't2',
-                'joinCondition' => "t1.id=t2.{$this->pidColumnName} AND t2.{$this->langColumnName}='$language'",
+                'joinAlias' => 'translation',
+                'joinCondition' => "{$this->table}.id=translation.{$this->pidColumnName} AND translation.{$this->langColumnName}='$language'",
             ],
         ], true);
 
-        $this->qb->where("t1.{$this->pidColumnName}=0");
+        $this->qb->where("{$this->table}.{$this->pidColumnName}=0");
     }
 
     /**

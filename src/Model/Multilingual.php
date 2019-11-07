@@ -12,23 +12,14 @@
 namespace Terminal42\DcMultilingualBundle\Model;
 
 use Contao\Database;
+use Contao\Database\Result;
+use Contao\Model;
+use Contao\Model\Collection;
 use Doctrine\DBAL\Query\QueryBuilder;
 use Terminal42\DcMultilingualBundle\QueryBuilder\MultilingualQueryBuilderFactoryInterface;
 
-class Multilingual extends \Model
+class Multilingual extends Model
 {
-    /**
-     * Prevent the model from saving.
-     *
-     * @param \Database\Result $objResult An optional database result
-     */
-    public function __construct(\Database\Result $objResult = null)
-    {
-        parent::__construct($objResult);
-
-        $this->preventSaving(false);
-    }
-
     /**
      * Returns the ID of the fallback language.
      */
@@ -90,9 +81,10 @@ class Multilingual extends \Model
      */
     public static function findByAlias($alias, $aliasColumnName = 'alias', $options = [])
     {
+        $table   = static::getTable();
         $options = array_merge([
                 'limit' => 1,
-                'column' => ["t1.$aliasColumnName=?"],
+                'column' => ["($table.$aliasColumnName=?"],
                 'value' => [$alias],
                 'return' => 'Model',
             ],
@@ -113,9 +105,10 @@ class Multilingual extends \Model
      */
     public static function findByMultilingualAlias($alias, $aliasColumnName = 'alias', $options = [])
     {
+        $table   = static::getTable();
         $options = array_merge([
                 'limit' => 1,
-                'column' => ["(t1.$aliasColumnName=? OR t2.$aliasColumnName=?)"],
+                'column' => ["($table.$aliasColumnName=? OR translation.$aliasColumnName=?)"],
                 'value' => [$alias, $alias],
                 'return' => 'Model',
             ],
@@ -205,11 +198,49 @@ class Multilingual extends \Model
     {
         $mlqb = static::getMultilingualQueryBuilder();
 
-        $mlqb->buildQueryBuilderForCount();
-
-        static::applyOptionsToQueryBuilder($mlqb->getQueryBuilder(), $options);
+        if (isset($options['having'])) {
+            $mlqb->buildQueryBuilderForCountWithSubQuery(static::buildFindQuery($options));
+        } else {
+            $mlqb->buildQueryBuilderForCount();
+            static::applyOptionsToQueryBuilder($mlqb->getQueryBuilder(), $options);
+        }
 
         return $mlqb->getQueryBuilder();
+    }
+
+    /**
+     * Prevent model from saving when creating a model from a database result. See #51
+     *
+     * @param Result $objResult The database result object
+     *
+     * @return static The model
+     */
+    protected static function createModelFromDbResult(Result $objResult)
+    {
+        $model = new static($objResult);
+        $model->preventSaving(false);
+
+        return $model;
+    }
+
+    /**
+     * Prevent new models from saving when creating a new collection from a database result. See #51
+     *
+     * @param Result $objResult The database result object
+     * @param string $strTable  The table name
+     *
+     * @return Collection The model collection
+     */
+    protected static function createCollectionFromDbResult(Result $objResult, $strTable)
+    {
+        $collection = Collection::createFromDbResult($objResult, $strTable);
+
+        /** @var self $model */
+        foreach ($collection as $model) {
+            $model->preventSaving(false);
+        }
+
+        return $collection->reset();
     }
 
     /**
@@ -227,8 +258,9 @@ class Multilingual extends \Model
                     $qb->andWhere($column);
                 }
             } else {
-                // Default is likely t1
-                $qb->andWhere('t1.'.$options['column'].'=?');
+                // Default is likely fallback table
+                $table = static::getTable();
+                $qb->andWhere("$table.{$options['column']}=?");
             }
         }
 
