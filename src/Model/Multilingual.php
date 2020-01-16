@@ -52,7 +52,7 @@ class Multilingual extends Model
         }
 
         // Try to load the translated model
-        $translatedModel = static::findByPk($this->id, ['language' => $language]);
+        $translatedModel = static::findByPk($this->getLanguageId(), ['language' => $language]);
 
         if (null === $translatedModel) {
             // Get fallback
@@ -62,7 +62,7 @@ class Multilingual extends Model
                 return $this->{$aliasColumnName};
             }
 
-            $fallbackModel = static::findByPk($this->id, ['language' => $fallbackLang]);
+            $fallbackModel = static::findByPk($this->getLanguageId(), ['language' => $fallbackLang]);
 
             return $fallbackModel->{$aliasColumnName};
         }
