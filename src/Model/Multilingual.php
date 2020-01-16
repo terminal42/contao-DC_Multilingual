@@ -87,7 +87,7 @@ class Multilingual extends Model
         $table   = static::getTable();
         $options = array_merge([
                 'limit' => 1,
-                'column' => ["($table.$aliasColumnName=?"],
+                'column' => ["$table.$aliasColumnName=?"],
                 'value' => [$alias],
                 'return' => 'Model',
             ],
