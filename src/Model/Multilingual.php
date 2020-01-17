@@ -46,6 +46,11 @@ class Multilingual extends Model
     {
         // Do not load any translation if already target language
         $langColumn = static::getLangColumn();
+        $fallbackLang = static::getFallbackLanguage();
+
+        if ($language === $fallbackLang && !$this->{$langColumn}) {
+            return $this->{$aliasColumnName};
+        }
 
         if ($language === $this->{$langColumn}) {
             return $this->{$aliasColumnName};
@@ -56,8 +61,6 @@ class Multilingual extends Model
 
         if (null === $translatedModel) {
             // Get fallback
-            $fallbackLang = static::getFallbackLanguage();
-
             if ($language === $fallbackLang) {
                 return $this->{$aliasColumnName};
             }
@@ -84,7 +87,7 @@ class Multilingual extends Model
         $table   = static::getTable();
         $options = array_merge([
                 'limit' => 1,
-                'column' => ["($table.$aliasColumnName=?"],
+                'column' => ["$table.$aliasColumnName=?"],
                 'value' => [$alias],
                 'return' => 'Model',
             ],
