@@ -48,7 +48,7 @@ class Multilingual extends Model
         $langColumn = static::getLangColumn();
         $fallbackLang = static::getFallbackLanguage();
 
-        if ($language === $fallbackLang && $this->{$langColumn} === '') {
+        if ($language === $fallbackLang && !$this->{$langColumn}) {
             return $this->{$aliasColumnName};
         }
 
