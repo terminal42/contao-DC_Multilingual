@@ -604,9 +604,15 @@ class Driver extends \DC_Table
             $set = $this->set;
 
             foreach ($objTranslations->row() as $k => $v) {
-                if (in_array($k, array_keys($GLOBALS['TL_DCA'][$this->strTable]['fields']))
-                    && $GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['eval']['translatableFor'] != ''
-                ) {
+                if (array_key_exists($k, $GLOBALS['TL_DCA'][$this->strTable]['fields'])) {
+                    if ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['eval']['translatableFor'] == '') {
+                        if (isset($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['default'])) {
+                            $set[$k] = $GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['default'];
+                        } else {
+                            unset($set[$k]);
+                        }
+                        continue;
+                    }
                     // Empty unique fields or add a unique identifier in copyAll mode
                     if ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['eval']['unique']) {
                         if (\Input::get('act') == 'copyAll') {
