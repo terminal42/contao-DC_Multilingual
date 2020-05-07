@@ -605,7 +605,7 @@ class Driver extends \DC_Table
 
             foreach ($objTranslations->row() as $k => $v) {
                 if (array_key_exists($k, $GLOBALS['TL_DCA'][$this->strTable]['fields'])) {
-                    if ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['eval']['translatableFor'] == '') {
+                    if (!$GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['eval']['translatableFor']) {
                         if (isset($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['default'])) {
                             $set[$k] = $GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['default'];
                         } else {
