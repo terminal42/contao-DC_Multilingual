@@ -13,6 +13,7 @@ namespace Terminal42\DcMultilingualBundle;
 
 use Contao\CoreBundle\Exception\AccessDeniedException;
 use Contao\CoreBundle\Exception\InternalServerErrorException;
+use Contao\System;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
 
@@ -838,12 +839,18 @@ class Driver extends \DC_Table
                 // Now that there's $arrFound we can just add all that main languages to the found array
                 // so it will never show translated items and we don't have to override the whole method
                 // anymore - hurray!
-                $translationIds = \Database::getInstance()->prepare(
-                    "SELECT id FROM " . $table . " WHERE pid=? AND $langColumn=''")
-                    ->execute($id)
-                    ->fetchEach('id');
+                $objSessionBag = System::getContainer()->get('session')->getBag('contao_backend');
+                $session = $objSessionBag->all();
+                $node = ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 6) ? $this->strTable . '_' . $table . '_tree' : $this->strTable . '_tree';
+                $blnIsOpen = (!empty($arrFound) || $session[$node][$id] == 1);
+                if ($blnIsOpen) {
+                    $translationIds = \Database::getInstance()->prepare(
+                        "SELECT id FROM " . $table . " WHERE pid=? AND $langColumn=''")
+                        ->execute($id)
+                        ->fetchEach('id');
 
-                $arrFound = array_merge($arrFound, $translationIds);
+                    $arrFound = array_merge($arrFound, $translationIds);
+                }
 
                 // Do not display the language records in the child list
                 if ($table === $this->strTable && $GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] === 6) {
