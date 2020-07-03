@@ -146,8 +146,17 @@ class Driver extends \DC_Table
             ->limit(1)
             ->execute($this->intId);
 
-        // Redirect if there is no record with the given ID
-        if ($objRow->numRows < 1)
+        // Access to a translation detected, redirect with main language id and request translated version
+        if ($objRow->{$this->pidColumnName} > 0)
+        {
+            $this->sessionKey = 'dc_multilingual:' . $this->strTable . ':' . $objRow->{$this->pidColumnName};
+            $objSessionBag = \System::getContainer()->get('session')->getBag('contao_backend');
+            $objSessionBag->set($this->sessionKey, $objRow->{$this->langColumnName});
+            $this->redirect($this->addToUrl('id=' . $objRow->{$this->pidColumnName}));
+        }
+
+        // Deny access if there is no record with the given ID or a translated version is accessed
+        if ($objRow->numRows < 1 || $objRow->{$this->pidColumnName} > 0)
         {
             throw new AccessDeniedException('Cannot load record "' . $this->strTable . '.id=' . $this->intId . '".');
         }
