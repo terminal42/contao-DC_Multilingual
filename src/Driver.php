@@ -618,7 +618,7 @@ class Driver extends \DC_Table
                     if (!$GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['eval']['translatableFor']) {
                         if (isset($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['default'])) {
                             $set[$k] = $GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['default'];
-                        } else {
+                        } elseif ($k !== 'pid' && $k !== 'ptable') { // skip ptable and pid from being unset since being set to 0 leads to contao deleting the records
                             unset($set[$k]);
                         }
                         continue;
@@ -670,7 +670,6 @@ class Driver extends \DC_Table
         return $insertId;
     }
 
-
     /**
      * Duplicate all child records of a duplicated record
      *
@@ -681,22 +680,116 @@ class Driver extends \DC_Table
      */
     protected function copyChilds($table, $insertID, $id, $parentId)
     {
-        parent::copyChilds($table, $insertID, $id, $parentId);
+        $time    = time();
+        $copy    = [];
+        $cctable = [];
+        $ctable  = $GLOBALS['TL_DCA'][$table]['config']['ctable'];
 
-        if ($GLOBALS['TL_DCA'][$table]['config']['langPid']) {
-            $pidColumnName = $GLOBALS['TL_DCA'][$table]['config']['langPid'];
-        } else {
-            $pidColumnName = $this->pidColumnName;
+        if (!$GLOBALS['TL_DCA'][$table]['config']['ptable'] && \strlen(\Input::get('childs')) && $this->Database->fieldExists('pid', $table) && $this->Database->fieldExists('sorting', $table)) {
+            $ctable[] = $table;
         }
 
-        $objLanguage = \Database::getInstance()->prepare("SELECT id FROM " . $table . " WHERE " . $pidColumnName . "=? AND id>?")
-            ->limit(1)
-            ->execute($id, $parentId);
+        if (!\is_array($ctable)) {
+            return;
+        }
 
-        // Update the language pid column
-        if ($objLanguage->numRows) {
-            \Database::getInstance()->prepare("UPDATE " . $table . " SET " . $pidColumnName . "=? WHERE id=?")
-                ->execute($insertID, $objLanguage->id);
+        // Walk through each child table
+        foreach ($ctable as $v) {
+            $this->loadDataContainer($v);
+            $cctable[$v] = $GLOBALS['TL_DCA'][$v]['config']['ctable'];
+
+            if (!$GLOBALS['TL_DCA'][$v]['config']['doNotCopyRecords'] && \strlen($v)) {
+                // Consider the dynamic parent table (see #4867)
+                if ($GLOBALS['TL_DCA'][$v]['config']['dynamicPtable']) {
+                    $ptable = $GLOBALS['TL_DCA'][$v]['config']['ptable'];
+                    $cond   = ($ptable == 'tl_article') ? "(ptable=? OR ptable='')" : "ptable=?";
+
+                    $objCTable = $this->Database->prepare("SELECT * FROM $v WHERE pid=? AND $cond" . ($this->Database->fieldExists('sorting', $v) ? " ORDER BY sorting" : ""))
+                        ->execute($id, $ptable);
+                } else {
+                    $objCTable = $this->Database->prepare("SELECT * FROM $v WHERE pid=?" . ($this->Database->fieldExists('sorting', $v) ? " ORDER BY sorting" : ""))
+                        ->execute($id);
+                }
+
+                while ($objCTable->next()) {
+                    // Exclude the duplicated record itself
+                    if ($v == $table && $objCTable->id == $parentId) {
+                        continue;
+                    }
+
+                    foreach ($objCTable->row() as $kk => $vv) {
+                        if ($kk == 'id') {
+                            continue;
+                        }
+
+                        // Never copy passwords
+                        if ($GLOBALS['TL_DCA'][$v]['fields'][$kk]['inputType'] == 'password') {
+                            $vv = \Widget::getEmptyValueByFieldType($GLOBALS['TL_DCA'][$v]['fields'][$kk]['sql']);
+                        } // Empty unique fields or add a unique identifier in copyAll mode
+                        elseif ($GLOBALS['TL_DCA'][$v]['fields'][$kk]['eval']['unique']) {
+                            $vv = (\Input::get('act') == 'copyAll') ? $vv . '-' . substr(md5(uniqid(mt_rand(), true)), 0, 8) : \Widget::getEmptyValueByFieldType($GLOBALS['TL_DCA'][$v]['fields'][$kk]['sql']);
+                        } // Reset doNotCopy and fallback fields to their default value
+                        elseif ($GLOBALS['TL_DCA'][$v]['fields'][$kk]['eval']['doNotCopy'] || $GLOBALS['TL_DCA'][$v]['fields'][$kk]['eval']['fallback']) {
+                            $vv = \Widget::getEmptyValueByFieldType($GLOBALS['TL_DCA'][$v]['fields'][$kk]['sql']);
+
+                            // Use array_key_exists to allow NULL (see #5252)
+                            if (\array_key_exists('default', $GLOBALS['TL_DCA'][$v]['fields'][$kk])) {
+                                $vv = \is_array($GLOBALS['TL_DCA'][$v]['fields'][$kk]['default']) ? serialize($GLOBALS['TL_DCA'][$v]['fields'][$kk]['default']) : $GLOBALS['TL_DCA'][$v]['fields'][$kk]['default'];
+                            }
+
+                            // Encrypt the default value (see #3740)
+                            if ($GLOBALS['TL_DCA'][$v]['fields'][$kk]['eval']['encrypt']) {
+                                $vv = \Encryption::encrypt($vv);
+                            }
+                        }
+
+                        $copy[$v][$objCTable->id][$kk] = $vv;
+                    }
+
+                    $copy[$v][$objCTable->id]['pid']    = $insertID;
+                    $copy[$v][$objCTable->id]['tstamp'] = $time;
+                }
+            }
+        }
+
+        // Duplicate the child records
+        foreach ($copy as $k => $v) {
+            $idMapping = [];
+
+            if (!empty($v)) {
+                foreach ($v as $kk => $vv) {
+                    $objInsertStmt = $this->Database->prepare("INSERT INTO " . $k . " %s")
+                        ->set($vv)
+                        ->execute();
+
+                    if ($objInsertStmt->affectedRows) {
+                        $insertID = $objInsertStmt->insertId;
+
+                        // collect the mapping in order to update the language pid columns afterwards
+                        $idMapping[$kk] = $insertID;
+
+                        if ((!empty($cctable[$k]) || $GLOBALS['TL_DCA'][$k]['list']['sorting']['mode'] == 5) && $kk != $parentId) {
+                            $this->copyChilds($k, $insertID, $kk, $parentId);
+                        }
+                    }
+                }
+
+                // Update the language pid column
+                if ($GLOBALS['TL_DCA'][$k]['config']['dataContainer'] == 'Multilingual') {
+                    $childPidColumnName = $GLOBALS['TL_DCA'][$k]['config']['langPid'] ?: 'langPid';
+
+                    foreach ($idMapping as $original => $new) {
+                        $objRecord = \Database::getInstance()->prepare("SELECT id, $childPidColumnName FROM $k WHERE $k.id=? AND $k.$childPidColumnName>0")
+                            ->execute($new);
+
+                        if ($objRecord->numRows > 0 && $idMapping[$objRecord->{$childPidColumnName}]) {
+                            \Database::getInstance()->prepare("UPDATE $k SET $k.$childPidColumnName=? WHERE $k.id=?")->execute(
+                                $idMapping[$objRecord->{$childPidColumnName}], $new
+                            );
+                        }
+                    }
+                }
+            }
         }
     }
 
