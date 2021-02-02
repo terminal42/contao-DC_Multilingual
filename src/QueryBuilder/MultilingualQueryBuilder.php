@@ -12,7 +12,6 @@
 namespace Terminal42\DcMultilingualBundle\QueryBuilder;
 
 use Doctrine\DBAL\Query\QueryBuilder;
-use function array_intersect;
 
 class MultilingualQueryBuilder implements MultilingualQueryBuilderInterface
 {
@@ -108,10 +107,15 @@ class MultilingualQueryBuilder implements MultilingualQueryBuilderInterface
     {
         $this->qb->resetQueryParts();
 
+        $systemColumns = [
+            'id' => 'translationId',
+            $this->langColumnName => $this->langColumnName,
+            $this->pidColumnName => $this->pidColumnName,
+        ];
+
         // Always translate system columns
-        $systemColumns = ['id', $this->langColumnName, $this->pidColumnName];
-        foreach ($systemColumns as $field) {
-            $this->qb->addSelect("IFNULL(translation.$field, {$this->table}.$field) AS $field");
+        foreach ($systemColumns as $field => $name) {
+            $this->qb->addSelect("IFNULL(translation.$field, {$this->table}.$field) AS $name");
         }
 
         // Regular fields
