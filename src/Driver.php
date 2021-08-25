@@ -105,8 +105,8 @@ class Driver extends \DC_Table
         $this->sessionKey = 'dc_multilingual:' . $this->strTable . ':' . $this->intId;
 
         // Column names
-        $this->pidColumnName = $dca['config']['langPid'] ?: 'langPid';
-        $this->langColumnName = $dca['config']['langColumnName'] ?: 'language';
+        $this->pidColumnName = isset($dca['config']['langPid']) ?: 'langPid';
+        $this->langColumnName = isset($dca['config']['langColumnName']) ?: 'language';
 
         // Filter out translations
         if ($dca['list']['sorting']['mode'] !== 5 && $dca['list']['sorting']['mode'] !== 6) {
