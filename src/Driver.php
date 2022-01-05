@@ -86,11 +86,7 @@ class Driver extends \DC_Table
         $dca = &$GLOBALS['TL_DCA'][$this->strTable];
 
         // Languages array
-        if (isset($dca['config']['languages'])) {
-            $this->translatableLangs = $dca['config']['languages'];
-        } else {
-            $this->translatableLangs = $this->getRootPageLanguages();
-        }
+        $this->translatableLangs = $dca['config']['languages'] ?? $this->getRootPageLanguages();
 
         // Fallback language
         if (isset($dca['config']['fallbackLang'])) {
@@ -105,8 +101,8 @@ class Driver extends \DC_Table
         $this->sessionKey = 'dc_multilingual:' . $this->strTable . ':' . $this->intId;
 
         // Column names
-        $this->pidColumnName = isset($dca['config']['langPid']) ? $dca['config']['langPid'] : 'langPid';
-        $this->langColumnName = isset($dca['config']['langColumnName']) ? $dca['config']['langColumnName'] : 'language';
+        $this->pidColumnName = $dca['config']['langPid'] ?? 'langPid';
+        $this->langColumnName = $dca['config']['langColumnName'] ?? 'language';
 
         // Filter out translations
         if ($dca['list']['sorting']['mode'] !== 5 && $dca['list']['sorting']['mode'] !== 6) {
@@ -130,7 +126,7 @@ class Driver extends \DC_Table
      */
     public function edit($intId=null, $ajaxId=null)
     {
-        if ($GLOBALS['TL_DCA'][$this->strTable]['config']['notEditable'])
+        if ($GLOBALS['TL_DCA'][$this->strTable]['config']['notEditable'] ?? false)
         {
             throw new InternalServerErrorException('Table "' . $this->strTable . '" is not editable.');
         }
@@ -170,8 +166,7 @@ class Driver extends \DC_Table
         $this->blnCreateNewVersion = false;
         $objVersions = new \Versions($this->strTable, $this->intId);
 
-        if (!$GLOBALS['TL_DCA'][$this->strTable]['config']['hideVersionMenu'])
-        {
+        if (!($GLOBALS['TL_DCA'][$this->strTable]['config']['hideVersionMenu'] ?? false)) {
             // Compare versions
             if (\Input::get('versions'))
             {
@@ -250,8 +245,13 @@ class Driver extends \DC_Table
 
                 if (isset($legends[$k]))
                 {
-                    list($key, $cls) = explode(':', $legends[$k]);
+                    $tmp = explode(':', $legends[$k]);
+                    $key = $tmp[0];
                     $legend = "\n" . '<legend onclick="AjaxRequest.toggleFieldset(this,\'' . $key . '\',\'' . $this->strTable . '\')">' . (isset($GLOBALS['TL_LANG'][$this->strTable][$key]) ? $GLOBALS['TL_LANG'][$this->strTable][$key] : $key) . '</legend>';
+
+                    if (isset($tmp[1])) {
+                        $cls = $tmp[1];
+                    }
                 }
 
                 if (isset($fs[$this->strTable][$key]))
@@ -302,13 +302,15 @@ class Driver extends \DC_Table
                     }
 
                     // Convert CSV fields (see #2890)
-                    if ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['eval']['multiple'] && isset($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['eval']['csv']))
-                    {
+                    if (
+                        ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['eval']['multiple'] ?? false)
+                        && isset($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['eval']['csv'])
+                    ) {
                         $this->varValue = trimsplit($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['eval']['csv'], $this->varValue);
                     }
 
                     // Call load_callback
-                    if (is_array($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['load_callback']))
+                    if (is_array($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['load_callback'] ?? null))
                     {
                         foreach ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['load_callback'] as $callback)
                         {
@@ -337,8 +339,10 @@ class Driver extends \DC_Table
         }
 
         // Versions overview
-        if ($GLOBALS['TL_DCA'][$this->strTable]['config']['enableVersioning'] && !$GLOBALS['TL_DCA'][$this->strTable]['config']['hideVersionMenu'])
-        {
+        if (
+            ($GLOBALS['TL_DCA'][$this->strTable]['config']['enableVersioning'] ?? false)
+            && !($GLOBALS['TL_DCA'][$this->strTable]['config']['hideVersionMenu'] ?? false)
+        ) {
             $version = $objVersions->renderDropdown();
         }
         else
@@ -358,17 +362,17 @@ class Driver extends \DC_Table
             $arrButtons['saveNclose'] = '<button type="submit" name="saveNclose" id="saveNclose" class="tl_submit" accesskey="c">'.$GLOBALS['TL_LANG']['MSC']['saveNclose'].'</button>';
         }
 
-        if (!\Input::get('popup') && !$GLOBALS['TL_DCA'][$this->strTable]['config']['closed'] && !$GLOBALS['TL_DCA'][$this->strTable]['config']['notCreatable'])
+        if (!\Input::get('popup') && !($GLOBALS['TL_DCA'][$this->strTable]['config']['closed'] ?? false) && !($GLOBALS['TL_DCA'][$this->strTable]['config']['notCreatable'] ?? false))
         {
             $arrButtons['saveNcreate'] = '<button type="submit" name="saveNcreate" id="saveNcreate" class="tl_submit" accesskey="n">'.$GLOBALS['TL_LANG']['MSC']['saveNcreate'].'</button>';
         }
 
-        if ($GLOBALS['TL_DCA'][$this->strTable]['config']['switchToEdit'])
+        if ($GLOBALS['TL_DCA'][$this->strTable]['config']['switchToEdit'] ?? false)
         {
             $arrButtons['saveNedit'] = '<button type="submit" name="saveNedit" id="saveNedit" class="tl_submit" accesskey="e">'.$GLOBALS['TL_LANG']['MSC']['saveNedit'].'</button>';
         }
 
-        if (!\Input::get('popup') && ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 4 || strlen($this->ptable) || $GLOBALS['TL_DCA'][$this->strTable]['config']['switchToEdit']))
+        if (!\Input::get('popup') && ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 4 || strlen($this->ptable) || ($GLOBALS['TL_DCA'][$this->strTable]['config']['switchToEdit'] ?? false)))
         {
             $arrButtons['saveNback'] = '<button type="submit" name="saveNback" id="saveNback" class="tl_submit" accesskey="g">'.$GLOBALS['TL_LANG']['MSC']['saveNback'].'</button>';
         }
@@ -378,7 +382,7 @@ class Driver extends \DC_Table
         }
 
         // Call the buttons_callback (see #4691)
-        if (is_array($GLOBALS['TL_DCA'][$this->strTable]['edit']['buttons_callback']))
+        if (is_array($GLOBALS['TL_DCA'][$this->strTable]['edit']['buttons_callback'] ?? null))
         {
             foreach ($GLOBALS['TL_DCA'][$this->strTable]['edit']['buttons_callback'] as $callback)
             {
@@ -439,7 +443,7 @@ class Driver extends \DC_Table
             array_unshift($arrValues, time());
 
             // Trigger the onsubmit_callback
-            if (is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['onsubmit_callback']))
+            if (is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['onsubmit_callback'] ?? null))
             {
                 foreach ($GLOBALS['TL_DCA'][$this->strTable]['config']['onsubmit_callback'] as $callback)
                 {
@@ -461,7 +465,7 @@ class Driver extends \DC_Table
                 $objVersions->create();
 
                 // Call the onversion_callback
-                if (is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['onversion_callback']))
+                if (is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['onversion_callback'] ?? null))
                 {
                     foreach ($GLOBALS['TL_DCA'][$this->strTable]['config']['onversion_callback'] as $callback)
                     {
@@ -481,15 +485,12 @@ class Driver extends \DC_Table
             }
 
             // Set the current timestamp (-> DO NOT CHANGE THE ORDER version - timestamp)
-            if ($GLOBALS['TL_DCA'][$this->strTable]['config']['dynamicPtable'])
-            {
+            if ($GLOBALS['TL_DCA'][$this->strTable]['config']['dynamicPtable'] ?? false) {
                 $this->Database->prepare("UPDATE " . $this->strTable . " SET ptable=?, tstamp=? WHERE id=?")
-                    ->execute($this->ptable, time(), $this->intId);
-            }
-            else
-            {
+                               ->execute($this->ptable, time(), $this->intId);
+            } else {
                 $this->Database->prepare("UPDATE " . $this->strTable . " SET tstamp=? WHERE id=?")
-                    ->execute(time(), $this->intId);
+                               ->execute(time(), $this->intId);
             }
 
             // Redirect
@@ -615,7 +616,7 @@ class Driver extends \DC_Table
 
             foreach ($objTranslations->row() as $k => $v) {
                 if (array_key_exists($k, $GLOBALS['TL_DCA'][$this->strTable]['fields'])) {
-                    if (!$GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['eval']['translatableFor']) {
+                    if (!($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['eval']['translatableFor'] ?? null)) {
                         if (isset($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['default'])) {
                             $set[$k] = $GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['default'];
                         } else {
@@ -624,23 +625,25 @@ class Driver extends \DC_Table
                         continue;
                     }
                     // Empty unique fields or add a unique identifier in copyAll mode
-                    if ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['eval']['unique']) {
+                    if ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['eval']['unique'] ?? false) {
                         if (\Input::get('act') == 'copyAll') {
                             $v = $v . '-' . substr(md5(uniqid(mt_rand(), true)), 0, 8);
                         } else {
                             $v = '';
                         }
                     } // Reset doNotCopy and fallback fields to their default value
-                    elseif ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['eval']['doNotCopy']
-                        || $GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['eval']['fallback']
+                    elseif (
+                        ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['eval']['doNotCopy'] ?? false)
+                        || ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['eval']['fallback'] ?? false)
                     ) {
                         $v = '';
 
                         // Use array_key_exists to allow NULL (see #5252)
                         if (array_key_exists('default', $GLOBALS['TL_DCA'][$this->strTable]['fields'][$k])) {
-                            $v = is_array($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['default']) ? serialize(
-                                $GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['default']
-                            ) : $GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['default'];
+                            $v = is_array(($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['default'] ?? null))
+                                ? serialize($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['default'])
+                                : $GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['default']
+                            ;
                         }
 
                         // Encrypt the default value (see #3740)
@@ -683,11 +686,7 @@ class Driver extends \DC_Table
     {
         parent::copyChilds($table, $insertID, $id, $parentId);
 
-        if ($GLOBALS['TL_DCA'][$table]['config']['langPid']) {
-            $pidColumnName = $GLOBALS['TL_DCA'][$table]['config']['langPid'];
-        } else {
-            $pidColumnName = $this->pidColumnName;
-        }
+        $pidColumnName = $GLOBALS['TL_DCA'][$table]['config']['langPid'] ?? $this->pidColumnName;
 
         $objLanguage = \Database::getInstance()->prepare("SELECT id FROM " . $table . " WHERE " . $pidColumnName . "=? AND id>?")
             ->limit(1)
@@ -843,7 +842,7 @@ class Driver extends \DC_Table
             if ($GLOBALS['TL_DCA'][$table]['config']['dataContainer'] === 'Multilingual'
                 && ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] === 5 || $GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] === 6 || $this->strTable != $table)
             ) {
-                $langColumn = $GLOBALS['TL_DCA'][$table]['config']['langColumnName'] ?: 'language';
+                $langColumn = $GLOBALS['TL_DCA'][$table]['config']['langColumnName'] ?? 'language';
 
                 // Now that there's $arrFound we can just add all that main languages to the found array
                 // so it will never show translated items and we don't have to override the whole method
@@ -1009,7 +1008,7 @@ class Driver extends \DC_Table
             return;
         }
 
-        $fromField = $data['eval']['generateAliasFromField'] ?: 'title';
+        $fromField = $data['eval']['generateAliasFromField'] ?? 'title';
         $autoAlias = false;
 
         // Generate $varValue alias if there is none
@@ -1100,17 +1099,13 @@ class Driver extends \DC_Table
         parent::deleteChilds($table, $id, $delete);
 
         // Do not delete record if there is no parent table
-        if ($GLOBALS['TL_DCA'][$table]['config']['ptable'] == '') {
+        if (empty($GLOBALS['TL_DCA'][$table]['config']['ptable'])) {
             return;
         }
 
         // Do not take the config of the current table because $table might
         // be a child table
-        if ($GLOBALS['TL_DCA'][$table]['config']['langPid']) {
-            $pidColumnName = $GLOBALS['TL_DCA'][$table]['config']['langPid'];
-        } else {
-            $pidColumnName = $this->pidColumnName;
-        }
+        $pidColumnName = $GLOBALS['TL_DCA'][$table]['config']['langPid'] ?? $this->pidColumnName;
 
         $objLanguages = \Database::getInstance()->prepare(
             "SELECT id FROM " . $table . " WHERE " . $pidColumnName . " IN (SELECT id FROM " . $table . " WHERE pid=?)")
@@ -1276,7 +1271,7 @@ class Driver extends \DC_Table
 
                 $intPid = ($objCurrent->numRows) ? $objCurrent->pid : 0;
 
-                if ($GLOBALS['TL_DCA'][$this->strTable]['config']['dynamicPtable']) {
+                if ($GLOBALS['TL_DCA'][$this->strTable]['config']['dynamicPtable'] ?? null) {
                     $intId = \Database::getInstance()->prepare("INSERT INTO " . $this->strTable . " ({$this->pidColumnName},tstamp,{$this->langColumnName},pid,ptable) VALUES (?,?,?,?,?)")
                         ->execute($this->intId, time(), $language, $intPid, $this->ptable)
                         ->insertId;
@@ -1363,7 +1358,7 @@ class Driver extends \DC_Table
 <div class="tl_formbody">
 <input type="hidden" name="FORM_SUBMIT" value="tl_language">
 <input type="hidden" name="REQUEST_TOKEN" value="' . REQUEST_TOKEN . '">
-<select name="language" class="tl_select' . (strlen($_SESSION['BE_DATA']['language'][$this->strTable][$this->intId]) ? ' active' : '') . '" onchange="document.id(this).getParent(\'form\').submit()">
+<select name="language" class="tl_select' . (strlen($_SESSION['BE_DATA']['language'][$this->strTable][$this->intId] ?? '') ? ' active' : '') . '" onchange="document.id(this).getParent(\'form\').submit()">
 ' . $available . $undefined . '
 </select>
 <noscript>
@@ -1405,11 +1400,11 @@ class Driver extends \DC_Table
 
                 // Now we only have regular fields here and we check if we
                 // need should display them in the palette or not
-                $translatableFor = $GLOBALS['TL_DCA'][$this->strTable]['fields'][$fieldChunk]['eval']['translatableFor'];
+                $translatableFor = $GLOBALS['TL_DCA'][$this->strTable]['fields'][$fieldChunk]['eval']['translatableFor'] ?? null;
 
                 // If translatableFor is not set at all and we are
                 // editing a language, we don't add it to the palette
-                if (!isset($translatableFor) && $this->editLang) {
+                if (null === $translatableFor && $this->editLang) {
                     continue;
                 }
 
