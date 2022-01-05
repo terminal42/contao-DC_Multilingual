@@ -129,11 +129,7 @@ trait MultilingualTrait
     {
         static::ensureDataContainerIsLoaded();
 
-        if ($GLOBALS['TL_DCA'][static::getTable()]['config']['langColumnName']) {
-            return $GLOBALS['TL_DCA'][static::getTable()]['config']['langColumnName'];
-        }
-
-        return 'language';
+        return $GLOBALS['TL_DCA'][static::getTable()]['config']['langColumnName'] ?? 'language';
     }
 
     /**
@@ -145,11 +141,7 @@ trait MultilingualTrait
     {
         static::ensureDataContainerIsLoaded();
 
-        if ($GLOBALS['TL_DCA'][static::getTable()]['config']['fallbackLang']) {
-            return $GLOBALS['TL_DCA'][static::getTable()]['config']['fallbackLang'];
-        }
-
-        return null;
+        return $GLOBALS['TL_DCA'][static::getTable()]['config']['fallbackLang'] ?? null;
     }
 
     /**
@@ -267,17 +259,17 @@ trait MultilingualTrait
         }
 
         // Group by
-        if (null !== $options['group']) {
+        if (!empty($options['group'])) {
             $qb->groupBy($options['group']);
         }
 
         // Having
-        if (null !== $options['having']) {
+        if (!empty($options['having'])) {
             $qb->having($options['having']);
         }
 
         // Order by
-        if (null !== $options['order']) {
+        if (!empty($options['order'])) {
             $qb->add('orderBy', $options['order']);
         }
     }
@@ -346,11 +338,7 @@ trait MultilingualTrait
     {
         static::ensureDataContainerIsLoaded();
 
-        if ($GLOBALS['TL_DCA'][static::getTable()]['config']['langPid']) {
-            return $GLOBALS['TL_DCA'][static::getTable()]['config']['langPid'];
-        }
-
-        return 'langPid';
+        return $GLOBALS['TL_DCA'][static::getTable()]['config']['langPid'] ?? 'langPid';
     }
 
     /**
