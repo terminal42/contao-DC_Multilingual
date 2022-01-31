@@ -850,7 +850,7 @@ class Driver extends \DC_Table
                 $objSessionBag = System::getContainer()->get('session')->getBag('contao_backend');
                 $session = $objSessionBag->all();
                 $node = ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 6) ? $this->strTable . '_' . $table . '_tree' : $this->strTable . '_tree';
-                $blnIsOpen = (!empty($arrFound) || $session[$node][$id] == 1);
+                $blnIsOpen = (!empty($arrFound) || ($session[$node][$id] ?? null) == 1);
                 if ($blnIsOpen) {
                     $translationIds = \Database::getInstance()->prepare(
                         "SELECT id FROM " . $table . " WHERE pid=? AND $langColumn=''")
