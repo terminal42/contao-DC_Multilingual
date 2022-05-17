@@ -246,7 +246,7 @@ trait MultilingualTrait
     protected static function applyOptionsToQueryBuilder(QueryBuilder $qb, array $options)
     {
         // Columns
-        if (null !== $options['column']) {
+        if (!empty($options['column'])) {
             if (is_array($options['column'])) {
                 foreach ($options['column'] as $column) {
                     $qb->andWhere($column);
