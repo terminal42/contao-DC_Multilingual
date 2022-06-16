@@ -13,11 +13,32 @@ declare(strict_types=1);
 
 namespace Terminal42\DcMultilingualBundle\Picker;
 
+use Contao\CoreBundle\Framework\ContaoFramework;
 use Contao\CoreBundle\Picker\AbstractTablePickerProvider;
+use Contao\DataContainer;
+use Contao\DcaLoader;
+use DC_Multilingual;
+use Doctrine\DBAL\Connection;
+use Knp\Menu\FactoryInterface;
+use Symfony\Component\Routing\RouterInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
 use Terminal42\DcMultilingualBundle\Driver;
+
+use function strpos;
 
 final class MultilingualPickerProvider extends AbstractTablePickerProvider
 {
+    private const PREFIX = 'dc.';
+
+    private ContaoFramework $framework;
+
+    public function __construct(ContaoFramework $framework, FactoryInterface $menuFactory, RouterInterface $router, TranslatorInterface $translator, Connection $connection)
+    {
+        parent::__construct($framework, $menuFactory, $router, $translator, $connection);
+
+        $this->framework = $framework;
+    }
+
     public function getName(): string
     {
         return 'multilingualPicker';
@@ -26,5 +47,28 @@ final class MultilingualPickerProvider extends AbstractTablePickerProvider
     protected function getDataContainer(): string
     {
         return Driver::class;
+    }
+
+    /**
+     * We have to reimplement whole method because we have to check two names of the data container driver.
+     */
+    public function supportsContext($context): bool
+    {
+        if (0 !== strpos($context, self::PREFIX)) {
+            return false;
+        }
+
+        $table = $this->getTableFromContext($context);
+
+        $this->framework->initialize();
+        $this->framework->createInstance(DcaLoader::class, [$table])->load();
+
+        if (0 === \count($this->getModulesForTable($table))) {
+            return false;
+        }
+
+        $driverClass = DataContainer::getDriverForTable($table);
+
+        return ($driverClass === Driver::class || $driverClass === DC_Multilingual::class);
     }
 }
