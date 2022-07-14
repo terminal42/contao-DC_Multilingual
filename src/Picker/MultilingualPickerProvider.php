@@ -15,7 +15,6 @@ namespace Terminal42\DcMultilingualBundle\Picker;
 
 use Contao\CoreBundle\Framework\ContaoFramework;
 use Contao\CoreBundle\Picker\AbstractTablePickerProvider;
-use Contao\DataContainer;
 use Contao\DcaLoader;
 use DC_Multilingual;
 use Doctrine\DBAL\Connection;
@@ -23,14 +22,16 @@ use Knp\Menu\FactoryInterface;
 use Symfony\Component\Routing\RouterInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Terminal42\DcMultilingualBundle\Driver;
-
 use function strpos;
 
 final class MultilingualPickerProvider extends AbstractTablePickerProvider
 {
     private const PREFIX = 'dc.';
 
-    private ContaoFramework $framework;
+    /**
+     * @var ContaoFramework
+     */
+    private $framework;
 
     public function __construct(ContaoFramework $framework, FactoryInterface $menuFactory, RouterInterface $router, TranslatorInterface $translator, Connection $connection)
     {
@@ -63,12 +64,10 @@ final class MultilingualPickerProvider extends AbstractTablePickerProvider
         $this->framework->initialize();
         $this->framework->createInstance(DcaLoader::class, [$table])->load();
 
-        if (0 === \count($this->getModulesForTable($table))) {
-            return false;
-        }
+        $drivers = ['Multilingual', Driver::class, DC_Multilingual::class];
 
-        $driverClass = DataContainer::getDriverForTable($table);
-
-        return ($driverClass === Driver::class || $driverClass === DC_Multilingual::class);
+        return isset($GLOBALS['TL_DCA'][$table]['config']['dataContainer'])
+            && \in_array($GLOBALS['TL_DCA'][$table]['config']['dataContainer'], $drivers, true)
+            && 0 !== \count($this->getModulesForTable($table));
     }
 }
