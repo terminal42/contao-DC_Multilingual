@@ -131,7 +131,7 @@ class Driver extends \DC_Table
             throw new InternalServerErrorException('Table "' . $this->strTable . '" is not editable.');
         }
 
-        if ('' !== $intId && $intId !== null)
+        if ($intId)
         {
             $this->intId = $intId;
             $this->sessionKey = 'dc_multilingual:' . $this->strTable . ':' . $this->intId;
