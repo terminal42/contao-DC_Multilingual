@@ -4,3 +4,14 @@ services:
         public: true
         arguments:
             - "@database_connection"
+
+    terminal42.dc_multilingual.picker.multilingual_provider:
+        class: Terminal42\DcMultilingualBundle\Picker\MultilingualPickerProvider
+        arguments:
+            - '@contao.framework'
+            - '@knp_menu.factory'
+            - '@router'
+            - '@translator'
+            - '@database_connection'
+        tags:
+            - contao.picker_provider
