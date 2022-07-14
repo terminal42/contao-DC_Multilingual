@@ -128,9 +128,41 @@ In the front end you can then search by a multilingual alias like this:
 MyModel::findByMultilingualAlias($alias);
 ```
 
+
+## Usage with Doctrine entities
+
+Since the driver only writes data to the database from the backend, it is fully
+compatible with using Doctrine entities in the frontend. For now, you must take care
+of translations yourself though. Here's how an entity could look like:
+
+```php
+#[Entity()]
+#[Table('tl_my_entity')]
+class MyEntity
+{
+    #[Id]
+    #[GeneratedValue('IDENTITY')]
+    #[Column(options: ['unsigned' => true])]
+    private int $id;
+    #[Column(options: ['unsigned' => true, 'default' => 0])]
+    private int $tstamp;
+
+    #[OneToMany('parent', self::class)]
+    protected $translations;
+    #[ManyToOne(self::class, inversedBy: 'translations')]
+    #[JoinColumn('langPid')]
+    protected $parent;
+    #[Column(length: 5, options: ['default' => ''])]
+    protected string $language;
+
+    // ... any other properties of your entity
+}
+```
+
+
 ## Useful notes
 
-1. Sometimes a table you want to make multilingual already contains the `language` field (e.g. `tl_user`), 
+1. Sometimes a table you want to make multilingual already contains the `language` field (e.g. `tl_user`),
 which may lead to unexpected results. In such cases you have to make sure that data container's property
-`$GLOBALS['TL_DCA']['tl_table']['config']['langColumnName']` is set to something else than `language`. 
+`$GLOBALS['TL_DCA']['tl_table']['config']['langColumnName']` is set to something else than `language`.
 See [#53](https://github.com/terminal42/contao-DC_Multilingual/issues/53) for more details.
