@@ -214,7 +214,7 @@ class Driver extends \DC_Table
                         $legends[$k] = substr($vv, 1, -1);
                         unset($boxes[$k][$kk]);
                     }
-                    elseif ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$vv]['exclude'] || !is_array($GLOBALS['TL_DCA'][$this->strTable]['fields'][$vv]))
+                    elseif (($GLOBALS['TL_DCA'][$this->strTable]['fields'][$vv]['exclude'] ?? null) || !is_array($GLOBALS['TL_DCA'][$this->strTable]['fields'][$vv]))
                     {
                         unset($boxes[$k][$kk]);
                     }
@@ -378,7 +378,7 @@ class Driver extends \DC_Table
         }
 
         if ($this->editLang) {
-            $arrButtons['deleteLanguage'] = '<input type="submit" name="deleteLanguage" class="tl_submit" style="float:right" value="' . specialchars($GLOBALS['TL_LANG']['MSC']['deleteLanguage']) . '" onclick="return confirm(\'' . $GLOBALS['TL_LANG']['MSC']['deleteLanguageConfirm'] . '\')">';
+            $arrButtons['deleteLanguage'] = '<button type="submit" name="deleteLanguage" class="tl_submit" style="float:right" onclick="return confirm(\'' . $GLOBALS['TL_LANG']['MSC']['deleteLanguageConfirm'] . '\')">' . $GLOBALS['TL_LANG']['MSC']['deleteLanguage'] . '</button>';
         }
 
         // Call the buttons_callback (see #4691)
@@ -787,7 +787,7 @@ class Driver extends \DC_Table
         $arrIds = array();
 
         // Get records
-        $objRows = $this->Database->prepare("SELECT id FROM " . $table . " WHERE " . $this->pidColumnName . "=0 AND pid=?" . ($hasSorting ? " ORDER BY sorting" : ""))
+        $objRows = $this->Database->prepare("SELECT id FROM " . $table . " WHERE ({$this->pidColumnName}=0 OR {$this->pidColumnName} IS NULL) AND pid=?" . ($hasSorting ? " ORDER BY sorting" : ""))
             ->execute($id);
 
         while ($objRows->next())
@@ -908,7 +908,7 @@ class Driver extends \DC_Table
                 if ($insertInto) {
                     $newPID = $pid;
 
-                    $objSorting = \Database::getInstance()->prepare("SELECT MIN(sorting) AS sorting FROM " . $this->strTable . " WHERE pid=? AND {$this->pidColumnName}=0")
+                    $objSorting = \Database::getInstance()->prepare("SELECT MIN(sorting) AS sorting FROM " . $this->strTable . " WHERE pid=? AND ({$this->pidColumnName}=0 OR {$this->pidColumnName} IS NULL)")
                         ->execute($pid);
 
                     // Select sorting value of the first record
@@ -917,7 +917,7 @@ class Driver extends \DC_Table
 
                         // Resort if the new sorting value is not an integer or smaller than 1
                         if (($curSorting % 2) != 0 || $curSorting < 1) {
-                            $objNewSorting = \Database::getInstance()->prepare("SELECT id FROM " . $this->strTable . " WHERE pid=? AND {$this->pidColumnName}=0 ORDER BY sorting")
+                            $objNewSorting = \Database::getInstance()->prepare("SELECT id FROM " . $this->strTable . " WHERE pid=? AND ({$this->pidColumnName}=0 OR {$this->pidColumnName} IS NULL) ORDER BY sorting")
                                 ->execute($pid);
 
                             $count = 2;
@@ -934,7 +934,7 @@ class Driver extends \DC_Table
                     else $newSorting = 128;
                 } // Else insert the current record after the parent record
                 elseif ($pid > 0) {
-                    $objSorting = \Database::getInstance()->prepare("SELECT pid, sorting FROM " . $this->strTable . " WHERE id=? AND {$this->pidColumnName}=0")
+                    $objSorting = \Database::getInstance()->prepare("SELECT pid, sorting FROM " . $this->strTable . " WHERE id=? AND ({$this->pidColumnName}=0 OR {$this->pidColumnName} IS NULL)")
                         ->limit(1)
                         ->execute($pid);
 
@@ -945,7 +945,7 @@ class Driver extends \DC_Table
 
                         // Do not proceed without a parent ID
                         if (is_numeric($newPID)) {
-                            $objNextSorting = \Database::getInstance()->prepare("SELECT MIN(sorting) AS sorting FROM " . $this->strTable . " WHERE pid=? AND {$this->pidColumnName}=0 AND sorting>?")
+                            $objNextSorting = \Database::getInstance()->prepare("SELECT MIN(sorting) AS sorting FROM " . $this->strTable . " WHERE pid=? AND ({$this->pidColumnName}=0 OR {$this->pidColumnName} IS NULL) AND sorting>?")
                                 ->execute($newPID, $curSorting);
 
                             // Select sorting value of the next record
@@ -956,7 +956,7 @@ class Driver extends \DC_Table
                                 if ((($curSorting + $nxtSorting) % 2) != 0 || $nxtSorting >= 4294967295) {
                                     $count = 1;
 
-                                    $objNewSorting = \Database::getInstance()->prepare("SELECT id, sorting FROM " . $this->strTable . " WHERE pid=? AND {$this->pidColumnName}=0 ORDER BY sorting")
+                                    $objNewSorting = \Database::getInstance()->prepare("SELECT id, sorting FROM " . $this->strTable . " WHERE pid=? AND ({$this->pidColumnName}=0 OR {$this->pidColumnName} IS NULL) ORDER BY sorting")
                                         ->execute($newPID);
 
                                     while ($objNewSorting->next()) {
