@@ -214,7 +214,7 @@ class Driver extends \DC_Table
                         $legends[$k] = substr($vv, 1, -1);
                         unset($boxes[$k][$kk]);
                     }
-                    elseif (($GLOBALS['TL_DCA'][$this->strTable]['fields'][$vv]['exclude'] ?? null) || !is_array($GLOBALS['TL_DCA'][$this->strTable]['fields'][$vv]))
+                    elseif (($GLOBALS['TL_DCA'][$this->strTable]['fields'][$vv]['exclude'] ?? null) || !is_array($GLOBALS['TL_DCA'][$this->strTable]['fields'][$vv] ?? null))
                     {
                         unset($boxes[$k][$kk]);
                     }
