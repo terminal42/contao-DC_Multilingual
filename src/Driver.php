@@ -11,21 +11,20 @@
 
 namespace Terminal42\DcMultilingualBundle;
 
-use Contao\Versions;
-use Contao\Input;
-use Contao\Environment;
-use Contao\Message;
-use Contao\Database;
-use Contao\Encryption;
-use Contao\PageModel;
 use Contao\Controller;
-use Exception;
-use Contao\StringUtil;
-use InvalidArgumentException;
 use Contao\CoreBundle\Exception\AccessDeniedException;
 use Contao\CoreBundle\Exception\InternalServerErrorException;
-use Contao\System;
 use Contao\DC_Table;
+use Contao\Database;
+use Contao\Encryption;
+use Contao\Environment;
+use Contao\Image;
+use Contao\Input;
+use Contao\Message;
+use Contao\PageModel;
+use Contao\StringUtil;
+use Contao\System;
+use Contao\Versions;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
 
@@ -104,7 +103,7 @@ class Driver extends DC_Table
         if (isset($dca['config']['fallbackLang'])) {
             $this->fallbackLang = $dca['config']['fallbackLang'];
 
-            if (!in_array($this->fallbackLang, $this->translatableLangs)) {
+            if (!\in_array($this->fallbackLang, $this->translatableLangs)) {
                 $this->translatableLangs[] = $this->fallbackLang;
             }
         }
@@ -117,7 +116,7 @@ class Driver extends DC_Table
         $this->langColumnName = $dca['config']['langColumnName'] ?? 'language';
 
         // Filter out translations
-        if ($dca['list']['sorting']['mode'] !== 5 && $dca['list']['sorting']['mode'] !== 6) {
+        if (($dca['list']['sorting']['mode'] ?? null) !== 5 && ($dca['list']['sorting']['mode'] ?? null) !== 6) {
             $dca['list']['sorting']['filter'][] = array($this->langColumnName.'=?', '');
         }
 
@@ -134,11 +133,11 @@ class Driver extends DC_Table
      * @return string
      *
      * @throws AccessDeniedException
-     * @throws InternalServerErrorException
+     * @throws InternalServerErrorException|\Exception
      */
     public function edit($intId=null, $ajaxId=null)
     {
-        if ($GLOBALS['TL_DCA'][$this->strTable]['config']['notEditable'] ?? false)
+        if ($GLOBALS['TL_DCA'][$this->strTable]['config']['notEditable'] ?? null)
         {
             throw new InternalServerErrorException('Table "' . $this->strTable . '" is not editable.');
         }
@@ -191,7 +190,8 @@ class Driver extends DC_Table
 
         $objVersions = new Versions($this->strTable, $versionId);
 
-        if (!($GLOBALS['TL_DCA'][$this->strTable]['config']['hideVersionMenu'] ?? false)) {
+        if (!($GLOBALS['TL_DCA'][$this->strTable]['config']['hideVersionMenu'] ?? null))
+        {
             // Compare versions
             if (Input::get('versions'))
             {
@@ -199,12 +199,12 @@ class Driver extends DC_Table
             }
 
             // Restore a version
-            if (Input::post('FORM_SUBMIT') == 'tl_version' && Input::post('version') != '')
+            if (Input::post('FORM_SUBMIT') == 'tl_version' && Input::post('version'))
             {
                 $objVersions->restore(Input::post('version'));
 
                 if (method_exists($this, 'invalidateCacheTags')) {
-				    $this->invalidateCacheTags();
+                    $this->invalidateCacheTags();
                 }
 
                 $this->reload();
@@ -215,7 +215,7 @@ class Driver extends DC_Table
 
         // Build an array from boxes and rows
         $this->strPalette = $this->getPalette();
-        $boxes = trimsplit(';', $this->strPalette);
+        $boxes = StringUtil::trimsplit(';', $this->strPalette);
         $legends = array();
 
         if (!empty($boxes))
@@ -223,29 +223,29 @@ class Driver extends DC_Table
             foreach ($boxes as $k=>$v)
             {
                 $eCount = 1;
-                $boxes[$k] = trimsplit(',', $v);
+                $boxes[$k] = StringUtil::trimsplit(',', $v);
 
                 foreach ($boxes[$k] as $kk=>$vv)
                 {
-                    if (preg_match('/^\[.*\]$/', $vv))
+                    if (preg_match('/^\[.*]$/', $vv))
                     {
                         ++$eCount;
                         continue;
                     }
 
-                    if (preg_match('/^\{.*\}$/', $vv))
+                    if (preg_match('/^{.*}$/', $vv))
                     {
                         $legends[$k] = substr($vv, 1, -1);
                         unset($boxes[$k][$kk]);
                     }
-                    elseif (($GLOBALS['TL_DCA'][$this->strTable]['fields'][$vv]['exclude'] ?? null) || !is_array($GLOBALS['TL_DCA'][$this->strTable]['fields'][$vv] ?? null))
+                    elseif (!\is_array($GLOBALS['TL_DCA'][$this->strTable]['fields'][$vv] ?? null) || ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$vv]['exclude'] ?? null))
                     {
                         unset($boxes[$k][$kk]);
                     }
                 }
 
                 // Unset a box if it does not contain any fields
-                if (count($boxes[$k]) < $eCount)
+                if (\count($boxes[$k]) < $eCount)
                 {
                     unset($boxes[$k]);
                 }
@@ -261,7 +261,7 @@ class Driver extends DC_Table
             // Render boxes
             foreach ($boxes as $k=>$v)
             {
-                $strAjax = '';
+                $arrAjax = array();
                 $blnAjax = false;
                 $key = '';
                 $cls = '';
@@ -269,13 +269,9 @@ class Driver extends DC_Table
 
                 if (isset($legends[$k]))
                 {
-                    $tmp = explode(':', $legends[$k]);
-                    $key = $tmp[0];
-                    $legend = "\n" . '<legend onclick="AjaxRequest.toggleFieldset(this,\'' . $key . '\',\'' . $this->strTable . '\')">' . (isset($GLOBALS['TL_LANG'][$this->strTable][$key]) ? $GLOBALS['TL_LANG'][$this->strTable][$key] : $key) . '</legend>';
+                    list($key, $cls) = explode(':', $legends[$k]) + array(null, null);
 
-                    if (isset($tmp[1])) {
-                        $cls = $tmp[1];
-                    }
+                    $legend = "\n" . '<legend onclick="AjaxRequest.toggleFieldset(this,\'' . $key . '\',\'' . $this->strTable . '\')">' . ($GLOBALS['TL_LANG'][$this->strTable][$key] ?? $key) . '</legend>';
                 }
 
                 if (isset($fs[$this->strTable][$key]))
@@ -287,7 +283,8 @@ class Driver extends DC_Table
                     $class .= (($cls && $legend) ? ' ' . $cls : '');
                 }
 
-                $return .= "\n\n" . '<fieldset' . ($key ? ' id="pal_'.$key.'"' : '') . ' class="' . $class . ($legend ? '' : ' nolegend') . '">' . $legend;
+                $return .= "\n\n" . '<fieldset' . ($key ? ' id="pal_' . $key . '"' : '') . ' class="' . $class . ($legend ? '' : ' nolegend') . '">' . $legend;
+                $thisId = '';
 
                 // Build rows of the current box
                 foreach ($v as $vv)
@@ -296,20 +293,37 @@ class Driver extends DC_Table
                     {
                         if ($blnAjax && Environment::get('isAjaxRequest'))
                         {
-                            return $strAjax . '<input type="hidden" name="FORM_FIELDS[]" value="'.specialchars($this->strPalette).'">';
+                            if ($ajaxId == $thisId)
+                            {
+                                if (($intLatestVersion = $objVersions->getLatestVersion()) !== null)
+                                {
+                                    $arrAjax[$thisId] .= '<input type="hidden" name="VERSION_NUMBER" value="' . $intLatestVersion . '">';
+                                }
+
+                                return $arrAjax[$thisId] . '<input type="hidden" name="FORM_FIELDS[]" value="' . StringUtil::specialchars($this->strPalette) . '">';
+                            }
+
+                            if (\count($arrAjax) > 1)
+                            {
+                                $current = "\n" . '<div id="' . $thisId . '" class="subpal cf">' . $arrAjax[$thisId] . '</div>';
+                                unset($arrAjax[$thisId]);
+                                end($arrAjax);
+                                $thisId = key($arrAjax);
+                                $arrAjax[$thisId] .= $current;
+                            }
                         }
 
-                        $blnAjax = false;
                         $return .= "\n" . '</div>';
 
                         continue;
                     }
 
-                    if (preg_match('/^\[.*\]$/', $vv))
+                    if (preg_match('/^\[.*]$/', $vv))
                     {
                         $thisId = 'sub_' . substr($vv, 1, -1);
-                        $blnAjax = ($ajaxId == $thisId && Environment::get('isAjaxRequest')) ? true : false;
-                        $return .= "\n" . '<div id="'.$thisId.'">';
+                        $arrAjax[$thisId] = '';
+                        $blnAjax = ($ajaxId == $thisId && Environment::get('isAjaxRequest')) ? true : $blnAjax;
+                        $return .= "\n" . '<div id="' . $thisId . '" class="subpal cf">';
 
                         continue;
                     }
@@ -326,24 +340,22 @@ class Driver extends DC_Table
                     }
 
                     // Convert CSV fields (see #2890)
-                    if (
-                        ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['eval']['multiple'] ?? false)
-                        && isset($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['eval']['csv'])
-                    ) {
-                        $this->varValue = trimsplit($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['eval']['csv'], $this->varValue);
+                    if (($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['eval']['multiple'] ?? null) && isset($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['eval']['csv']))
+                    {
+                        $this->varValue = StringUtil::trimsplit($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['eval']['csv'], $this->varValue);
                     }
 
                     // Call load_callback
-                    if (is_array($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['load_callback'] ?? null))
+                    if (\is_array($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['load_callback'] ?? null))
                     {
                         foreach ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['load_callback'] as $callback)
                         {
-                            if (is_array($callback))
+                            if (\is_array($callback))
                             {
                                 $this->import($callback[0]);
                                 $this->varValue = $this->{$callback[0]}->{$callback[1]}($this->varValue, $this);
                             }
-                            elseif (is_callable($callback))
+                            elseif (\is_callable($callback))
                             {
                                 $this->varValue = $callback($this->varValue, $this);
                             }
@@ -354,7 +366,7 @@ class Driver extends DC_Table
                     $this->objActiveRecord->{$this->strField} = $this->varValue;
 
                     // Build the row and pass the current palette string (thanks to Tristan Lins)
-                    $blnAjax ? $strAjax .= $this->row($this->strPalette) : $return .= $this->row($this->strPalette);
+                    $blnAjax ? $arrAjax[$thisId] .= $this->row($this->strPalette) : $return .= $this->row($this->strPalette);
                 }
 
                 $class = 'tl_box';
@@ -363,10 +375,8 @@ class Driver extends DC_Table
         }
 
         // Versions overview
-        if (
-            ($GLOBALS['TL_DCA'][$this->strTable]['config']['enableVersioning'] ?? false)
-            && !($GLOBALS['TL_DCA'][$this->strTable]['config']['hideVersionMenu'] ?? false)
-        ) {
+        if (($GLOBALS['TL_DCA'][$this->strTable]['config']['enableVersioning'] ?? null) && !($GLOBALS['TL_DCA'][$this->strTable]['config']['hideVersionMenu'] ?? null))
+        {
             $version = $objVersions->renderDropdown();
         }
         else
@@ -379,26 +389,26 @@ class Driver extends DC_Table
 
         // Submit buttons
         $arrButtons = array();
-        $arrButtons['save'] = '<button type="submit" name="save" id="save" class="tl_submit" accesskey="s">'.$GLOBALS['TL_LANG']['MSC']['save'].'</button>';
+        $arrButtons['save'] = '<button type="submit" name="save" id="save" class="tl_submit" accesskey="s">' . $GLOBALS['TL_LANG']['MSC']['save'] . '</button>';
 
         if (!Input::get('nb'))
         {
-            $arrButtons['saveNclose'] = '<button type="submit" name="saveNclose" id="saveNclose" class="tl_submit" accesskey="c">'.$GLOBALS['TL_LANG']['MSC']['saveNclose'].'</button>';
+            $arrButtons['saveNclose'] = '<button type="submit" name="saveNclose" id="saveNclose" class="tl_submit" accesskey="c">' . $GLOBALS['TL_LANG']['MSC']['saveNclose'] . '</button>';
         }
 
-        if (!Input::get('popup') && !($GLOBALS['TL_DCA'][$this->strTable]['config']['closed'] ?? false) && !($GLOBALS['TL_DCA'][$this->strTable]['config']['notCreatable'] ?? false))
+        if (!Input::get('popup') && !($GLOBALS['TL_DCA'][$this->strTable]['config']['closed'] ?? null) && !($GLOBALS['TL_DCA'][$this->strTable]['config']['notCreatable'] ?? null))
         {
-            $arrButtons['saveNcreate'] = '<button type="submit" name="saveNcreate" id="saveNcreate" class="tl_submit" accesskey="n">'.$GLOBALS['TL_LANG']['MSC']['saveNcreate'].'</button>';
+            $arrButtons['saveNcreate'] = '<button type="submit" name="saveNcreate" id="saveNcreate" class="tl_submit" accesskey="n">' . $GLOBALS['TL_LANG']['MSC']['saveNcreate'] . '</button>';
         }
 
-        if ($GLOBALS['TL_DCA'][$this->strTable]['config']['switchToEdit'] ?? false)
+        if ($GLOBALS['TL_DCA'][$this->strTable]['config']['switchToEdit'] ?? null)
         {
-            $arrButtons['saveNedit'] = '<button type="submit" name="saveNedit" id="saveNedit" class="tl_submit" accesskey="e">'.$GLOBALS['TL_LANG']['MSC']['saveNedit'].'</button>';
+            $arrButtons['saveNedit'] = '<button type="submit" name="saveNedit" id="saveNedit" class="tl_submit" accesskey="e">' . $GLOBALS['TL_LANG']['MSC']['saveNedit'] . '</button>';
         }
 
-        if (!Input::get('popup') && ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 4 || strlen($this->ptable) || ($GLOBALS['TL_DCA'][$this->strTable]['config']['switchToEdit'] ?? false)))
+        if (!Input::get('popup') && ($this->ptable || ($GLOBALS['TL_DCA'][$this->strTable]['config']['switchToEdit'] ?? null) || ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] ?? null) == 4))
         {
-            $arrButtons['saveNback'] = '<button type="submit" name="saveNback" id="saveNback" class="tl_submit" accesskey="g">'.$GLOBALS['TL_LANG']['MSC']['saveNback'].'</button>';
+            $arrButtons['saveNback'] = '<button type="submit" name="saveNback" id="saveNback" class="tl_submit" accesskey="g">' . $GLOBALS['TL_LANG']['MSC']['saveNback'] . '</button>';
         }
 
         if ($this->editLang) {
@@ -406,34 +416,61 @@ class Driver extends DC_Table
         }
 
         // Call the buttons_callback (see #4691)
-        if (is_array($GLOBALS['TL_DCA'][$this->strTable]['edit']['buttons_callback'] ?? null))
+        if (\is_array($GLOBALS['TL_DCA'][$this->strTable]['edit']['buttons_callback'] ?? null))
         {
             foreach ($GLOBALS['TL_DCA'][$this->strTable]['edit']['buttons_callback'] as $callback)
             {
-                if (is_array($callback))
+                if (\is_array($callback))
                 {
                     $this->import($callback[0]);
                     $arrButtons = $this->{$callback[0]}->{$callback[1]}($arrButtons, $this);
                 }
-                elseif (is_callable($callback))
+                elseif (\is_callable($callback))
                 {
                     $arrButtons = $callback($arrButtons, $this);
                 }
             }
         }
 
+        if (\count($arrButtons) < 3)
+        {
+            $strButtons = implode(' ', $arrButtons);
+        }
+        else
+        {
+            $strButtons = array_shift($arrButtons) . ' ';
+            $strButtons .= '<div class="split-button">';
+            $strButtons .= array_shift($arrButtons) . '<button type="button" id="sbtog">' . Image::getHtml('navcol.svg') . '</button> <ul class="invisible">';
+
+            foreach ($arrButtons as $strButton)
+            {
+                $strButtons .= '<li>' . $strButton . '</li>';
+            }
+
+            $strButtons .= '</ul></div>';
+        }
+
         // Add the buttons and end the form
         $return .= '
 </div>
-
 <div class="tl_formbody_submit">
-
 <div class="tl_submit_container">
-  ' . implode(' ', $arrButtons) . '
+  ' . $strButtons . '
 </div>
-
 </div>
 </form>';
+
+
+        $strVersionField = '';
+
+        // Store the current version number (see #8412)
+        if (($intLatestVersion = $objVersions->getLatestVersion()) !== null)
+        {
+            $strVersionField = '
+<input type="hidden" name="VERSION_NUMBER" value="' . $intLatestVersion . '">';
+        }
+
+        $strBackUrl = $this->getReferer(true);
 
         // Set the focus if there is an error
         if ($this->noReload)
@@ -447,36 +484,34 @@ class Driver extends DC_Table
         }
 
         // Begin the form (-> DO NOT CHANGE THIS ORDER -> this way the onsubmit attribute of the form can be changed by a field)
-        $return = $version . '
+        $return = $version . Message::generate() . ($this->noReload ? '
+<p class="tl_error">' . $GLOBALS['TL_LANG']['ERR']['general'] . '</p>' : '') . '
 <div id="tl_buttons">' . (Input::get('nb') ? '&nbsp;' : '
-<a href="'.$this->getReferer(true).'" class="header_back" title="'.specialchars($GLOBALS['TL_LANG']['MSC']['backBTTitle']).'" accesskey="b" onclick="Backend.getScrollOffset()">'.$GLOBALS['TL_LANG']['MSC']['backBT'].'</a>') . '
+<a href="' . $strBackUrl . '" class="header_back" title="' . StringUtil::specialchars($GLOBALS['TL_LANG']['MSC']['backBTTitle']) . '" accesskey="b" onclick="Backend.getScrollOffset()">' . $GLOBALS['TL_LANG']['MSC']['backBT'] . '</a>') . '
 </div>
-'.Message::generate().'
-<form action="'.ampersand(Environment::get('request'), true).'" id="'.$this->strTable.'" class="tl_form" method="post" enctype="' . ($this->blnUploadable ? 'multipart/form-data' : 'application/x-www-form-urlencoded') . '"'.(!empty($this->onsubmit) ? ' onsubmit="'.implode(' ', $this->onsubmit).'"' : '').' novalidate>
+<form id="' . $this->strTable . '" class="tl_form tl_edit_form" method="post" enctype="' . ($this->blnUploadable ? 'multipart/form-data' : 'application/x-www-form-urlencoded') . '"' . (!empty($this->onsubmit) ? ' onsubmit="' . implode(' ', $this->onsubmit) . '"' : '') . '>
 <div class="tl_formbody_edit">
-<input type="hidden" name="FORM_SUBMIT" value="'.$this->strTable.'">
-<input type="hidden" name="REQUEST_TOKEN" value="'.REQUEST_TOKEN.'">
-<input type="hidden" name="FORM_FIELDS[]" value="'.specialchars($this->strPalette).'">'.($this->noReload ? '
-
-<p class="tl_error">'.$GLOBALS['TL_LANG']['ERR']['general'].'</p>' : '').$return;
+<input type="hidden" name="FORM_SUBMIT" value="' . $this->strTable . '">
+<input type="hidden" name="REQUEST_TOKEN" value="' . REQUEST_TOKEN . '">' . $strVersionField . '
+<input type="hidden" name="FORM_FIELDS[]" value="' . StringUtil::specialchars($this->strPalette) . '">' . $return;
 
         // Reload the page to prevent _POST variables from being sent twice
-        if (Input::post('FORM_SUBMIT') == $this->strTable && !$this->noReload)
+        if (!$this->noReload && Input::post('FORM_SUBMIT') == $this->strTable)
         {
             $arrValues = $this->values;
             array_unshift($arrValues, time());
 
             // Trigger the onsubmit_callback
-            if (is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['onsubmit_callback'] ?? null))
+            if (\is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['onsubmit_callback'] ?? null))
             {
                 foreach ($GLOBALS['TL_DCA'][$this->strTable]['config']['onsubmit_callback'] as $callback)
                 {
-                    if (is_array($callback))
+                    if (\is_array($callback))
                     {
                         $this->import($callback[0]);
                         $this->{$callback[0]}->{$callback[1]}($this);
                     }
-                    elseif (is_callable($callback))
+                    elseif (\is_callable($callback))
                     {
                         $callback($this);
                     }
@@ -489,30 +524,35 @@ class Driver extends DC_Table
                 $objVersions->create();
 
                 // Call the onversion_callback
-                if (is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['onversion_callback'] ?? null))
+                if (\is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['onversion_callback'] ?? null))
                 {
+                    trigger_deprecation('contao/core-bundle', '4.0', 'Using the "onversion_callback" has been deprecated and will no longer work in Contao 5.0. Use the "oncreate_version_callback" instead.');
+
                     foreach ($GLOBALS['TL_DCA'][$this->strTable]['config']['onversion_callback'] as $callback)
                     {
-                        if (is_array($callback))
+                        if (\is_array($callback))
                         {
                             $this->import($callback[0]);
                             $this->{$callback[0]}->{$callback[1]}($this->strTable, $this->intId, $this);
                         }
-                        elseif (is_callable($callback))
+                        elseif (\is_callable($callback))
                         {
                             $callback($this->strTable, $this->intId, $this);
                         }
                     }
                 }
 
-                $this->log('A new version of record "'.$this->strTable.'.id='.$this->intId.'" has been created'.$this->getParentEntries($this->strTable, $this->intId), __METHOD__, TL_GENERAL);
+                System::log('A new version of record "'.$this->strTable.'.id='.$this->intId.'" has been created'.$this->getParentEntries($this->strTable, $this->intId), __METHOD__, TL_GENERAL);
             }
 
             // Set the current timestamp (-> DO NOT CHANGE THE ORDER version - timestamp)
-            if ($GLOBALS['TL_DCA'][$this->strTable]['config']['dynamicPtable'] ?? false) {
+            if ($GLOBALS['TL_DCA'][$this->strTable]['config']['dynamicPtable'] ?? null)
+            {
                 $this->Database->prepare("UPDATE " . $this->strTable . " SET ptable=?, tstamp=? WHERE id=?")
                                ->execute($this->ptable, time(), $this->intId);
-            } else {
+            }
+            else
+            {
                 $this->Database->prepare("UPDATE " . $this->strTable . " SET tstamp=? WHERE id=?")
                                ->execute(time(), $this->intId);
             }
@@ -540,7 +580,7 @@ class Driver extends DC_Table
                     System::setCookie('BE_PAGE_OFFSET', 0, 0);
                 }
 
-                $this->redirect($this->addToUrl($GLOBALS['TL_DCA'][$this->strTable]['list']['operations']['edit']['href'], false, array('s2e', 'act')));
+                $this->redirect($this->addToUrl($GLOBALS['TL_DCA'][$this->strTable]['list']['operations']['edit']['href'] ?? '', false, array('s2e', 'act', 'mode', 'pid')));
             }
             elseif (isset($_POST['saveNback']))
             {
@@ -550,7 +590,7 @@ class Driver extends DC_Table
                     System::setCookie('BE_PAGE_OFFSET', 0, 0);
                 }
 
-                if ($this->ptable == '')
+                if (!$this->ptable)
                 {
                     $this->redirect(TL_SCRIPT . '?do=' . Input::get('do'));
                 }
@@ -586,7 +626,7 @@ class Driver extends DC_Table
                 }
 
                 // Parent view
-                elseif ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 4)
+                elseif (($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] ?? null) == 4)
                 {
                     $strUrl .= $this->Database->fieldExists('sorting', $this->strTable) ? '&amp;act=create&amp;mode=1&amp;pid=' . $this->intId . '&amp;id=' . $this->activeRecord->pid : '&amp;act=create&amp;mode=2&amp;pid=' . $this->activeRecord->pid;
                 }
@@ -594,7 +634,7 @@ class Driver extends DC_Table
                 // List view
                 else
                 {
-                    $strUrl .= ($this->ptable != '') ? '&amp;act=create&amp;mode=2&amp;pid=' . CURRENT_ID : '&amp;act=create';
+                    $strUrl .= $this->ptable ? '&amp;act=create&amp;mode=2&amp;pid=' . CURRENT_ID : '&amp;act=create';
                 }
 
                 $this->redirect($strUrl . '&amp;rt=' . REQUEST_TOKEN);
@@ -607,7 +647,6 @@ class Driver extends DC_Table
         if ($this->noReload)
         {
             $return .= '
-
 <script>
   window.addEvent(\'domready\', function() {
     Backend.vScrollTo(($(\'' . $this->strTable . '\').getElement(\'label.error\').getPosition().y - 20));
@@ -668,7 +707,7 @@ class Driver extends DC_Table
 
                         // Use array_key_exists to allow NULL (see #5252)
                         if (array_key_exists('default', $GLOBALS['TL_DCA'][$this->strTable]['fields'][$k])) {
-                            $v = is_array(($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['default'] ?? null))
+                            $v = \is_array(($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['default'] ?? null))
                                 ? serialize($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['default'])
                                 : $GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['default']
                             ;
@@ -694,7 +733,8 @@ class Driver extends DC_Table
         }
 
         // Switch to edit mode
-        if (!$blnDoNotRedirect) {
+        if (!$blnDoNotRedirect)
+        {
             $this->redirect($this->switchToEdit($insertId));
         }
 
@@ -738,10 +778,10 @@ class Driver extends DC_Table
         $where = array();
 
         // Child mode
-        if ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 6) {
+        if (($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] ?? null) == 6) {
             $table = $GLOBALS['TL_DCA'][$this->strTable]['config']['ptable'];
 
-            if ($GLOBALS['TL_DCA'][$table]['config']['dataContainer'] == 'Multilingual') {
+            if ($GLOBALS['TL_DCA'][$table]['config']['dataContainer'] === 'Multilingual') {
                 $where[] = "$this->langColumnName=''";
             }
 
@@ -751,7 +791,7 @@ class Driver extends DC_Table
             $where[] = "$this->langColumnName=''";
         }
 
-        if (is_array($this->root) && count($this->root)) {
+        if (\is_array($this->root) && \count($this->root)) {
             $where[] = 'id IN(' . implode(',', $this->root) . ')';
         }
 
@@ -791,7 +831,7 @@ class Driver extends DC_Table
         $blnPtable = false;
 
         // Load parent table
-        if ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 6)
+        if (($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] ?? null) == 6)
         {
             $table = $this->ptable;
 
@@ -815,7 +855,7 @@ class Driver extends DC_Table
         $arrIds = array();
 
         // Get records
-        $objRows = $this->Database->prepare("SELECT id FROM " . $table . " WHERE ({$this->pidColumnName}=0 OR {$this->pidColumnName} IS NULL) AND pid=?" . ($hasSorting ? " ORDER BY sorting" : ""))
+        $objRows = $this->Database->prepare("SELECT id FROM " . $table . " WHERE ({$this->pidColumnName}=0 OR {$this->pidColumnName} IS NULL) AND pid=?" . ($hasSorting ? " ORDER BY sorting, id" : ""))
             ->execute($id);
 
         while ($objRows->next())
@@ -835,10 +875,14 @@ class Driver extends DC_Table
             $blnClipboard = true;
             $arrClipboard = $arrClipboard[$this->strTable];
         }
-
-        for ($i=0, $c=count($arrIds); $i<$c; $i++)
+        else
         {
-            $return .= ' ' . trim($this->generateTree($table, $arrIds[$i], array('p'=>$arrIds[($i-1)], 'n'=>$arrIds[($i+1)]), $hasSorting, $margin, ($blnClipboard ? $arrClipboard : false), ($id == $arrClipboard ['id'] || (is_array($arrClipboard ['id']) && in_array($id, $arrClipboard ['id'])) || (!$blnPtable && !is_array($arrClipboard['id']) && in_array($id, $this->Database->getChildRecords($arrClipboard['id'], $table)))), $blnProtected));
+            $arrClipboard = null;
+        }
+
+        for ($i=0, $c=\count($arrIds); $i<$c; $i++)
+        {
+            $return .= ' ' . trim($this->generateTree($table, $arrIds[$i], array('p'=>($arrIds[$i-1] ?? null), 'n'=>($arrIds[$i+1] ?? null)), $hasSorting, $margin, ($blnClipboard ? $arrClipboard : false), $arrClipboard !== null && ($id == $arrClipboard['id'] || (\is_array($arrClipboard['id']) && \in_array($id, $arrClipboard['id'])) || (!$blnPtable && !\is_array($arrClipboard['id']) && \in_array($id, $this->Database->getChildRecords($arrClipboard['id'], $table)))), $blnProtected));
         }
 
         return $return;
@@ -868,7 +912,7 @@ class Driver extends DC_Table
             Controller::loadDataContainer($table);
 
             if ($GLOBALS['TL_DCA'][$table]['config']['dataContainer'] === 'Multilingual'
-                && ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] === 5 || $GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] === 6 || $this->strTable != $table)
+                && (($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] ?? null) === 5 || ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] ?? null) === 6 || $this->strTable != $table)
             ) {
                 $langColumn = $GLOBALS['TL_DCA'][$table]['config']['langColumnName'] ?? 'language';
 
@@ -889,10 +933,10 @@ class Driver extends DC_Table
                 }
 
                 // Do not display the language records in the child list
-                if ($table === $this->strTable && $GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] === 6) {
+                if ($table === $this->strTable && ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] ?? null) === 6) {
                     static $languageRecords;
 
-                    if (!is_array($languageRecords)) {
+                    if (!\is_array($languageRecords)) {
                         $languageRecords = Database::getInstance()->execute("SELECT id FROM $table WHERE $langColumn=''")
                             ->fetchEach('id');
 
@@ -900,7 +944,7 @@ class Driver extends DC_Table
                     }
 
                     // Return an empty string if the ID is a langauge record
-                    if (!in_array((int)$id, $languageRecords, true)) {
+                    if (!\in_array((int)$id, $languageRecords, true)) {
                         return '';
                     }
                 }
@@ -957,9 +1001,13 @@ class Driver extends DC_Table
                                     ->execute(($count++ * 128), $objNewSorting->id);
                             }
                         } // Else new sorting = (current sorting / 2)
-                        else $newSorting = ($curSorting / 2);
+                        else {
+                            $newSorting = ($curSorting / 2);
+                        }
                     } // Else new sorting = 128
-                    else $newSorting = 128;
+                    else {
+                        $newSorting = 128;
+                    }
                 } // Else insert the current record after the parent record
                 elseif ($pid > 0) {
                     $objSorting = Database::getInstance()->prepare("SELECT pid, sorting FROM " . $this->strTable . " WHERE id=? AND ({$this->pidColumnName}=0 OR {$this->pidColumnName} IS NULL)")
@@ -996,9 +1044,13 @@ class Driver extends DC_Table
                                         }
                                     }
                                 } // Else new sorting = (current sorting + next sorting) / 2
-                                else $newSorting = (($curSorting + $nxtSorting) / 2);
+                                else {
+                                    $newSorting = (($curSorting + $nxtSorting) / 2);
+                                }
                             } // Else new sorting = (current sorting + 128)
-                            else $newSorting = ($curSorting + 128);
+                            else {
+                                $newSorting = ($curSorting + 128);
+                            }
                         }
                     } // Use the given parent ID as parent ID
                     else {
@@ -1008,8 +1060,8 @@ class Driver extends DC_Table
                 }
 
                 // Set new sorting and new parent ID
-                $this->set['pid'] = intval($newPID);
-                $this->set['sorting'] = intval($newSorting);
+                $this->set['pid'] = (int) $newPID;
+                $this->set['sorting'] = (int) $newSorting;
             }
         } else {
             parent::getNewPosition($mode, $pid, $insertInto);
@@ -1021,7 +1073,7 @@ class Driver extends DC_Table
      *
      * @param mixed $varValue
      *
-     * @throws Exception
+     * @throws \Exception
      */
     protected function save($varValue)
     {
@@ -1068,7 +1120,7 @@ class Driver extends DC_Table
         // Check whether the alias exists
         if ($objAlias->numRows > 0) {
             if (!$autoAlias) {
-                throw new InvalidArgumentException(sprintf($GLOBALS['TL_LANG']['ERR']['aliasExists'], $varValue));
+                throw new \InvalidArgumentException(sprintf($GLOBALS['TL_LANG']['ERR']['aliasExists'], $varValue));
             }
 
             // For child record take the parent record alias
@@ -1236,13 +1288,13 @@ class Driver extends DC_Table
         /** @var Request $request */
         $request = System::getContainer()->get('request_stack')->getCurrentRequest();
 
-        if (0 !== count($this->translatableLangs)) {
+        if (0 !== \count($this->translatableLangs)) {
             $needsReload = false;
 
             if ('tl_language' === $request->request->get('FORM_SUBMIT')) {
                 $language = $request->request->get('language');
 
-                if (in_array($language, $this->translatableLangs)) {
+                if (\in_array($language, $this->translatableLangs)) {
                     $objSessionBag->set($this->sessionKey, $language);
                 } else {
                     $objSessionBag->remove($this->sessionKey);
@@ -1283,7 +1335,7 @@ class Driver extends DC_Table
 
         $language = $objSessionBag->get($this->sessionKey);
 
-        if (null === $language || !in_array($language, $this->translatableLangs)) {
+        if (null === $language || !\in_array($language, $this->translatableLangs)) {
 
             return;
         }
@@ -1334,7 +1386,7 @@ class Driver extends DC_Table
     protected function addLanguageSwitchPanel($version)
     {
         // Check languages
-        if (!is_array($this->translatableLangs) || count($this->translatableLangs) <= 1) {
+        if (!\is_array($this->translatableLangs) || \count($this->translatableLangs) <= 1) {
 
             return $version;
         }
@@ -1357,7 +1409,7 @@ class Driver extends DC_Table
             $selected = $this->currentLang == $language || ($this->fallbackLang && $this->currentLang == '' && $this->fallbackLang == $language);
 
             // Show the languages that are already translated (fallback is always "translated")
-            if (in_array($language, $availableLangs) || ($language == $this->fallbackLang)) {
+            if (\in_array($language, $availableLangs) || ($language == $this->fallbackLang)) {
                 $available .= sprintf('<option value="%s"%s>%s</option>',
                     $value,
                     ($selected) ? ' selected="selected"' : '',
@@ -1382,7 +1434,7 @@ class Driver extends DC_Table
         return str_replace(
             '<div class="tl_version_panel">',
             '<div class="tl_version_panel language_panel">
-<form action="' . ampersand(Environment::get('request'), true) . '" id="tl_language" class="tl_form" method="post">
+<form action="' . StringUtil::ampersand(Environment::get('request'), true) . '" id="tl_language" class="tl_form" method="post">
 <div class="tl_formbody">
 <input type="hidden" name="FORM_SUBMIT" value="tl_language">
 <input type="hidden" name="REQUEST_TOKEN" value="' . REQUEST_TOKEN . '">
@@ -1390,7 +1442,7 @@ class Driver extends DC_Table
 ' . $available . $undefined . '
 </select>
 <noscript>
-<input type="submit" name="editLanguage" class="tl_submit" value="' . specialchars($GLOBALS['TL_LANG']['MSC']['editLanguage']) . '">
+<input type="submit" name="editLanguage" class="tl_submit" value="' . StringUtil::specialchars($GLOBALS['TL_LANG']['MSC']['editLanguage']) . '">
 </noscript>
 </div>
 </form>',
@@ -1445,7 +1497,7 @@ class Driver extends DC_Table
 
                 // Also we don't add it if the current language is not in the
                 // translatableFor setting
-                if (!in_array($this->currentLang, $translatableFor)) {
+                if (!\in_array($this->currentLang, $translatableFor)) {
                     continue;
                 }
 
