@@ -1126,6 +1126,11 @@ class Driver extends DC_Table
     {
         parent::deleteChilds($table, $id, $delete);
 
+        // Do not delete record if it is not a multilingual dataContainer
+        if ('Multilingual' !== $GLOBALS['TL_DCA'][$table]['config']['dataContainer']) {
+            return;
+        }
+
         // Do not delete record if there is no parent table
         if (empty($GLOBALS['TL_DCA'][$table]['config']['ptable'])) {
             return;
@@ -1252,6 +1257,18 @@ class Driver extends DC_Table
             } elseif ($this->strTable === $request->request->get('FORM_SUBMIT')
                 && $request->request->has('deleteLanguage')
             ) {
+                // Trigger the ondelete_callback
+                if (\is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['ondelete_callback'])) {
+                    foreach ($GLOBALS['TL_DCA'][$this->strTable]['config']['ondelete_callback'] as $callback) {
+                        if (\is_array($callback)) {
+                            $this->import($callback[0]);
+                            $this->{$callback[0]}->{$callback[1]}($this, '');
+                        } elseif (\is_callable($callback)) {
+                            $callback($this, '');
+                        }
+                    }
+                }
+
                 Database::getInstance()
                     ->prepare(
                         "DELETE FROM " . $this->strTable . "
@@ -1268,6 +1285,7 @@ class Driver extends DC_Table
 
             if ($needsReload) {
                 $_SESSION['TL_INFO'] = '';
+                Message::reset();
                 Controller::reload();
             }
         }
