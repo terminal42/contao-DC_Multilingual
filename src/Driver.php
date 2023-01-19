@@ -177,6 +177,11 @@ class Driver extends \DC_Table
             if (\Input::post('FORM_SUBMIT') == 'tl_version' && \Input::post('version') != '')
             {
                 $objVersions->restore(\Input::post('version'));
+
+                if (method_exists($this, 'invalidateCacheTags')) {
+				    $this->invalidateCacheTags();
+                }
+
                 $this->reload();
             }
         }
@@ -491,6 +496,10 @@ class Driver extends \DC_Table
             } else {
                 $this->Database->prepare("UPDATE " . $this->strTable . " SET tstamp=? WHERE id=?")
                                ->execute(time(), $this->intId);
+            }
+
+            if (method_exists($this, 'invalidateCacheTags')) {
+                $this->invalidateCacheTags();
             }
 
             // Redirect
