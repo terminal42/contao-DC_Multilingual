@@ -164,7 +164,20 @@ class Driver extends \DC_Table
         $this->procedure[] = 'id=?';
 
         $this->blnCreateNewVersion = false;
-        $objVersions = new \Versions($this->strTable, $this->intId);
+
+        // Handle language change or deletion
+        $this->handleLanguageOperation();
+
+        // Load the language record
+        $this->loadCurrentLanguageRecord();
+
+        $versionId = $this->intId;
+
+        if ($this->objActiveRecord && $this->objActiveRecord->id) {
+            $versionId = $this->objActiveRecord->id;
+        }
+
+        $objVersions = new \Versions($this->strTable, $versionId);
 
         if (!($GLOBALS['TL_DCA'][$this->strTable]['config']['hideVersionMenu'] ?? false)) {
             // Compare versions
@@ -185,12 +198,6 @@ class Driver extends \DC_Table
                 $this->reload();
             }
         }
-
-        // Handle language change or deletion
-        $this->handleLanguageOperation();
-
-        // Load the language record
-        $this->loadCurrentLanguageRecord();
 
         $objVersions->initialize();
 
