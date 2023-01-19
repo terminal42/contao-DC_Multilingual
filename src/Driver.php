@@ -38,7 +38,7 @@ class Driver extends DC_Table
     /**
      * True if we are editing a language that is not the fallback
      *
-     * @param bool
+     * @var bool
      */
     protected $editLang = false;
 
@@ -127,8 +127,8 @@ class Driver extends DC_Table
     /**
      * Auto-generate a form to edit the current database record
      *
-     * @param integer $intId
-     * @param integer $ajaxId
+     * @param int $intId
+     * @param int $ajaxId
      *
      * @return string
      *
@@ -662,9 +662,11 @@ class Driver extends DC_Table
      * Duplicate a particular record of the current table with all the
      * translations
      *
-     * @param  bool
+     * @param bool $blnDoNotRedirect
      *
      * @return int|bool
+     *
+     * @throws InternalServerErrorException
      */
     public function copy($blnDoNotRedirect = false)
     {
@@ -682,7 +684,7 @@ class Driver extends DC_Table
             $set = $this->set;
 
             foreach ($objTranslations->row() as $k => $v) {
-                if (array_key_exists($k, $GLOBALS['TL_DCA'][$this->strTable]['fields'])) {
+                if (\array_key_exists($k, $GLOBALS['TL_DCA'][$this->strTable]['fields'])) {
                     if (!($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['eval']['translatableFor'] ?? null)) {
                         if (isset($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['default'])) {
                             $set[$k] = $GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['default'];
@@ -745,10 +747,10 @@ class Driver extends DC_Table
     /**
      * Duplicate all child records of a duplicated record
      *
-     * @param string
-     * @param integer
-     * @param integer
-     * @param integer
+     * @param string $table
+     * @param int    $insertID
+     * @param int    $id
+     * @param int    $parentId
      */
     protected function copyChilds($table, $insertID, $id, $parentId)
     {
@@ -814,8 +816,8 @@ class Driver extends DC_Table
     /**
      * Generate a particular subpart of the tree and return it as HTML string
      *
-     * @param integer $id
-     * @param integer $level
+     * @param int $id
+     * @param int $level
      *
      * @return string
      */
@@ -892,16 +894,16 @@ class Driver extends DC_Table
     /**
      * Recursively generate the tree and return it as HTML string
      *
-     * @param string  $table
-     * @param integer $id
-     * @param array   $arrPrevNext
-     * @param boolean $blnHasSorting
-     * @param integer $intMargin
-     * @param array   $arrClipboard
-     * @param boolean $blnCircularReference
-     * @param boolean $protectedPage
-     * @param boolean $blnNoRecursion
-     * @param array   $arrFound
+     * @param string $table
+     * @param int    $id
+     * @param array  $arrPrevNext
+     * @param bool   $blnHasSorting
+     * @param int    $intMargin
+     * @param array  $arrClipboard
+     * @param bool   $blnCircularReference
+     * @param bool   $protectedPage
+     * @param bool   $blnNoRecursion
+     * @param array  $arrFound
      *
      * @return string
      */
@@ -958,9 +960,9 @@ class Driver extends DC_Table
     /**
      * Calculate the new position of a moved or inserted record
      *
-     * @param string
-     * @param integer
-     * @param boolean
+     * @param string     $mode
+     * @param int|null   $pid
+     * @param bool       $insertInto
      */
     protected function getNewPosition($mode, $pid = null, $insertInto = false)
     {
@@ -1156,7 +1158,9 @@ class Driver extends DC_Table
     /**
      * Delete record and associated translations
      *
-     * @param boolean
+     * @param bool $blnDoNotRedirect
+     *
+     * @throws InternalServerErrorException
      */
     public function delete($blnDoNotRedirect = false)
     {
@@ -1170,9 +1174,9 @@ class Driver extends DC_Table
     /**
      * Recursively get all related table names and language records
      *
-     * @param string
-     * @param integer
-     * @param array
+     * @param string  $table
+     * @param int     $id
+     * @param array   $delete
      */
     public function deleteChilds($table, $id, &$delete)
     {
@@ -1381,7 +1385,7 @@ class Driver extends DC_Table
      *
      * @param string $version
      *
-     * @return mixed
+     * @return array|string|string[]
      */
     protected function addLanguageSwitchPanel($version)
     {
