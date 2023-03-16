@@ -13,7 +13,10 @@ namespace Terminal42\DcMultilingualBundle\Model;
 
 use Contao\Database;
 use Contao\Database\Result;
+use Contao\DcaExtractor;
+use Contao\DcaLoader;
 use Contao\Model\Collection;
+use Contao\System;
 use Doctrine\DBAL\Query\QueryBuilder;
 use Terminal42\DcMultilingualBundle\QueryBuilder\MultilingualQueryBuilderFactoryInterface;
 
@@ -282,7 +285,7 @@ trait MultilingualTrait
     protected static function getMultilingualQueryBuilder()
     {
         /** @var MultilingualQueryBuilderFactoryInterface $factory */
-        $factory = \System::getContainer()->get('terminal42.dc_multilingual.querybuilder_factory');
+        $factory = System::getContainer()->get('terminal42.dc_multilingual.querybuilder_factory');
 
         return $factory->build(
             static::getTable(),
@@ -300,7 +303,7 @@ trait MultilingualTrait
      */
     protected static function getRegularFields()
     {
-        $extractor    = \DcaExtractor::getInstance(static::getTable());
+        $extractor    = DcaExtractor::getInstance(static::getTable());
         $tableColumns = Database::getInstance()->getFieldNames(static::getTable());
 
         return array_intersect($tableColumns, array_keys($extractor->getFields()));
@@ -347,7 +350,7 @@ trait MultilingualTrait
     protected static function ensureDataContainerIsLoaded()
     {
         if (!isset($GLOBALS['TL_DCA'][static::getTable()])) {
-            $loader = new \DcaLoader(static::getTable());
+            $loader = new DcaLoader(static::getTable());
             $loader->load();
         }
     }

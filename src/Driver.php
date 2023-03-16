@@ -11,9 +11,21 @@
 
 namespace Terminal42\DcMultilingualBundle;
 
+use Contao\Versions;
+use Contao\Input;
+use Contao\Environment;
+use Contao\Message;
+use Contao\Database;
+use Contao\Encryption;
+use Contao\PageModel;
+use Contao\Controller;
+use Exception;
+use Contao\StringUtil;
+use InvalidArgumentException;
 use Contao\CoreBundle\Exception\AccessDeniedException;
 use Contao\CoreBundle\Exception\InternalServerErrorException;
 use Contao\System;
+use Contao\DC_Table;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
 
@@ -22,7 +34,7 @@ use Symfony\Component\HttpFoundation\Session\SessionInterface;
  *
  * This class is based on the DC_Table driver of Contao 4.1
  */
-class Driver extends \DC_Table
+class Driver extends DC_Table
 {
     /**
      * True if we are editing a language that is not the fallback
@@ -146,7 +158,7 @@ class Driver extends \DC_Table
         if ($objRow->{$this->pidColumnName} > 0)
         {
             $this->sessionKey = 'dc_multilingual:' . $this->strTable . ':' . $objRow->{$this->pidColumnName};
-            $objSessionBag = \System::getContainer()->get('session')->getBag('contao_backend');
+            $objSessionBag = System::getContainer()->get('session')->getBag('contao_backend');
             $objSessionBag->set($this->sessionKey, $objRow->{$this->langColumnName});
             $this->redirect($this->addToUrl('id=' . $objRow->{$this->pidColumnName}));
         }
@@ -177,19 +189,19 @@ class Driver extends \DC_Table
             $versionId = $this->objActiveRecord->id;
         }
 
-        $objVersions = new \Versions($this->strTable, $versionId);
+        $objVersions = new Versions($this->strTable, $versionId);
 
         if (!($GLOBALS['TL_DCA'][$this->strTable]['config']['hideVersionMenu'] ?? false)) {
             // Compare versions
-            if (\Input::get('versions'))
+            if (Input::get('versions'))
             {
                 $objVersions->compare();
             }
 
             // Restore a version
-            if (\Input::post('FORM_SUBMIT') == 'tl_version' && \Input::post('version') != '')
+            if (Input::post('FORM_SUBMIT') == 'tl_version' && Input::post('version') != '')
             {
-                $objVersions->restore(\Input::post('version'));
+                $objVersions->restore(Input::post('version'));
 
                 if (method_exists($this, 'invalidateCacheTags')) {
 				    $this->invalidateCacheTags();
@@ -240,7 +252,7 @@ class Driver extends \DC_Table
             }
 
             /** @var SessionInterface $objSessionBag */
-            $objSessionBag = \System::getContainer()->get('session')->getBag('contao_backend');
+            $objSessionBag = System::getContainer()->get('session')->getBag('contao_backend');
 
             $class = 'tl_tbox';
             $fs = $objSessionBag->get('fieldset_states');
@@ -282,7 +294,7 @@ class Driver extends \DC_Table
                 {
                     if ($vv == '[EOF]')
                     {
-                        if ($blnAjax && \Environment::get('isAjaxRequest'))
+                        if ($blnAjax && Environment::get('isAjaxRequest'))
                         {
                             return $strAjax . '<input type="hidden" name="FORM_FIELDS[]" value="'.specialchars($this->strPalette).'">';
                         }
@@ -296,7 +308,7 @@ class Driver extends \DC_Table
                     if (preg_match('/^\[.*\]$/', $vv))
                     {
                         $thisId = 'sub_' . substr($vv, 1, -1);
-                        $blnAjax = ($ajaxId == $thisId && \Environment::get('isAjaxRequest')) ? true : false;
+                        $blnAjax = ($ajaxId == $thisId && Environment::get('isAjaxRequest')) ? true : false;
                         $return .= "\n" . '<div id="'.$thisId.'">';
 
                         continue;
@@ -369,12 +381,12 @@ class Driver extends \DC_Table
         $arrButtons = array();
         $arrButtons['save'] = '<button type="submit" name="save" id="save" class="tl_submit" accesskey="s">'.$GLOBALS['TL_LANG']['MSC']['save'].'</button>';
 
-        if (!\Input::get('nb'))
+        if (!Input::get('nb'))
         {
             $arrButtons['saveNclose'] = '<button type="submit" name="saveNclose" id="saveNclose" class="tl_submit" accesskey="c">'.$GLOBALS['TL_LANG']['MSC']['saveNclose'].'</button>';
         }
 
-        if (!\Input::get('popup') && !($GLOBALS['TL_DCA'][$this->strTable]['config']['closed'] ?? false) && !($GLOBALS['TL_DCA'][$this->strTable]['config']['notCreatable'] ?? false))
+        if (!Input::get('popup') && !($GLOBALS['TL_DCA'][$this->strTable]['config']['closed'] ?? false) && !($GLOBALS['TL_DCA'][$this->strTable]['config']['notCreatable'] ?? false))
         {
             $arrButtons['saveNcreate'] = '<button type="submit" name="saveNcreate" id="saveNcreate" class="tl_submit" accesskey="n">'.$GLOBALS['TL_LANG']['MSC']['saveNcreate'].'</button>';
         }
@@ -384,7 +396,7 @@ class Driver extends \DC_Table
             $arrButtons['saveNedit'] = '<button type="submit" name="saveNedit" id="saveNedit" class="tl_submit" accesskey="e">'.$GLOBALS['TL_LANG']['MSC']['saveNedit'].'</button>';
         }
 
-        if (!\Input::get('popup') && ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 4 || strlen($this->ptable) || ($GLOBALS['TL_DCA'][$this->strTable]['config']['switchToEdit'] ?? false)))
+        if (!Input::get('popup') && ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 4 || strlen($this->ptable) || ($GLOBALS['TL_DCA'][$this->strTable]['config']['switchToEdit'] ?? false)))
         {
             $arrButtons['saveNback'] = '<button type="submit" name="saveNback" id="saveNback" class="tl_submit" accesskey="g">'.$GLOBALS['TL_LANG']['MSC']['saveNback'].'</button>';
         }
@@ -436,11 +448,11 @@ class Driver extends \DC_Table
 
         // Begin the form (-> DO NOT CHANGE THIS ORDER -> this way the onsubmit attribute of the form can be changed by a field)
         $return = $version . '
-<div id="tl_buttons">' . (\Input::get('nb') ? '&nbsp;' : '
+<div id="tl_buttons">' . (Input::get('nb') ? '&nbsp;' : '
 <a href="'.$this->getReferer(true).'" class="header_back" title="'.specialchars($GLOBALS['TL_LANG']['MSC']['backBTTitle']).'" accesskey="b" onclick="Backend.getScrollOffset()">'.$GLOBALS['TL_LANG']['MSC']['backBT'].'</a>') . '
 </div>
-'.\Message::generate().'
-<form action="'.ampersand(\Environment::get('request'), true).'" id="'.$this->strTable.'" class="tl_form" method="post" enctype="' . ($this->blnUploadable ? 'multipart/form-data' : 'application/x-www-form-urlencoded') . '"'.(!empty($this->onsubmit) ? ' onsubmit="'.implode(' ', $this->onsubmit).'"' : '').' novalidate>
+'.Message::generate().'
+<form action="'.ampersand(Environment::get('request'), true).'" id="'.$this->strTable.'" class="tl_form" method="post" enctype="' . ($this->blnUploadable ? 'multipart/form-data' : 'application/x-www-form-urlencoded') . '"'.(!empty($this->onsubmit) ? ' onsubmit="'.implode(' ', $this->onsubmit).'"' : '').' novalidate>
 <div class="tl_formbody_edit">
 <input type="hidden" name="FORM_SUBMIT" value="'.$this->strTable.'">
 <input type="hidden" name="REQUEST_TOKEN" value="'.REQUEST_TOKEN.'">
@@ -449,7 +461,7 @@ class Driver extends \DC_Table
 <p class="tl_error">'.$GLOBALS['TL_LANG']['ERR']['general'].'</p>' : '').$return;
 
         // Reload the page to prevent _POST variables from being sent twice
-        if (\Input::post('FORM_SUBMIT') == $this->strTable && !$this->noReload)
+        if (Input::post('FORM_SUBMIT') == $this->strTable && !$this->noReload)
         {
             $arrValues = $this->values;
             array_unshift($arrValues, time());
@@ -512,35 +524,35 @@ class Driver extends \DC_Table
             // Redirect
             if (isset($_POST['saveNclose']))
             {
-                \Message::reset();
+                Message::reset();
 
                 if (version_compare(VERSION, '4.8', '<')) {
-                    \System::setCookie('BE_PAGE_OFFSET', 0, 0);
+                    System::setCookie('BE_PAGE_OFFSET', 0, 0);
                 }
 
                 $this->redirect($this->getReferer());
             }
             elseif (isset($_POST['saveNedit']))
             {
-                \Message::reset();
+                Message::reset();
 
                 if (version_compare(VERSION, '4.8', '<')) {
-                    \System::setCookie('BE_PAGE_OFFSET', 0, 0);
+                    System::setCookie('BE_PAGE_OFFSET', 0, 0);
                 }
 
                 $this->redirect($this->addToUrl($GLOBALS['TL_DCA'][$this->strTable]['list']['operations']['edit']['href'], false, array('s2e', 'act')));
             }
             elseif (isset($_POST['saveNback']))
             {
-                \Message::reset();
+                Message::reset();
 
                 if (version_compare(VERSION, '4.8', '<')) {
-                    \System::setCookie('BE_PAGE_OFFSET', 0, 0);
+                    System::setCookie('BE_PAGE_OFFSET', 0, 0);
                 }
 
                 if ($this->ptable == '')
                 {
-                    $this->redirect(TL_SCRIPT . '?do=' . \Input::get('do'));
+                    $this->redirect(TL_SCRIPT . '?do=' . Input::get('do'));
                 }
                 // TODO: try to abstract this
                 elseif (($this->ptable == 'tl_theme' && $this->strTable == 'tl_style_sheet') || ($this->ptable == 'tl_page' && $this->strTable == 'tl_article'))
@@ -554,17 +566,17 @@ class Driver extends \DC_Table
             }
             elseif (isset($_POST['saveNcreate']))
             {
-                \Message::reset();
+                Message::reset();
 
                 if (version_compare(VERSION, '4.8', '<')) {
-                    \System::setCookie('BE_PAGE_OFFSET', 0, 0);
+                    System::setCookie('BE_PAGE_OFFSET', 0, 0);
                 }
 
-                $strUrl = TL_SCRIPT . '?do=' . \Input::get('do');
+                $strUrl = TL_SCRIPT . '?do=' . Input::get('do');
 
                 if (isset($_GET['table']))
                 {
-                    $strUrl .= '&amp;table=' . \Input::get('table');
+                    $strUrl .= '&amp;table=' . Input::get('table');
                 }
 
                 // Tree view
@@ -619,7 +631,7 @@ class Driver extends \DC_Table
     {
         $insertId = parent::copy(true);
         $time = time();
-        $objTranslations = \Database::getInstance()
+        $objTranslations = Database::getInstance()
             ->prepare(
                 "SELECT *
                  FROM " . $this->strTable . "
@@ -642,7 +654,7 @@ class Driver extends \DC_Table
                     }
                     // Empty unique fields or add a unique identifier in copyAll mode
                     if ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['eval']['unique'] ?? false) {
-                        if (\Input::get('act') == 'copyAll') {
+                        if (Input::get('act') == 'copyAll') {
                             $v = $v . '-' . substr(md5(uniqid(mt_rand(), true)), 0, 8);
                         } else {
                             $v = '';
@@ -664,7 +676,7 @@ class Driver extends \DC_Table
 
                         // Encrypt the default value (see #3740)
                         if ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['eval']['encrypt']) {
-                            $v = \Encryption::encrypt($v);
+                            $v = Encryption::encrypt($v);
                         }
                     }
 
@@ -678,7 +690,7 @@ class Driver extends \DC_Table
             $set[$this->langColumnName] = $objTranslations->{$this->langColumnName};
             unset($set['id']);
 
-            \Database::getInstance()->prepare("INSERT INTO {$this->strTable} %s")->set($set)->execute();
+            Database::getInstance()->prepare("INSERT INTO {$this->strTable} %s")->set($set)->execute();
         }
 
         // Switch to edit mode
@@ -704,13 +716,13 @@ class Driver extends \DC_Table
 
         $pidColumnName = $GLOBALS['TL_DCA'][$table]['config']['langPid'] ?? $this->pidColumnName;
 
-        $objLanguage = \Database::getInstance()->prepare("SELECT id FROM " . $table . " WHERE " . $pidColumnName . "=? AND id>?")
+        $objLanguage = Database::getInstance()->prepare("SELECT id FROM " . $table . " WHERE " . $pidColumnName . "=? AND id>?")
             ->limit(1)
             ->execute($id, $parentId);
 
         // Update the language pid column
         if ($objLanguage->numRows) {
-            \Database::getInstance()->prepare("UPDATE " . $table . " SET " . $pidColumnName . "=? WHERE id=?")
+            Database::getInstance()->prepare("UPDATE " . $table . " SET " . $pidColumnName . "=? WHERE id=?")
                 ->execute($insertID, $objLanguage->id);
         }
     }
@@ -745,13 +757,13 @@ class Driver extends \DC_Table
 
         $orderBy = '';
 
-        if (\Database::getInstance()->fieldExists('sorting', $table)) {
+        if (Database::getInstance()->fieldExists('sorting', $table)) {
             $orderBy = " ORDER BY sorting";
         }
 
         $where = implode(' AND ', $where);
 
-        $this->root = \Database::getInstance()
+        $this->root = Database::getInstance()
             ->query("SELECT id FROM $table WHERE " . $where . $orderBy)
             ->fetchEach('id');
 
@@ -769,7 +781,7 @@ class Driver extends \DC_Table
      */
     public function ajaxTreeView($id, $level)
     {
-        if (!\Environment::get('isAjaxRequest'))
+        if (!Environment::get('isAjaxRequest'))
         {
             return '';
         }
@@ -783,7 +795,7 @@ class Driver extends \DC_Table
         {
             $table = $this->ptable;
 
-            \System::loadLanguageFile($table);
+            System::loadLanguageFile($table);
             $this->loadDataContainer($table);
 
             $blnPtable = true;
@@ -794,7 +806,7 @@ class Driver extends \DC_Table
         // Check protected pages
         if ($table == 'tl_page')
         {
-            $objParent = \PageModel::findWithDetails($id);
+            $objParent = PageModel::findWithDetails($id);
             $blnProtected = $objParent->protected ? true : false;
         }
 
@@ -812,7 +824,7 @@ class Driver extends \DC_Table
         }
 
         /** @var SessionInterface $objSession */
-        $objSession = \System::getContainer()->get('session');
+        $objSession = System::getContainer()->get('session');
 
         $blnClipboard = false;
         $arrClipboard = $objSession->get('CLIPBOARD');
@@ -853,7 +865,7 @@ class Driver extends \DC_Table
     {
         // Check whether there are child records
         if (!$blnNoRecursion) {
-            \Controller::loadDataContainer($table);
+            Controller::loadDataContainer($table);
 
             if ($GLOBALS['TL_DCA'][$table]['config']['dataContainer'] === 'Multilingual'
                 && ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] === 5 || $GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] === 6 || $this->strTable != $table)
@@ -868,7 +880,7 @@ class Driver extends \DC_Table
                 $node = ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 6) ? $this->strTable . '_' . $table . '_tree' : $this->strTable . '_tree';
                 $blnIsOpen = (!empty($arrFound) || ($session[$node][$id] ?? null) == 1);
                 if ($blnIsOpen) {
-                    $translationIds = \Database::getInstance()->prepare(
+                    $translationIds = Database::getInstance()->prepare(
                         "SELECT id FROM " . $table . " WHERE pid=? AND $langColumn=''")
                         ->execute($id)
                         ->fetchEach('id');
@@ -881,7 +893,7 @@ class Driver extends \DC_Table
                     static $languageRecords;
 
                     if (!is_array($languageRecords)) {
-                        $languageRecords = \Database::getInstance()->execute("SELECT id FROM $table WHERE $langColumn=''")
+                        $languageRecords = Database::getInstance()->execute("SELECT id FROM $table WHERE $langColumn=''")
                             ->fetchEach('id');
 
                         $languageRecords = array_map('intval', $languageRecords);
@@ -909,7 +921,7 @@ class Driver extends \DC_Table
     protected function getNewPosition($mode, $pid = null, $insertInto = false)
     {
         // If there is pid and sorting
-        if (\Database::getInstance()->fieldExists('pid', $this->strTable) && \Database::getInstance()->fieldExists('sorting', $this->strTable)) {
+        if (Database::getInstance()->fieldExists('pid', $this->strTable) && Database::getInstance()->fieldExists('sorting', $this->strTable)) {
             // PID is not set - only valid for duplicated records, as they get the same parent ID as the original record!
             if ($pid === null && $this->intId && $mode == 'copy') {
                 $pid = $this->intId;
@@ -924,7 +936,7 @@ class Driver extends \DC_Table
                 if ($insertInto) {
                     $newPID = $pid;
 
-                    $objSorting = \Database::getInstance()->prepare("SELECT MIN(sorting) AS sorting FROM " . $this->strTable . " WHERE pid=? AND ({$this->pidColumnName}=0 OR {$this->pidColumnName} IS NULL)")
+                    $objSorting = Database::getInstance()->prepare("SELECT MIN(sorting) AS sorting FROM " . $this->strTable . " WHERE pid=? AND ({$this->pidColumnName}=0 OR {$this->pidColumnName} IS NULL)")
                         ->execute($pid);
 
                     // Select sorting value of the first record
@@ -933,14 +945,14 @@ class Driver extends \DC_Table
 
                         // Resort if the new sorting value is not an integer or smaller than 1
                         if (($curSorting % 2) != 0 || $curSorting < 1) {
-                            $objNewSorting = \Database::getInstance()->prepare("SELECT id FROM " . $this->strTable . " WHERE pid=? AND ({$this->pidColumnName}=0 OR {$this->pidColumnName} IS NULL) ORDER BY sorting")
+                            $objNewSorting = Database::getInstance()->prepare("SELECT id FROM " . $this->strTable . " WHERE pid=? AND ({$this->pidColumnName}=0 OR {$this->pidColumnName} IS NULL) ORDER BY sorting")
                                 ->execute($pid);
 
                             $count = 2;
                             $newSorting = 128;
 
                             while ($objNewSorting->next()) {
-                                \Database::getInstance()->prepare("UPDATE " . $this->strTable . " SET sorting=? WHERE id=?")
+                                Database::getInstance()->prepare("UPDATE " . $this->strTable . " SET sorting=? WHERE id=?")
                                     ->limit(1)
                                     ->execute(($count++ * 128), $objNewSorting->id);
                             }
@@ -950,7 +962,7 @@ class Driver extends \DC_Table
                     else $newSorting = 128;
                 } // Else insert the current record after the parent record
                 elseif ($pid > 0) {
-                    $objSorting = \Database::getInstance()->prepare("SELECT pid, sorting FROM " . $this->strTable . " WHERE id=? AND ({$this->pidColumnName}=0 OR {$this->pidColumnName} IS NULL)")
+                    $objSorting = Database::getInstance()->prepare("SELECT pid, sorting FROM " . $this->strTable . " WHERE id=? AND ({$this->pidColumnName}=0 OR {$this->pidColumnName} IS NULL)")
                         ->limit(1)
                         ->execute($pid);
 
@@ -961,7 +973,7 @@ class Driver extends \DC_Table
 
                         // Do not proceed without a parent ID
                         if (is_numeric($newPID)) {
-                            $objNextSorting = \Database::getInstance()->prepare("SELECT MIN(sorting) AS sorting FROM " . $this->strTable . " WHERE pid=? AND ({$this->pidColumnName}=0 OR {$this->pidColumnName} IS NULL) AND sorting>?")
+                            $objNextSorting = Database::getInstance()->prepare("SELECT MIN(sorting) AS sorting FROM " . $this->strTable . " WHERE pid=? AND ({$this->pidColumnName}=0 OR {$this->pidColumnName} IS NULL) AND sorting>?")
                                 ->execute($newPID, $curSorting);
 
                             // Select sorting value of the next record
@@ -972,11 +984,11 @@ class Driver extends \DC_Table
                                 if ((($curSorting + $nxtSorting) % 2) != 0 || $nxtSorting >= 4294967295) {
                                     $count = 1;
 
-                                    $objNewSorting = \Database::getInstance()->prepare("SELECT id, sorting FROM " . $this->strTable . " WHERE pid=? AND ({$this->pidColumnName}=0 OR {$this->pidColumnName} IS NULL) ORDER BY sorting")
+                                    $objNewSorting = Database::getInstance()->prepare("SELECT id, sorting FROM " . $this->strTable . " WHERE pid=? AND ({$this->pidColumnName}=0 OR {$this->pidColumnName} IS NULL) ORDER BY sorting")
                                         ->execute($newPID);
 
                                     while ($objNewSorting->next()) {
-                                        \Database::getInstance()->prepare("UPDATE " . $this->strTable . " SET sorting=? WHERE id=?")
+                                        Database::getInstance()->prepare("UPDATE " . $this->strTable . " SET sorting=? WHERE id=?")
                                             ->execute(($count++ * 128), $objNewSorting->id);
 
                                         if ($objNewSorting->sorting == $curSorting) {
@@ -1009,11 +1021,11 @@ class Driver extends \DC_Table
      *
      * @param mixed $varValue
      *
-     * @throws \Exception
+     * @throws Exception
      */
     protected function save($varValue)
     {
-        if (\Input::post('FORM_SUBMIT') != $this->strTable) {
+        if (Input::post('FORM_SUBMIT') != $this->strTable) {
             return;
         }
 
@@ -1030,10 +1042,10 @@ class Driver extends \DC_Table
         // Generate $varValue alias if there is none
         if ('' === $varValue) {
             $autoAlias = true;
-            $varValue = \StringUtil::generateAlias($this->objActiveRecord->{$fromField});
+            $varValue = StringUtil::generateAlias($this->objActiveRecord->{$fromField});
         }
 
-        $records = \Database::getInstance()
+        $records = Database::getInstance()
             ->prepare("SELECT id FROM {$this->strTable} WHERE {$this->pidColumnName}=?")
             ->execute(($this->objActiveRecord->{$this->pidColumnName} > 0) ? $this->objActiveRecord->{$this->pidColumnName} : $this->objActiveRecord->id)
         ;
@@ -1047,7 +1059,7 @@ class Driver extends \DC_Table
         }
 
         // Check for duplicates in current language
-        $objAlias = \Database::getInstance()->prepare(
+        $objAlias = Database::getInstance()->prepare(
             "SELECT id FROM {$this->strTable} WHERE id NOT IN (" . implode(',', $excludedIds) . ") AND {$this->strField}=? AND {$this->langColumnName}=?"
         )->execute($varValue, $this->currentLang);
 
@@ -1056,12 +1068,12 @@ class Driver extends \DC_Table
         // Check whether the alias exists
         if ($objAlias->numRows > 0) {
             if (!$autoAlias) {
-                throw new \InvalidArgumentException(sprintf($GLOBALS['TL_LANG']['ERR']['aliasExists'], $varValue));
+                throw new InvalidArgumentException(sprintf($GLOBALS['TL_LANG']['ERR']['aliasExists'], $varValue));
             }
 
             // For child record take the parent record alias
             if ($this->objActiveRecord->{$this->pidColumnName} > 0) {
-                $parent = \Database::getInstance()
+                $parent = Database::getInstance()
                     ->prepare("SELECT {$this->strField} FROM {$this->strTable} WHERE id=?")
                     ->execute($this->objActiveRecord->{$this->pidColumnName})
                 ;
@@ -1096,7 +1108,7 @@ class Driver extends \DC_Table
      */
     public function delete($blnDoNotRedirect = false)
     {
-        \Database::getInstance()->prepare("DELETE FROM " . $this->strTable . " WHERE " . $this->pidColumnName . "=?")
+        Database::getInstance()->prepare("DELETE FROM " . $this->strTable . " WHERE " . $this->pidColumnName . "=?")
             ->execute($this->intId);
 
         parent::delete($blnDoNotRedirect);
@@ -1123,7 +1135,7 @@ class Driver extends \DC_Table
         // be a child table
         $pidColumnName = $GLOBALS['TL_DCA'][$table]['config']['langPid'] ?? $this->pidColumnName;
 
-        $objLanguages = \Database::getInstance()->prepare(
+        $objLanguages = Database::getInstance()->prepare(
             "SELECT id FROM " . $table . " WHERE " . $pidColumnName . " IN (SELECT id FROM " . $table . " WHERE pid=?)")
             ->execute($id);
 
@@ -1195,7 +1207,7 @@ class Driver extends \DC_Table
      */
     protected function getRootPageLanguages()
     {
-        $objPages = \Database::getInstance()->execute("SELECT DISTINCT language FROM tl_page WHERE type='root' AND language!=''");
+        $objPages = Database::getInstance()->execute("SELECT DISTINCT language FROM tl_page WHERE type='root' AND language!=''");
         $languages = $objPages->fetchEach('language');
 
         array_walk(
@@ -1219,10 +1231,10 @@ class Driver extends \DC_Table
         }
 
         /** @var SessionInterface $objSessionBag */
-        $objSessionBag = \System::getContainer()->get('session')->getBag('contao_backend');
+        $objSessionBag = System::getContainer()->get('session')->getBag('contao_backend');
 
         /** @var Request $request */
-        $request = \System::getContainer()->get('request_stack')->getCurrentRequest();
+        $request = System::getContainer()->get('request_stack')->getCurrentRequest();
 
         if (0 !== count($this->translatableLangs)) {
             $needsReload = false;
@@ -1240,7 +1252,7 @@ class Driver extends \DC_Table
             } elseif ($this->strTable === $request->request->get('FORM_SUBMIT')
                 && $request->request->has('deleteLanguage')
             ) {
-                \Database::getInstance()
+                Database::getInstance()
                     ->prepare(
                         "DELETE FROM " . $this->strTable . "
                          WHERE {$this->pidColumnName}=? AND {$this->langColumnName}=?"
@@ -1256,7 +1268,7 @@ class Driver extends \DC_Table
 
             if ($needsReload) {
                 $_SESSION['TL_INFO'] = '';
-                \Controller::reload();
+                Controller::reload();
             }
         }
     }
@@ -1267,7 +1279,7 @@ class Driver extends \DC_Table
     protected function loadCurrentLanguageRecord()
     {
         /** @var SessionInterface $objSessionBag */
-        $objSessionBag = \System::getContainer()->get('session')->getBag('contao_backend');
+        $objSessionBag = System::getContainer()->get('session')->getBag('contao_backend');
 
         $language = $objSessionBag->get($this->sessionKey);
 
@@ -1276,33 +1288,33 @@ class Driver extends \DC_Table
             return;
         }
 
-        $objRow = \Database::getInstance()->prepare("SELECT * FROM " . $this->strTable . " WHERE {$this->pidColumnName}=? AND {$this->langColumnName}=?")->execute($this->intId, $language);
+        $objRow = Database::getInstance()->prepare("SELECT * FROM " . $this->strTable . " WHERE {$this->pidColumnName}=? AND {$this->langColumnName}=?")->execute($this->intId, $language);
 
         if (!$objRow->numRows) {
             // Preserve the "pid" field
-            if (\Database::getInstance()->fieldExists('pid', $this->strTable)) {
-                $objCurrent = \Database::getInstance()->prepare("SELECT pid FROM " . $this->strTable . " WHERE id=?")
+            if (Database::getInstance()->fieldExists('pid', $this->strTable)) {
+                $objCurrent = Database::getInstance()->prepare("SELECT pid FROM " . $this->strTable . " WHERE id=?")
                     ->limit(1)
                     ->execute($this->intId);
 
                 $intPid = ($objCurrent->numRows) ? $objCurrent->pid : 0;
 
                 if ($GLOBALS['TL_DCA'][$this->strTable]['config']['dynamicPtable'] ?? null) {
-                    $intId = \Database::getInstance()->prepare("INSERT INTO " . $this->strTable . " ({$this->pidColumnName},tstamp,{$this->langColumnName},pid,ptable) VALUES (?,?,?,?,?)")
+                    $intId = Database::getInstance()->prepare("INSERT INTO " . $this->strTable . " ({$this->pidColumnName},tstamp,{$this->langColumnName},pid,ptable) VALUES (?,?,?,?,?)")
                         ->execute($this->intId, time(), $language, $intPid, $this->ptable)
                         ->insertId;
                 } else {
-                    $intId = \Database::getInstance()->prepare("INSERT INTO " . $this->strTable . " ({$this->pidColumnName},tstamp,{$this->langColumnName},pid) VALUES (?,?,?,?)")
+                    $intId = Database::getInstance()->prepare("INSERT INTO " . $this->strTable . " ({$this->pidColumnName},tstamp,{$this->langColumnName},pid) VALUES (?,?,?,?)")
                         ->execute($this->intId, time(), $language, $intPid)
                         ->insertId;
                 }
             } else {
-                $intId = \Database::getInstance()->prepare("INSERT INTO " . $this->strTable . " ({$this->pidColumnName},tstamp,{$this->langColumnName}) VALUES (?,?,?)")
+                $intId = Database::getInstance()->prepare("INSERT INTO " . $this->strTable . " ({$this->pidColumnName},tstamp,{$this->langColumnName}) VALUES (?,?,?)")
                     ->execute($this->intId, time(), $language)
                     ->insertId;
             }
 
-            $objRow = \Database::getInstance()->prepare("SELECT * FROM " . $this->strTable . " WHERE id=?")->execute($intId);
+            $objRow = Database::getInstance()->prepare("SELECT * FROM " . $this->strTable . " WHERE id=?")->execute($intId);
         }
 
         $this->objActiveRecord  = $objRow;
@@ -1332,10 +1344,10 @@ class Driver extends \DC_Table
             $version = '<div class="tl_version_panel"></div>';
         }
 
-        $availableLangs = \Database::getInstance()->prepare("SELECT {$this->langColumnName} FROM " . $this->strTable . " WHERE {$this->pidColumnName}=?")
+        $availableLangs = Database::getInstance()->prepare("SELECT {$this->langColumnName} FROM " . $this->strTable . " WHERE {$this->pidColumnName}=?")
             ->execute($this->intId)
             ->fetchEach($this->langColumnName);
-        $langLabels = \System::getLanguages();
+        $langLabels = System::getLanguages();
         $available = ($this->fallbackLang) ? '' : '<option value="">' . $GLOBALS['TL_LANG']['MSC']['defaultLanguage'] . '</option>';
         $undefined = '';
 
@@ -1370,7 +1382,7 @@ class Driver extends \DC_Table
         return str_replace(
             '<div class="tl_version_panel">',
             '<div class="tl_version_panel language_panel">
-<form action="' . ampersand(\Environment::get('request'), true) . '" id="tl_language" class="tl_form" method="post">
+<form action="' . ampersand(Environment::get('request'), true) . '" id="tl_language" class="tl_form" method="post">
 <div class="tl_formbody">
 <input type="hidden" name="FORM_SUBMIT" value="tl_language">
 <input type="hidden" name="REQUEST_TOKEN" value="' . REQUEST_TOKEN . '">
