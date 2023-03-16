@@ -1,31 +1,37 @@
 {
-    "name":"terminal42/dc_multilingual",
-    "description":"A multilingual DC driver storing the translations in the same table for Contao Open Source CMS",
-    "keywords":["contao", "multilingual", "driver"],
-    "type":"contao-module",
-    "license":"LGPL-3.0+",
-    "authors":[{
-        "name":"terminal42 gmbh",
-        "homepage":"https://www.terminal42.ch"
-    }, {
-        "name":"Codefog",
-        "homepage":"http://codefog.pl"
-    }],
-    "funding": [{
-        "type": "github",
-        "url": "https://github.com/terminal42"
-    }, {
-        "type": "other",
-        "url": "https://ko-fi.com/terminal42"
-    }],
+    "name": "terminal42/dc_multilingual",
+    "description": "A multilingual DC driver storing the translations in the same table for Contao Open Source CMS",
+    "keywords": ["contao", "multilingual", "driver"],
+    "type": "contao-bundle",
+    "license": "LGPL-3.0+",
+    "authors": [
+        {
+            "name": "terminal42 gmbh",
+            "homepage": "https://www.terminal42.ch"
+        },
+        {
+            "name": "Codefog",
+            "homepage": "https://codefog.pl"
+        }
+    ],
+    "funding": [
+        {
+            "type": "github",
+            "url": "https://github.com/terminal42"
+        },
+        {
+            "type": "other",
+            "url": "https://ko-fi.com/terminal42"
+        }
+    ],
     "support": {
         "issues": "https://github.com/terminal42/contao-DC_Multilingual/issues",
         "source": "https://github.com/terminal42/contao-DC_Multilingual",
         "forum": "https://community.contao.org"
     },
-    "require":{
+    "require": {
         "php": "^7.1 || ^8.0",
-        "contao/core-bundle": "^4.4",
+        "contao/core-bundle": "^4.9",
         "doctrine/dbal": "^2.11 || ^3.0"
     },
     "require-dev": {
@@ -34,9 +40,6 @@
     },
     "conflict": {
         "contao/manager-plugin": "<2.0 || >=3.0"
-    },
-    "replace": {
-        "contao-legacy/dc_multilingual": "self.version"
     },
     "autoload": {
         "classmap": [

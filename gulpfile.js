@@ -9,8 +9,8 @@ const production = true;
 
 // Configuration
 const styles = [
-    'src/Resources/public/*.css',
-    '!src/Resources/public/*.min.css'
+    'public/*.css',
+    '!public/*.min.css'
 ];
 
 // Build styles
@@ -27,7 +27,7 @@ gulp.task('styles', function () {
 gulp.task('watch', function () {
     gulp.watch(
         [
-            'src/Resources/public/*.css'
+            'public/*.css'
         ],
         ['styles']
     );
