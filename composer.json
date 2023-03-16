@@ -35,8 +35,7 @@
         "doctrine/dbal": "^2.11 || ^3.0"
     },
     "require-dev": {
-        "contao/manager-plugin": "^2.0",
-        "friendsofphp/php-cs-fixer": "^2.1"
+        "contao/manager-plugin": "^2.0"
     },
     "conflict": {
         "contao/manager-plugin": "<2.0 || >=3.0"
@@ -52,10 +51,7 @@
     "extra": {
         "contao-manager-plugin": "Terminal42\\DcMultilingualBundle\\ContaoManager\\Plugin"
     },
-    "config": {
-        "allow-plugins": {
-            "composer/package-versions-deprecated": true,
-            "contao/manager-plugin": true
-        }
+    "scripts": {
+        "cs-fixer": "@php tools/ecs/vendor/bin/ecs check src --config tools/ecs/config.php --fix --ansi"
     }
 }

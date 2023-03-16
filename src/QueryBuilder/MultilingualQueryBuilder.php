@@ -1,18 +1,10 @@
 <?php
 
-/*
- * dc_multilingual Extension for Contao Open Source CMS
- *
- * @copyright  Copyright (c) 2011-2017, terminal42 gmbh
- * @author     terminal42 gmbh <info@terminal42.ch>
- * @license    http://opensource.org/licenses/lgpl-3.0.html LGPL
- * @link       http://github.com/terminal42/contao-dc_multilingual
- */
+declare(strict_types=1);
 
 namespace Terminal42\DcMultilingualBundle\QueryBuilder;
 
 use Doctrine\DBAL\Query\QueryBuilder;
-use function array_intersect;
 
 class MultilingualQueryBuilder implements MultilingualQueryBuilderInterface
 {
@@ -49,21 +41,12 @@ class MultilingualQueryBuilder implements MultilingualQueryBuilderInterface
     /**
      * MultilingualQueryBuilder constructor.
      *
-     * @param QueryBuilder $qb
-     * @param string       $table
-     * @param string       $pidColumnName
-     * @param string       $langColumnName
-     * @param array        $regularFields
-     * @param array        $translatableFields
+     * @param string $table
+     * @param string $pidColumnName
+     * @param string $langColumnName
      */
-    public function __construct(
-        QueryBuilder $qb,
-        $table,
-        $pidColumnName,
-        $langColumnName,
-        array $regularFields,
-        array $translatableFields
-    ) {
+    public function __construct(QueryBuilder $qb, $table, $pidColumnName, $langColumnName, array $regularFields, array $translatableFields)
+    {
         $this->qb = $qb;
         $this->table = $table;
         $this->langColumnName = $langColumnName;
@@ -75,27 +58,26 @@ class MultilingualQueryBuilder implements MultilingualQueryBuilderInterface
     /**
      * Build the query for a simple count query.
      */
-    public function buildQueryBuilderForCount()
+    public function buildQueryBuilderForCount(): void
     {
         $this->qb->resetQueryParts();
 
         $this->qb->addSelect("COUNT({$this->table}.id) AS count")
             ->from($this->table, $this->table)
-            ->where("{$this->table}.{$this->pidColumnName}=0");
+            ->where("{$this->table}.{$this->pidColumnName}=0")
+        ;
     }
 
     /**
      * Build the query for a simple count query with a subquery.
-     *
-     * @param QueryBuilder $queryBuilder
      */
-    public function buildQueryBuilderForCountWithSubQuery(QueryBuilder $queryBuilder)
+    public function buildQueryBuilderForCountWithSubQuery(QueryBuilder $queryBuilder): void
     {
         $this->qb->resetQueryParts();
 
-        $this->qb->addSelect("COUNT(t1.id) AS count")
+        $this->qb->addSelect('COUNT(t1.id) AS count')
             ->from($this->table, 't1')
-            ->join('t1', sprintf('(%s)', $queryBuilder->getSQL()), 't3', "t1.id = t3.id")
+            ->join('t1', sprintf('(%s)', $queryBuilder->getSQL()), 't3', 't1.id = t3.id')
         ;
     }
 
@@ -104,12 +86,13 @@ class MultilingualQueryBuilder implements MultilingualQueryBuilderInterface
      *
      * @param string $language
      */
-    public function buildQueryBuilderForFind($language)
+    public function buildQueryBuilderForFind($language): void
     {
         $this->qb->resetQueryParts();
 
         // Always translate system columns
         $systemColumns = ['id', $this->langColumnName, $this->pidColumnName];
+
         foreach ($systemColumns as $field) {
             $this->qb->addSelect("IFNULL(translation.$field, {$this->table}.$field) AS $field");
         }
@@ -120,7 +103,7 @@ class MultilingualQueryBuilder implements MultilingualQueryBuilderInterface
         }
 
         // Translatable fields
-        foreach (array_intersect($this->translatableFields, $this->regularFields) as $field) {
+        foreach (\array_intersect($this->translatableFields, $this->regularFields) as $field) {
             $this->qb->addSelect("IFNULL(translation.$field, {$this->table}.$field) AS $field");
         }
 

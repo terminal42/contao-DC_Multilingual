@@ -1,13 +1,6 @@
 <?php
 
-/*
- * dc_multilingual Extension for Contao Open Source CMS
- *
- * @copyright  Copyright (c) 2011-2017, terminal42 gmbh
- * @author     terminal42 gmbh <info@terminal42.ch>
- * @license    http://opensource.org/licenses/lgpl-3.0.html LGPL
- * @link       http://github.com/terminal42/contao-dc_multilingual
- */
+declare(strict_types=1);
 
 namespace Terminal42\DcMultilingualBundle\Model;
 
@@ -19,6 +12,7 @@ use Contao\Model\Collection;
 use Contao\System;
 use Doctrine\DBAL\Query\QueryBuilder;
 use Terminal42\DcMultilingualBundle\QueryBuilder\MultilingualQueryBuilderFactoryInterface;
+use Terminal42\DcMultilingualBundle\QueryBuilder\MultilingualQueryBuilderInterface;
 
 trait MultilingualTrait
 {
@@ -86,8 +80,9 @@ trait MultilingualTrait
      */
     public static function findByAlias($alias, $aliasColumnName = 'alias', $options = [])
     {
-        $table   = static::getTable();
-        $options = array_merge([
+        $table = static::getTable();
+        $options = array_merge(
+            [
                 'limit' => 1,
                 'column' => ["$table.$aliasColumnName=?"],
                 'value' => [$alias],
@@ -110,8 +105,9 @@ trait MultilingualTrait
      */
     public static function findByMultilingualAlias($alias, $aliasColumnName = 'alias', $options = [])
     {
-        $table   = static::getTable();
-        $options = array_merge([
+        $table = static::getTable();
+        $options = array_merge(
+            [
                 'limit' => 1,
                 'column' => ["($table.$aliasColumnName=? OR translation.$aliasColumnName=?)"],
                 'value' => [$alias, $alias],
@@ -169,6 +165,7 @@ trait MultilingualTrait
 
         // Consider the fallback language
         $fallbackLang = static::getFallbackLanguage();
+
         if (null !== $fallbackLang && $fallbackLang === $options['language']) {
             $options['language'] = '';
         }
@@ -206,7 +203,7 @@ trait MultilingualTrait
     }
 
     /**
-     * Prevent model from saving when creating a model from a database result. See #51
+     * Prevent model from saving when creating a model from a database result. See #51.
      *
      * @param Result $objResult The database result object
      *
@@ -221,7 +218,7 @@ trait MultilingualTrait
     }
 
     /**
-     * Prevent new models from saving when creating a new collection from a database result. See #51
+     * Prevent new models from saving when creating a new collection from a database result. See #51.
      *
      * @param Result $objResult The database result object
      * @param string $strTable  The table name
@@ -242,15 +239,12 @@ trait MultilingualTrait
 
     /**
      * Apply the model options to the query builder.
-     *
-     * @param QueryBuilder $qb
-     * @param array        $options
      */
-    protected static function applyOptionsToQueryBuilder(QueryBuilder $qb, array $options)
+    protected static function applyOptionsToQueryBuilder(QueryBuilder $qb, array $options): void
     {
         // Columns
         if (!empty($options['column'])) {
-            if (is_array($options['column'])) {
+            if (\is_array($options['column'])) {
                 foreach ($options['column'] as $column) {
                     $qb->andWhere($column);
                 }
@@ -280,7 +274,7 @@ trait MultilingualTrait
     /**
      * Get the MultilingualQueryBuilder.
      *
-     * @return \Terminal42\DcMultilingualBundle\QueryBuilder\MultilingualQueryBuilderInterface
+     * @return MultilingualQueryBuilderInterface
      */
     protected static function getMultilingualQueryBuilder()
     {
@@ -303,7 +297,7 @@ trait MultilingualTrait
      */
     protected static function getRegularFields()
     {
-        $extractor    = DcaExtractor::getInstance(static::getTable());
+        $extractor = DcaExtractor::getInstance(static::getTable());
         $tableColumns = Database::getInstance()->getFieldNames(static::getTable());
 
         return array_intersect($tableColumns, array_keys($extractor->getFields()));
@@ -318,11 +312,11 @@ trait MultilingualTrait
     {
         static::ensureDataContainerIsLoaded();
 
-        $fields       = [];
+        $fields = [];
         $tableColumns = Database::getInstance()->getFieldNames(static::getTable());
 
         foreach ($GLOBALS['TL_DCA'][static::getTable()]['fields'] as $field => $data) {
-            if (!isset($data['eval']['translatableFor']) || !in_array($field, $tableColumns, true)) {
+            if (!isset($data['eval']['translatableFor']) || !\in_array($field, $tableColumns, true)) {
                 continue;
             }
 
@@ -347,7 +341,7 @@ trait MultilingualTrait
     /**
      * Ensure the data container is loaded.
      */
-    protected static function ensureDataContainerIsLoaded()
+    protected static function ensureDataContainerIsLoaded(): void
     {
         if (!isset($GLOBALS['TL_DCA'][static::getTable()])) {
             $loader = new DcaLoader(static::getTable());

@@ -1,4 +1,4 @@
-/vendor
+/node_modules/
+/tools/**/vendor/
+/vendor/
 /composer.lock
-/.php_cs.cache
-/node_modules
