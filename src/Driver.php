@@ -740,8 +740,10 @@ class Driver extends DC_Table
         // Child mode
         if ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 6) {
             $table = $GLOBALS['TL_DCA'][$this->strTable]['config']['ptable'];
+            $drivers = ['Multilingual', __CLASS__, \DC_Multilingual::class];
+            $dataContainer = $GLOBALS['TL_DCA'][$table]['config']['dataContainer'] ?? null;
 
-            if ($GLOBALS['TL_DCA'][$table]['config']['dataContainer'] == 'Multilingual') {
+            if (isset($dataContainer) && \in_array($dataContainer, $drivers, true)) {
                 $where[] = "$this->langColumnName=''";
             }
 
@@ -866,8 +868,10 @@ class Driver extends DC_Table
         // Check whether there are child records
         if (!$blnNoRecursion) {
             Controller::loadDataContainer($table);
+            $drivers = ['Multilingual', __CLASS__, \DC_Multilingual::class];
+            $dataContainer = $GLOBALS['TL_DCA'][$table]['config']['dataContainer'] ?? null;
 
-            if ($GLOBALS['TL_DCA'][$table]['config']['dataContainer'] === 'Multilingual'
+            if (isset($dataContainer) && \in_array($dataContainer, $drivers, true)
                 && ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] === 5 || $GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] === 6 || $this->strTable != $table)
             ) {
                 $langColumn = $GLOBALS['TL_DCA'][$table]['config']['langColumnName'] ?? 'language';
@@ -1127,7 +1131,10 @@ class Driver extends DC_Table
         parent::deleteChilds($table, $id, $delete);
 
         // Do not delete record if it is not a multilingual dataContainer
-        if ('Multilingual' !== $GLOBALS['TL_DCA'][$table]['config']['dataContainer']) {
+        $drivers = ['Multilingual', __CLASS__, \DC_Multilingual::class];
+        $dataContainer = $GLOBALS['TL_DCA'][$table]['config']['dataContainer'] ?? null;
+
+        if (!(isset($dataContainer) && \in_array($dataContainer, $drivers, true))) {
             return;
         }
 
