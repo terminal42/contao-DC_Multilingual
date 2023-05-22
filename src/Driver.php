@@ -740,8 +740,10 @@ class Driver extends DC_Table
         // Child mode
         if ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 6) {
             $table = $GLOBALS['TL_DCA'][$this->strTable]['config']['ptable'];
+            $drivers = ['Multilingual', __CLASS__, \DC_Multilingual::class];
+            $dataContainer = $GLOBALS['TL_DCA'][$table]['config']['dataContainer'] ?? null;
 
-            if ($GLOBALS['TL_DCA'][$table]['config']['dataContainer'] == 'Multilingual') {
+            if (isset($dataContainer) && \in_array($dataContainer, $drivers, true)) {
                 $where[] = "$this->langColumnName=''";
             }
 
@@ -866,8 +868,10 @@ class Driver extends DC_Table
         // Check whether there are child records
         if (!$blnNoRecursion) {
             Controller::loadDataContainer($table);
+            $drivers = ['Multilingual', __CLASS__, \DC_Multilingual::class];
+            $dataContainer = $GLOBALS['TL_DCA'][$table]['config']['dataContainer'] ?? null;
 
-            if ($GLOBALS['TL_DCA'][$table]['config']['dataContainer'] === 'Multilingual'
+            if (isset($dataContainer) && \in_array($dataContainer, $drivers, true)
                 && ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] === 5 || $GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] === 6 || $this->strTable != $table)
             ) {
                 $langColumn = $GLOBALS['TL_DCA'][$table]['config']['langColumnName'] ?? 'language';
@@ -1126,6 +1130,14 @@ class Driver extends DC_Table
     {
         parent::deleteChilds($table, $id, $delete);
 
+        // Do not delete record if it is not a multilingual dataContainer
+        $drivers = ['Multilingual', __CLASS__, \DC_Multilingual::class];
+        $dataContainer = $GLOBALS['TL_DCA'][$table]['config']['dataContainer'] ?? null;
+
+        if (!(isset($dataContainer) && \in_array($dataContainer, $drivers, true))) {
+            return;
+        }
+
         // Do not delete record if there is no parent table
         if (empty($GLOBALS['TL_DCA'][$table]['config']['ptable'])) {
             return;
@@ -1252,6 +1264,18 @@ class Driver extends DC_Table
             } elseif ($this->strTable === $request->request->get('FORM_SUBMIT')
                 && $request->request->has('deleteLanguage')
             ) {
+                // Trigger the ondelete_callback
+                if (\is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['ondelete_callback'])) {
+                    foreach ($GLOBALS['TL_DCA'][$this->strTable]['config']['ondelete_callback'] as $callback) {
+                        if (\is_array($callback)) {
+                            $this->import($callback[0]);
+                            $this->{$callback[0]}->{$callback[1]}($this, '');
+                        } elseif (\is_callable($callback)) {
+                            $callback($this, '');
+                        }
+                    }
+                }
+
                 Database::getInstance()
                     ->prepare(
                         "DELETE FROM " . $this->strTable . "
@@ -1268,6 +1292,7 @@ class Driver extends DC_Table
 
             if ($needsReload) {
                 $_SESSION['TL_INFO'] = '';
+                Message::reset();
                 Controller::reload();
             }
         }
