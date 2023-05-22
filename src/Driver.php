@@ -738,7 +738,7 @@ class Driver extends DC_Table
         $where = array();
 
         // Child mode
-        if ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 6) {
+        if (($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] ?? null) == 6) {
             $table = $GLOBALS['TL_DCA'][$this->strTable]['config']['ptable'];
             $drivers = ['Multilingual', __CLASS__, \DC_Multilingual::class];
             $dataContainer = $GLOBALS['TL_DCA'][$table]['config']['dataContainer'] ?? null;
@@ -746,9 +746,7 @@ class Driver extends DC_Table
             if (isset($dataContainer) && \in_array($dataContainer, $drivers, true)) {
                 $where[] = "$this->langColumnName=''";
             }
-
         } else {
-
             $table = $this->strTable;
             $where[] = "$this->langColumnName=''";
         }
@@ -793,7 +791,7 @@ class Driver extends DC_Table
         $blnPtable = false;
 
         // Load parent table
-        if ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 6)
+        if (($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] ?? null) == 6)
         {
             $table = $this->ptable;
 
@@ -837,10 +835,14 @@ class Driver extends DC_Table
             $blnClipboard = true;
             $arrClipboard = $arrClipboard[$this->strTable];
         }
-
-        for ($i=0, $c=count($arrIds); $i<$c; $i++)
+        else
         {
-            $return .= ' ' . trim($this->generateTree($table, $arrIds[$i], array('p'=>$arrIds[($i-1)], 'n'=>$arrIds[($i+1)]), $hasSorting, $margin, ($blnClipboard ? $arrClipboard : false), ($id == $arrClipboard ['id'] || (is_array($arrClipboard ['id']) && in_array($id, $arrClipboard ['id'])) || (!$blnPtable && !is_array($arrClipboard['id']) && in_array($id, $this->Database->getChildRecords($arrClipboard['id'], $table)))), $blnProtected));
+            $arrClipboard = null;
+        }
+
+        for ($i=0, $c=\count($arrIds); $i<$c; $i++)
+        {
+            $return .= ' ' . trim($this->generateTree($table, $arrIds[$i], array('p'=>($arrIds[$i-1] ?? null), 'n'=>($arrIds[$i+1] ?? null)), $hasSorting, $margin, ($blnClipboard ? $arrClipboard : false), $arrClipboard !== null && ($id == $arrClipboard['id'] || (\is_array($arrClipboard['id']) && \in_array($id, $arrClipboard['id'])) || (!$blnPtable && !\is_array($arrClipboard['id']) && \in_array($id, $this->Database->getChildRecords($arrClipboard['id'], $table)))), $blnProtected));
         }
 
         return $return;
