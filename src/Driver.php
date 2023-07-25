@@ -29,6 +29,7 @@ use Contao\PageModel;
 use Contao\StringUtil;
 use Contao\System;
 use Contao\Versions;
+use Contao\Widget;
 use Exception;
 use InvalidArgumentException;
 use Symfony\Component\HttpFoundation\Request;
