@@ -9,50 +9,20 @@ use Doctrine\DBAL\Query\QueryBuilder;
 class MultilingualQueryBuilder implements MultilingualQueryBuilderInterface
 {
     /**
-     * @var QueryBuilder
-     */
-    private $qb;
-
-    /**
-     * @var string
-     */
-    private $table;
-
-    /**
-     * @var string
-     */
-    private $langColumnName;
-
-    /**
-     * @var string
-     */
-    private $pidColumnName;
-
-    /**
-     * @var array
-     */
-    private $regularFields;
-
-    /**
-     * @var array
-     */
-    private $translatableFields;
-
-    /**
      * MultilingualQueryBuilder constructor.
      *
      * @param string $table
      * @param string $pidColumnName
      * @param string $langColumnName
      */
-    public function __construct(QueryBuilder $qb, $table, $pidColumnName, $langColumnName, array $regularFields, array $translatableFields)
-    {
-        $this->qb = $qb;
-        $this->table = $table;
-        $this->langColumnName = $langColumnName;
-        $this->pidColumnName = $pidColumnName;
-        $this->regularFields = $regularFields;
-        $this->translatableFields = $translatableFields;
+    public function __construct(
+        private readonly QueryBuilder $qb,
+        private $table,
+        private $pidColumnName,
+        private $langColumnName,
+        private readonly array $regularFields,
+        private readonly array $translatableFields,
+    ) {
     }
 
     /**
@@ -103,7 +73,7 @@ class MultilingualQueryBuilder implements MultilingualQueryBuilderInterface
         }
 
         // Translatable fields
-        foreach (\array_intersect($this->translatableFields, $this->regularFields) as $field) {
+        foreach (array_intersect($this->translatableFields, $this->regularFields) as $field) {
             $this->qb->addSelect("IFNULL(translation.$field, {$this->table}.$field) AS $field");
         }
 

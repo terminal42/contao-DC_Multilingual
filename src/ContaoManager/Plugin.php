@@ -12,9 +12,6 @@ use Terminal42\DcMultilingualBundle\Terminal42DcMultilingualBundle;
 
 class Plugin implements BundlePluginInterface
 {
-    /**
-     * {@inheritdoc}
-     */
     public function getBundles(ParserInterface $parser)
     {
         return [

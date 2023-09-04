@@ -35,8 +35,6 @@ trait MultilingualTrait
      *
      * @param string $language
      * @param string $aliasColumnName
-     *
-     * @return mixed
      */
     public function getAlias($language, $aliasColumnName = 'alias')
     {
@@ -72,11 +70,8 @@ trait MultilingualTrait
     /**
      * Find a model by its alias.
      *
-     * @param        $alias
      * @param string $aliasColumnName
      * @param array  $options
-     *
-     * @return mixed
      */
     public static function findByAlias($alias, $aliasColumnName = 'alias', $options = [])
     {
@@ -88,7 +83,7 @@ trait MultilingualTrait
                 'value' => [$alias],
                 'return' => 'Model',
             ],
-            $options
+            $options,
         );
 
         return static::find($options);
@@ -97,11 +92,8 @@ trait MultilingualTrait
     /**
      * Find a model by its alias when using multilingal aliases.
      *
-     * @param        $alias
      * @param string $aliasColumnName
      * @param array  $options
-     *
-     * @return mixed
      */
     public static function findByMultilingualAlias($alias, $aliasColumnName = 'alias', $options = [])
     {
@@ -113,7 +105,7 @@ trait MultilingualTrait
                 'value' => [$alias, $alias],
                 'return' => 'Model',
             ],
-            $options
+            $options,
         );
 
         return static::find($options);
@@ -133,10 +125,8 @@ trait MultilingualTrait
 
     /**
      * Get the fallback language if available.
-     *
-     * @return string|null
      */
-    public static function getFallbackLanguage()
+    public static function getFallbackLanguage(): string|null
     {
         static::ensureDataContainerIsLoaded();
 
@@ -160,7 +150,7 @@ trait MultilingualTrait
 
         // Use the current language if none provided
         if (!isset($options['language'])) {
-            $options['language'] = str_replace('-', '_', $GLOBALS['TL_LANGUAGE']);
+            $options['language'] = str_replace('-', '_', (string) $GLOBALS['TL_LANGUAGE']);
         }
 
         // Consider the fallback language
@@ -286,7 +276,7 @@ trait MultilingualTrait
             static::getPidColumn(),
             static::getLangColumn(),
             static::getRegularFields(),
-            static::getTranslatableFields()
+            static::getTranslatableFields(),
         );
     }
 

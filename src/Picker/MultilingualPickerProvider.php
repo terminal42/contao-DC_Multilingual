@@ -17,10 +17,7 @@ final class MultilingualPickerProvider extends AbstractTablePickerProvider
 {
     private const PREFIX = 'dc.';
 
-    /**
-     * @var ContaoFramework
-     */
-    private $framework;
+    private readonly ContaoFramework $framework;
 
     public function __construct(ContaoFramework $framework, FactoryInterface $menuFactory, RouterInterface $router, TranslatorInterface $translator, Connection $connection)
     {
@@ -39,7 +36,7 @@ final class MultilingualPickerProvider extends AbstractTablePickerProvider
      */
     public function supportsContext($context): bool
     {
-        if (0 !== \strpos($context, self::PREFIX)) {
+        if (!str_starts_with((string) $context, self::PREFIX)) {
             return false;
         }
 

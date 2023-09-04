@@ -7,7 +7,7 @@ This is a standalone DC driver for Contao Open Source CMS that allows you to eas
 
 ```php
 // Set the driver
-$GLOBALS['TL_DCA']['table']['config']['dataContainer'] = 'Multilingual';
+$GLOBALS['TL_DCA']['table']['config']['dataContainer'] = \Terminal42\DcMultilingualBundle\Driver::class;
 
 // Languages you want to provide for translation (default: Languages of all root pages)
 $GLOBALS['TL_DCA']['table']['config']['languages'] = ['en', 'de', 'pl'];
@@ -35,7 +35,7 @@ $GLOBALS['TL_DCA']['table']['fields']['name']['eval']['translatableFor'] = ['de'
 
 ```php
 // Update tl_news configuration
-$GLOBALS['TL_DCA']['tl_news']['config']['dataContainer'] = 'Multilingual';
+$GLOBALS['TL_DCA']['tl_news']['config']['dataContainer'] = \Terminal42\DcMultilingualBundle\Driver::class;
 $GLOBALS['TL_DCA']['tl_news']['config']['languages'] = ['en', 'de', 'pl'];
 $GLOBALS['TL_DCA']['tl_news']['config']['langPid'] = 'langPid';
 $GLOBALS['TL_DCA']['tl_news']['config']['langColumnName'] = 'language';

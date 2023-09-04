@@ -10,16 +10,10 @@ use Doctrine\DBAL\Query\QueryBuilder;
 class MultilingualQueryBuilderFactory implements MultilingualQueryBuilderFactoryInterface
 {
     /**
-     * @var Connection
-     */
-    private $connection;
-
-    /**
      * QueryBuilderFactory constructor.
      */
-    public function __construct(Connection $connection)
+    public function __construct(private readonly Connection $connection)
     {
-        $this->connection = $connection;
     }
 
     /**
@@ -39,7 +33,7 @@ class MultilingualQueryBuilderFactory implements MultilingualQueryBuilderFactory
             $pidColumnName,
             $langColumnName,
             $regularFields,
-            $translatableFields
+            $translatableFields,
         );
     }
 
