@@ -1466,7 +1466,7 @@ class Driver extends DC_Table
 
 		foreach ($this->translatableLangs as $language) {
 			$value = ($this->fallbackLang == $language) ? '' : $language;
-			$label = ($this->fallbackLang == $language) ? ($langLabels[$language] . ' (' . $GLOBALS['TL_LANG']['MSC']['defaultLanguage'] . ')') : $langLabels[$language];
+			$label = ($this->fallbackLang == $language) ? (($langLabels[$language] ?? $language) . ' (' . $GLOBALS['TL_LANG']['MSC']['defaultLanguage'] . ')') : ($langLabels[$language] ?? $language);
 			$selected = $this->currentLang == $language || ($this->fallbackLang && $this->currentLang == '' && $this->fallbackLang == $language);
 
 			// Show the languages that are already translated (fallback is always "translated")
