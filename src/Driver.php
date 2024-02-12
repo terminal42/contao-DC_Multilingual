@@ -185,11 +185,11 @@ class Driver extends DC_Table
 		$this->arrSubmit = array();
 		$this->blnCreateNewVersion = false;
 
-		// Handle language change or deletion
-		$this->handleLanguageOperation();
-
 		// Load the language record
 		$currentRecord = $this->loadCurrentLanguageRecord($currentRecord);
+
+        // Handle language change or deletion
+        $this->handleLanguageOperation();
 
 		$versionId = $currentRecord['id'];
 		$objVersions = new Versions($this->strTable, $versionId);
