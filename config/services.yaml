@@ -15,3 +15,5 @@ services:
             - '@database_connection'
         tags:
             - contao.picker_provider
+
+    Terminal42\DcMultilingualBundle\QueryBuilder\MultilingualQueryBuilderFactoryInterface: '@terminal42.dc_multilingual.querybuilder_factory'
