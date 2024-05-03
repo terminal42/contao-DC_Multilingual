@@ -28,7 +28,7 @@ class MultilingualQueryBuilder implements MultilingualQueryBuilderInterface
     /**
      * Build the query for a simple count query.
      */
-    public function buildQueryBuilderForCount(): void
+    public function buildQueryBuilderForCount(): QueryBuilder
     {
         $this->qb->resetQueryParts();
 
@@ -36,12 +36,14 @@ class MultilingualQueryBuilder implements MultilingualQueryBuilderInterface
             ->from($this->table, $this->table)
             ->where("{$this->table}.{$this->pidColumnName}=0")
         ;
+
+        return $this->qb;
     }
 
     /**
      * Build the query for a simple count query with a subquery.
      */
-    public function buildQueryBuilderForCountWithSubQuery(QueryBuilder $queryBuilder): void
+    public function buildQueryBuilderForCountWithSubQuery(QueryBuilder $queryBuilder): QueryBuilder
     {
         $this->qb->resetQueryParts();
 
@@ -49,6 +51,8 @@ class MultilingualQueryBuilder implements MultilingualQueryBuilderInterface
             ->from($this->table, 't1')
             ->join('t1', sprintf('(%s)', $queryBuilder->getSQL()), 't3', 't1.id = t3.id')
         ;
+
+        return $this->qb;
     }
 
     /**
@@ -56,7 +60,7 @@ class MultilingualQueryBuilder implements MultilingualQueryBuilderInterface
      *
      * @param string $language
      */
-    public function buildQueryBuilderForFind($language): void
+    public function buildQueryBuilderForFind($language): QueryBuilder
     {
         $this->qb->resetQueryParts();
 
@@ -88,12 +92,11 @@ class MultilingualQueryBuilder implements MultilingualQueryBuilderInterface
         ], true);
 
         $this->qb->where("{$this->table}.{$this->pidColumnName}=0");
+
+        return $this->qb;
     }
 
-    /**
-     * @return QueryBuilder
-     */
-    public function getQueryBuilder()
+    public function getQueryBuilder(): QueryBuilder
     {
         return $this->qb;
     }
