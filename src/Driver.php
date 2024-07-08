@@ -11,16 +11,20 @@
 
 namespace Terminal42\DcMultilingualBundle;
 
+use Contao\Backend;
+use Contao\BackendTemplate;
 use Contao\Controller;
 use Contao\CoreBundle\Exception\AccessDeniedException;
 use Contao\CoreBundle\Exception\InternalServerErrorException;
 use Contao\CoreBundle\Exception\NotFoundException;
+use Contao\CoreBundle\Exception\ResponseException;
 use Contao\CoreBundle\Security\ContaoCorePermissions;
 use Contao\CoreBundle\Security\DataContainer\CreateAction;
 use Contao\CoreBundle\Security\DataContainer\UpdateAction;
 use Contao\Database;
 use Contao\DataContainer;
 use Contao\DC_Table;
+use Contao\Encryption;
 use Contao\Environment;
 use Contao\Image;
 use Contao\Input;
