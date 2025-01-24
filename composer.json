@@ -31,7 +31,7 @@
     },
     "require": {
         "php": "^7.1 || ^8.0",
-        "contao/core-bundle": "^4.9",
+        "contao/core-bundle": "^4.13.51",
         "doctrine/dbal": "^2.11 || ^3.0"
     },
     "require-dev": {
@@ -53,5 +53,12 @@
     },
     "scripts": {
         "cs-fixer": "@php tools/ecs/vendor/bin/ecs check src --config tools/ecs/config.php --fix --ansi"
+    },
+    "config": {
+        "allow-plugins": {
+            "contao-components/installer": false,
+            "php-http/discovery": false,
+            "contao/manager-plugin": false
+        }
     }
 }
