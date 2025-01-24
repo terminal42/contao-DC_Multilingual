@@ -128,9 +128,7 @@ class Driver extends DC_Table
 		$this->langColumnName = $dca['config']['langColumnName'] ?? 'language';
 
 		// Filter out translations
-		if ($dca['list']['sorting']['mode'] !== 5 && $dca['list']['sorting']['mode'] !== 6) {
-			$dca['list']['sorting']['filter'][] = array($this->langColumnName.'=?', '');
-		}
+        $dca['list']['sorting']['filter'][] = array($this->langColumnName.'=?', '');
 
 		// Add CSS file to place the language dropdown
 		$GLOBALS['TL_CSS'][] = 'bundles/terminal42dcmultilingual/backend.css';
@@ -1577,7 +1575,7 @@ class Driver extends DC_Table
 		return $modifiedPalette;
 	}
 
-	private function addDynamicPtable(array $data): array
+    private function addDynamicPtable(array $data): array
 	{
 		if (($GLOBALS['TL_DCA'][$this->strTable]['config']['dynamicPtable'] ?? false) && !isset($data['ptable']))
 		{
