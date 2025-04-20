@@ -61,7 +61,7 @@ class NewsModel extends Terminal42\DcMultilingualBundle\Model\Multilingual
 
     public static function findPublished()
     {
-        return static::findBy(['t1.published=?'], [1]);
+        return static::findBy(['tl_news.published=?'], [1]);
     }
 }
 ```
