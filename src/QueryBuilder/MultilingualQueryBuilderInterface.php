@@ -10,11 +10,15 @@ interface MultilingualQueryBuilderInterface
 {
     /**
      * Build the query for a simple count query.
+     *
+     * @return QueryBuilder
      */
     public function buildQueryBuilderForCount();
 
     /**
      * Build the query for a simple count query.
+     *
+     * @return QueryBuilder
      */
     public function buildQueryBuilderForCountWithSubQuery(QueryBuilder $queryBuilder);
 
@@ -22,6 +26,8 @@ interface MultilingualQueryBuilderInterface
      * Build the query builder for a find query.
      *
      * @param string $language
+     *
+     * @return QueryBuilder
      */
     public function buildQueryBuilderForFind($language);
 

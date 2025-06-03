@@ -18,6 +18,8 @@ trait MultilingualTrait
 {
     /**
      * Returns the ID of the fallback language.
+     *
+     * @return int
      */
     public function getLanguageId()
     {
@@ -35,6 +37,8 @@ trait MultilingualTrait
      *
      * @param string $language
      * @param string $aliasColumnName
+     *
+     * @return string
      */
     public function getAlias($language, $aliasColumnName = 'alias')
     {
@@ -51,7 +55,7 @@ trait MultilingualTrait
         }
 
         // Try to load the translated model
-        $translatedModel = static::findByPk($this->getLanguageId(), ['language' => $language]);
+        $translatedModel = static::findById($this->getLanguageId(), ['language' => $language]);
 
         if (null === $translatedModel) {
             // Get fallback
@@ -59,7 +63,7 @@ trait MultilingualTrait
                 return $this->{$aliasColumnName};
             }
 
-            $fallbackModel = static::findByPk($this->getLanguageId(), ['language' => $fallbackLang]);
+            $fallbackModel = static::findById($this->getLanguageId(), ['language' => $fallbackLang]);
 
             return $fallbackModel->{$aliasColumnName};
         }
@@ -70,8 +74,11 @@ trait MultilingualTrait
     /**
      * Find a model by its alias.
      *
+     * @param string $alias
      * @param string $aliasColumnName
      * @param array  $options
+     *
+     * @return self
      */
     public static function findByAlias($alias, $aliasColumnName = 'alias', $options = [])
     {
@@ -92,8 +99,11 @@ trait MultilingualTrait
     /**
      * Find a model by its alias when using multilingal aliases.
      *
+     * @param string $alias
      * @param string $aliasColumnName
      * @param array  $options
+     *
+     * @return self
      */
     public static function findByMultilingualAlias($alias, $aliasColumnName = 'alias', $options = [])
     {
@@ -213,7 +223,7 @@ trait MultilingualTrait
      * @param Result $objResult The database result object
      * @param string $strTable  The table name
      *
-     * @return Collection The model collection
+     * @return Collection<Multilingual> The model collection
      */
     protected static function createCollectionFromDbResult(Result $objResult, $strTable)
     {

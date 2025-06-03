@@ -1,14 +1,5 @@
 <?php
 
-/*
- * dc_multilingual Extension for Contao Open Source CMS
- *
- * @copyright  Copyright (c) 2011-2017, terminal42 gmbh
- * @author     terminal42 gmbh <info@terminal42.ch>
- * @license    http://opensource.org/licenses/lgpl-3.0.html LGPL
- * @link       http://github.com/terminal42/contao-dc_multilingual
- */
-
 namespace Terminal42\DcMultilingualBundle;
 
 use Contao\Backend;
@@ -33,23 +24,19 @@ use Contao\StringUtil;
 use Contao\System;
 use Contao\Versions;
 use Contao\Widget;
-use Exception;
-use InvalidArgumentException;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Session\Session;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
 
 /**
- * Class Driver
- *
- * This class is based on the DC_Table driver of Contao 4.1
+ * This class is based on the DC_Table driver of Contao 5.3.
+ * It uses the Contao legacy coding style for easier review with DC_Table.
  */
 class Driver extends DC_Table
 {
 	/**
 	 * True if we are editing a language that is not the fallback
 	 *
-	 * @param bool
+	 * @var bool
 	 */
 	protected $editLang = false;
 
@@ -58,7 +45,7 @@ class Driver extends DC_Table
 	 *
 	 * @var array
 	 */
-	protected $translatableLangs = [];
+	protected $translatableLangs = array();
 
 	/**
 	 * Fallback language
@@ -101,7 +88,7 @@ class Driver extends DC_Table
 	 * @param string $strTable
 	 * @param array  $arrModule
 	 */
-	public function __construct($strTable, $arrModule=[])
+	public function __construct($strTable, $arrModule=array())
 	{
 		$dca = &$GLOBALS['TL_DCA'][$this->strTable];
 
@@ -109,10 +96,12 @@ class Driver extends DC_Table
 		$this->translatableLangs = $dca['config']['languages'] ?? $this->getRootPageLanguages();
 
 		// Fallback language
-		if (isset($dca['config']['fallbackLang'])) {
+		if (isset($dca['config']['fallbackLang']))
+		{
 			$this->fallbackLang = $dca['config']['fallbackLang'];
 
-			if (!in_array($this->fallbackLang, $this->translatableLangs)) {
+			if (!\in_array($this->fallbackLang, $this->translatableLangs))
+			{
 				$this->translatableLangs[] = $this->fallbackLang;
 			}
 		}
@@ -125,7 +114,7 @@ class Driver extends DC_Table
 		$this->langColumnName = $dca['config']['langColumnName'] ?? 'language';
 
 		// Filter out translations
-		$dca['list']['sorting']['filter'][] = array($this->langColumnName.'=?', '');
+		$dca['list']['sorting']['filter'][] = array($this->langColumnName . '=?', '');
 
 		// Add CSS file to place the language dropdown
 		$GLOBALS['TL_CSS'][] = 'bundles/terminal42dcmultilingual/backend.css';
@@ -206,7 +195,7 @@ class Driver extends DC_Table
 			// Restore a version
 			if (Input::post('FORM_SUBMIT') == 'tl_version' && Input::post('version'))
 			{
-				$objVersions->restore(Input::post('version'));
+				$objVersions->restore((int) Input::post('version'));
 
 				$this->invalidateCacheTags();
 
@@ -385,7 +374,7 @@ class Driver extends DC_Table
 		if (!$this->noReload && Input::post('FORM_SUBMIT') == $this->strTable)
 		{
 			// Show a warning if the record has been saved by another user (see #8412)
-			if ($intLatestVersion !== null && Input::post('VERSION_NUMBER') !== null && $intLatestVersion > Input::post('VERSION_NUMBER'))
+			if ($intLatestVersion !== null && Input::post('VERSION_NUMBER') !== null && $intLatestVersion > (int) Input::post('VERSION_NUMBER'))
 			{
 				$objTemplate = new BackendTemplate('be_conflict');
 				$objTemplate->language = $GLOBALS['TL_LANGUAGE'];
@@ -656,7 +645,7 @@ class Driver extends DC_Table
 	 * Duplicate a particular record of the current table with all the
 	 * translations
 	 *
-	 * @param  bool
+	 * @param bool $blnDoNotRedirect
 	 *
 	 * @return int|bool
 	 */
@@ -677,7 +666,7 @@ class Driver extends DC_Table
 
 			foreach ($objTranslations->row() as $k => $v)
 			{
-				if (array_key_exists($k, $GLOBALS['TL_DCA'][$this->strTable]['fields']))
+				if (\array_key_exists($k, $GLOBALS['TL_DCA'][$this->strTable]['fields']))
 				{
 					if (!($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['eval']['translatableFor'] ?? null))
 					{
@@ -698,7 +687,7 @@ class Driver extends DC_Table
 					{
 						if (Input::get('act') == 'copyAll')
 						{
-							$v = $v . '-' . substr(md5(uniqid(mt_rand(), true)), 0, 8);
+							$v .= '-' . substr(md5(uniqid((string) mt_rand(), true)), 0, 8);
 						}
 						else
 						{
@@ -714,9 +703,9 @@ class Driver extends DC_Table
 						$v = '';
 
 						// Use array_key_exists to allow NULL (see #5252)
-						if (array_key_exists('default', $GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]))
+						if (\array_key_exists('default', $GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]))
 						{
-							$v = is_array(($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['default'] ?? null))
+							$v = \is_array($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['default'] ?? null)
 								? serialize($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['default'])
 								: $GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['default']
 							;
@@ -737,7 +726,8 @@ class Driver extends DC_Table
 		}
 
 		// Switch to edit mode
-		if (!$blnDoNotRedirect) {
+		if (!$blnDoNotRedirect)
+		{
 			$this->redirect($this->switchToEdit($insertId));
 		}
 
@@ -747,10 +737,12 @@ class Driver extends DC_Table
 	/**
 	 * Duplicate all child records of a duplicated record
 	 *
-	 * @param string
-	 * @param integer
-	 * @param integer
-	 * @param integer
+	 * @param string  $table
+	 * @param integer $insertID
+	 * @param integer $id
+	 * @param integer $parentId
+	 *
+	 * @return void
 	 */
 	protected function copyChildren($table, $insertID, $id, $parentId)
 	{
@@ -788,10 +780,11 @@ class Driver extends DC_Table
 		if (($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] ?? null) == self::MODE_TREE_EXTENDED)
 		{
 			$table = $GLOBALS['TL_DCA'][$this->strTable]['config']['ptable'];
-			$drivers = [__CLASS__, \DC_Multilingual::class];
+			$drivers = array(__CLASS__, \DC_Multilingual::class);
 			$dataContainer = $GLOBALS['TL_DCA'][$table]['config']['dataContainer'] ?? null;
 
-			if (isset($dataContainer) && \in_array($dataContainer, $drivers, true)) {
+			if (isset($dataContainer) && \in_array($dataContainer, $drivers, true))
+			{
 				$where[] = "$this->langColumnName=''";
 			}
 		}
@@ -801,7 +794,7 @@ class Driver extends DC_Table
 			$where[] = "$this->langColumnName=''";
 		}
 
-		if (is_array($this->root) && count($this->root))
+		if (\is_array($this->root) && \count($this->root))
 		{
 			$where[] = 'id IN(' . implode(',', $this->root) . ')';
 		}
@@ -926,10 +919,11 @@ class Driver extends DC_Table
 		if (!$blnNoRecursion)
 		{
 			Controller::loadDataContainer($table);
-			$drivers = [__CLASS__, \DC_Multilingual::class];
+			$drivers = array(__CLASS__, \DC_Multilingual::class);
 			$dataContainer = $GLOBALS['TL_DCA'][$table]['config']['dataContainer'] ?? null;
 
-			if (isset($dataContainer) && \in_array($dataContainer, $drivers, true)
+			if (
+				isset($dataContainer) && \in_array($dataContainer, $drivers, true)
 				&& ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] === self::MODE_TREE || $GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] === self::MODE_TREE_EXTENDED || $this->strTable != $table)
 			) {
 				$langColumn = $GLOBALS['TL_DCA'][$table]['config']['langColumnName'] ?? 'language';
@@ -957,7 +951,7 @@ class Driver extends DC_Table
 				{
 					static $languageRecords;
 
-					if (!is_array($languageRecords))
+					if (!\is_array($languageRecords))
 					{
 						$languageRecords = Database::getInstance()->execute("SELECT id FROM $table WHERE $langColumn=''")
 							->fetchEach('id');
@@ -966,7 +960,7 @@ class Driver extends DC_Table
 					}
 
 					// Return an empty string if the ID is a langauge record
-					if (!in_array((int)$id, $languageRecords, true))
+					if (!\in_array((int) $id, $languageRecords, true))
 					{
 						return '';
 					}
@@ -977,13 +971,14 @@ class Driver extends DC_Table
 		return parent::generateTree($table, $id, $arrPrevNext, $blnHasSorting, $intMargin, $arrClipboard, $blnCircularReference, $protectedPage, $blnNoRecursion, $arrFound);
 	}
 
-
 	/**
 	 * Calculate the new position of a moved or inserted record
 	 *
-	 * @param string
-	 * @param integer
-	 * @param boolean
+	 * @param string  $mode
+	 * @param integer $pid
+	 * @param boolean $insertInto
+	 *
+	 * @return void
 	 */
 	protected function getNewPosition($mode, $pid=null, $insertInto=false)
 	{
@@ -1011,7 +1006,7 @@ class Driver extends DC_Table
 				// Consider the pagination menu when inserting at the top (see #7895)
 				if ($insertInto && isset($session['filter'][$filter]['limit']))
 				{
-					$limit = substr($session['filter'][$filter]['limit'], 0, strpos($session['filter'][$filter]['limit'], ','));
+					$limit = (int) substr($session['filter'][$filter]['limit'], 0, strpos($session['filter'][$filter]['limit'], ','));
 
 					if ($limit > 0)
 					{
@@ -1167,7 +1162,9 @@ class Driver extends DC_Table
 	 *
 	 * @param mixed $varValue
 	 *
-	 * @throws Exception
+	 * @throws \Exception
+	 *
+	 * @return void
 	 */
 	protected function save($varValue)
 	{
@@ -1181,6 +1178,7 @@ class Driver extends DC_Table
 		if (!isset($arrData['eval']['isMultilingualAlias']))
 		{
 			parent::save($varValue);
+
 			return;
 		}
 
@@ -1222,7 +1220,7 @@ class Driver extends DC_Table
 		{
 			if (!$autoAlias)
 			{
-				throw new InvalidArgumentException(sprintf($GLOBALS['TL_LANG']['ERR']['aliasExists'], $varValue));
+				throw new \InvalidArgumentException(\sprintf($GLOBALS['TL_LANG']['ERR']['aliasExists'], $varValue));
 			}
 
 			// For child record take the parent record alias
@@ -1264,7 +1262,9 @@ class Driver extends DC_Table
 	/**
 	 * Delete record and associated translations
 	 *
-	 * @param boolean
+	 * @param boolean $blnDoNotRedirect
+	 *
+	 * @return void
 	 */
 	public function delete($blnDoNotRedirect = false)
 	{
@@ -1278,16 +1278,18 @@ class Driver extends DC_Table
 	/**
 	 * Recursively get all related table names and language records
 	 *
-	 * @param string
-	 * @param integer
-	 * @param array
+	 * @param string  $table
+	 * @param integer $id
+	 * @param array   $delete
+	 *
+	 * @return void
 	 */
-	public function deleteChilds($table, $id, &$delete)
+	public function deleteChildren($table, $id, &$delete)
 	{
-		parent::deleteChilds($table, $id, $delete);
+		parent::deleteChildren($table, $id, $delete);
 
 		// Do not delete record if it is not a multilingual dataContainer
-		$drivers = [__CLASS__, \DC_Multilingual::class];
+		$drivers = array(__CLASS__, \DC_Multilingual::class);
 		$dataContainer = $GLOBALS['TL_DCA'][$table]['config']['dataContainer'] ?? null;
 
 		if (!(isset($dataContainer) && \in_array($dataContainer, $drivers, true)))
@@ -1377,7 +1379,7 @@ class Driver extends DC_Table
 
 		array_walk(
 			$languages,
-			function (&$value) {
+			static function (&$value) {
 				$value = str_replace('-', '_', $value);
 			}
 		);
@@ -1387,12 +1389,15 @@ class Driver extends DC_Table
 
 	/**
 	 * Handles the language dropdown change and the delete action
+	 *
+	 * @return void
 	 */
 	protected function handleLanguageOperation()
 	{
 		// Incomplete records can't be translated (see #17)
-		if (!$this->objActiveRecord->tstamp) {
-			$this->translatableLangs = [];
+		if (!$this->objActiveRecord->tstamp)
+		{
+			$this->translatableLangs = array();
 		}
 
 		$requestStack = System::getContainer()->get('request_stack');
@@ -1403,7 +1408,7 @@ class Driver extends DC_Table
 		/** @var Request $request */
 		$request = $requestStack->getCurrentRequest();
 
-		if (0 !== count($this->translatableLangs))
+		if (0 !== \count($this->translatableLangs))
 		{
 			$needsReload = false;
 
@@ -1439,7 +1444,7 @@ class Driver extends DC_Table
 				{
 					$language = $request->request->get('language');
 
-					if (in_array($language, $this->translatableLangs))
+					if (\in_array($language, $this->translatableLangs))
 					{
 						$objSessionBag->set($this->sessionKey, $language);
 					}
@@ -1470,7 +1475,7 @@ class Driver extends DC_Table
 		$objSessionBag = System::getContainer()->get('request_stack')->getSession()->getBag('contao_backend');
 		$language = $objSessionBag->get($this->sessionKey);
 
-		if (null === $language || !in_array($language, $this->translatableLangs))
+		if (null === $language || !\in_array($language, $this->translatableLangs))
 		{
 			return $currentRecord;
 		}
@@ -1518,8 +1523,8 @@ class Driver extends DC_Table
 		}
 
 		$this->objActiveRecord = $objRow;
-		$this->procedure = [$this->pidColumnName.'=?', $this->langColumnName.'=?'];
-		$this->values = [$this->intId, $language];
+		$this->procedure = array($this->pidColumnName . '=?', $this->langColumnName . '=?');
+		$this->values = array($this->intId, $language);
 		$this->editLang = true;
 		$this->currentLang = $language;
 
@@ -1536,7 +1541,7 @@ class Driver extends DC_Table
 	protected function addLanguageSwitchPanel($version)
 	{
 		// Check languages
-		if (!is_array($this->translatableLangs) || count($this->translatableLangs) <= 1)
+		if (!\is_array($this->translatableLangs) || \count($this->translatableLangs) <= 1)
 		{
 			return $version;
 		}
@@ -1563,9 +1568,9 @@ class Driver extends DC_Table
 			$selected = $this->currentLang == $language || ($this->fallbackLang && $this->currentLang == '' && $this->fallbackLang == $language);
 
 			// Show the languages that are already translated (fallback is always "translated")
-			if (in_array($language, $availableLangs) || ($language == $this->fallbackLang))
+			if (\in_array($language, $availableLangs) || ($language == $this->fallbackLang))
 			{
-				$available .= sprintf(
+				$available .= \sprintf(
 					'<option value="%s"%s>%s</option>',
 					$value,
 					($selected) ? ' selected="selected"' : '',
@@ -1573,7 +1578,8 @@ class Driver extends DC_Table
 				);
 
 				// Add translation hint
-				if ($selected
+				if (
+					$selected
 					&& (
 						($this->fallbackLang && $this->fallbackLang != $language)
 						|| (!$this->fallbackLang && $this->currentLang != '')
@@ -1584,7 +1590,7 @@ class Driver extends DC_Table
 			}
 			else
 			{
-				$undefined .= '<option value="' . $value . '">' . $label . ' ('.$GLOBALS['TL_LANG']['MSC']['undefinedLanguage'].')' . '</option>';
+				$undefined .= '<option value="' . $value . '">' . $label . ' (' . $GLOBALS['TL_LANG']['MSC']['undefinedLanguage'] . ')</option>';
 			}
 		}
 
@@ -1595,7 +1601,7 @@ class Driver extends DC_Table
 <div class="tl_formbody">
 <input type="hidden" name="FORM_SUBMIT" value="tl_language">
 <input type="hidden" name="REQUEST_TOKEN" value="' . System::getContainer()->get('contao.csrf.token_manager')->getDefaultTokenValue() . '">
-<select name="language" class="tl_select' . (strlen($_SESSION['BE_DATA']['language'][$this->strTable][$this->intId] ?? '') ? ' active' : '') . '" onchange="document.id(this).getParent(\'form\').submit()">
+<select name="language" class="tl_select' . (\strlen($_SESSION['BE_DATA']['language'][$this->strTable][$this->intId] ?? '') ? ' active' : '') . '" onchange="document.id(this).getParent(\'form\').submit()">
 ' . $available . $undefined . '
 </select>
 <noscript>
@@ -1624,12 +1630,13 @@ class Driver extends DC_Table
 		foreach ($legendChunks as $legendChunk)
 		{
 			$fieldChunks    = StringUtil::trimsplit(',', $legendChunk);
-			$newFieldChunks = [];
+			$newFieldChunks = array();
 
 			foreach ($fieldChunks as $fieldChunk)
 			{
 				// Do not handle any special stuff like legends
-				if (preg_match('/^\[.*\]$/', $fieldChunk)
+				if (
+					preg_match('/^\[.*\]$/', $fieldChunk)
 					|| preg_match('/^\{.*\}$/', $fieldChunk)
 				) {
 					$newFieldChunks[] = $fieldChunk;
@@ -1657,7 +1664,7 @@ class Driver extends DC_Table
 
 				// Also we don't add it if the current language is not in the
 				// translatableFor setting
-				if (!in_array($this->currentLang, $translatableFor))
+				if (!\in_array($this->currentLang, $translatableFor))
 				{
 					continue;
 				}
@@ -1666,7 +1673,6 @@ class Driver extends DC_Table
 			}
 
 			$modifiedPalette .= implode(',', $newFieldChunks) . ';';
-
 		}
 
 		return $modifiedPalette;

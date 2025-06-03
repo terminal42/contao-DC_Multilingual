@@ -31,12 +31,20 @@
     },
     "require": {
         "php": "^8.1",
-        "contao/core-bundle": "~5.3.23 || ^5.4.11"
+        "contao/core-bundle": "~5.3.23 || ^5.4.11",
+        "doctrine/dbal": "^3.6",
+        "knplabs/knp-menu": "^3.1",
+        "symfony/config": "^6.4 || ^7",
+        "symfony/dependency-injection": "^6.4 || ^7",
+        "symfony/deprecation-contracts": "^3",
+        "symfony/http-kernel": "^6.4 || ^7",
+        "symfony/routing": "^6.4 || ^7",
+        "symfony/translation-contracts": "^3"
     },
     "require-dev": {
         "contao/manager-plugin": "^2.0",
         "terminal42/contao-build-tools": "dev-main",
-        "contao/core-bundle": "5.3.*"
+        "contao/contao": "5.3.*"
     },
     "conflict": {
         "contao/manager-plugin": "<2.0 || >=3.0"
@@ -51,5 +59,16 @@
     },
     "extra": {
         "contao-manager-plugin": "Terminal42\\DcMultilingualBundle\\ContaoManager\\Plugin"
+    },
+    "scripts": {
+        "ecs-legacy": "@php vendor/terminal42/contao-build-tools/tools/ecs/vendor/bin/ecs check src/Driver.php --config ecs-legacy.php --fix --ansi"
+    },
+    "config": {
+        "allow-plugins": {
+            "contao-components/installer": false,
+            "php-http/discovery": false,
+            "contao/manager-plugin": false,
+            "terminal42/contao-build-tools": true
+        }
     }
 }

@@ -33,6 +33,8 @@ final class MultilingualPickerProvider extends AbstractTablePickerProvider
 
     /**
      * We have to reimplement whole method because we have to check two names of the data container driver.
+     *
+     * @param string $context
      */
     public function supportsContext($context): bool
     {
@@ -45,7 +47,7 @@ final class MultilingualPickerProvider extends AbstractTablePickerProvider
         $this->framework->initialize();
         $this->framework->createInstance(DcaLoader::class, [$table])->load();
 
-        $drivers = ['Multilingual', Driver::class, \DC_Multilingual::class];
+        $drivers = [Driver::class, \DC_Multilingual::class];
 
         return isset($GLOBALS['TL_DCA'][$table]['config']['dataContainer'])
             && \in_array($GLOBALS['TL_DCA'][$table]['config']['dataContainer'], $drivers, true)

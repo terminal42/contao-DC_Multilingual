@@ -1,0 +1,9 @@
+parameters:
+    doctrine:
+        objectManagerLoader: null
+
+    ignoreErrors:
+        - '#no value type specified in iterable type#'
+        -
+            message: '#Unsafe usage of new static#'
+            path: 'src/Model/MultilingualTrait.php'
