@@ -823,6 +823,15 @@ class Driver extends DC_Table
 	{
 		parent::copyChildren($table, $insertID, $id, $parentId);
 
+		Controller::loadDataContainer($table);
+		$drivers = array(__CLASS__, \DC_Multilingual::class);
+		$dataContainer = $GLOBALS['TL_DCA'][$table]['config']['dataContainer'] ?? null;
+
+		if (!\in_array($dataContainer, $drivers, true))
+		{
+			return;
+		}
+
 		$pidColumnName = $GLOBALS['TL_DCA'][$table]['config']['langPid'] ?? $this->pidColumnName;
 
 		$objLanguage = Database::getInstance()
