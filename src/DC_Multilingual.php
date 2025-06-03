@@ -1,5 +1,6 @@
 <?php
 
+
 declare(strict_types=1);
 
 use Terminal42\DcMultilingualBundle\Driver;
@@ -12,8 +13,11 @@ use Terminal42\DcMultilingualBundle\Driver;
  * @license    http://opensource.org/licenses/lgpl-3.0.html LGPL
  * @link       http://github.com/terminal42/contao-dc_multilingual
  */
+
+trigger_deprecation('terminal42/dc_multilingual', '4.6', 'The global DC_Multilingual class is deprecated, use Terminal42\DcMultilingualBundle\Driver instead.');
+
 /**
- * Contao for now only supports loading drivers from the global namespace.
+ * @deprecated Use the Terminal42\DcMultilingualBundle\Driver instead
  */
 class DC_Multilingual extends Driver
 {
