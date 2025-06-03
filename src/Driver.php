@@ -609,11 +609,24 @@ class Driver extends DC_Table
 </script>';
 		}
 
+		$copyFallback = '';
+
+		if ($this->editLang)
+		{
+			$copyFallback = \sprintf(
+				'&nbsp;&nbsp;::&nbsp;&nbsp;<a href="%s" class="header_icon" style="background-image:url(\'%s\')" title="%s" accesskey="d" data-action="contao--scroll-offset#discard">%s</a>',
+				Backend::addToUrl('act=copyFallback'),
+				Controller::addAssetsUrlTo(Image::getPath('copy.svg')),
+				StringUtil::specialchars($GLOBALS['TL_LANG']['MSC']['copyFallback'] ?? ''),
+				$GLOBALS['TL_LANG']['MSC']['copyFallback'] ?? 'copyFallback',
+			);
+		}
+
 		// Begin the form (-> DO NOT CHANGE THIS ORDER -> this way the onsubmit attribute of the form can be changed by a field)
 		$return = $version . Message::generate() . ($this->noReload ? '
 <p class="tl_error">' . $GLOBALS['TL_LANG']['ERR']['submit'] . '</p>' : '') . (Input::get('nb') ? '' : '
 <div id="tl_buttons">
-<a href="' . $strBackUrl . '" class="header_back" title="' . StringUtil::specialchars($GLOBALS['TL_LANG']['MSC']['backBTTitle']) . '" accesskey="b" data-action="contao--scroll-offset#discard">' . $GLOBALS['TL_LANG']['MSC']['backBT'] . '</a>
+<a href="' . $strBackUrl . '" class="header_back" title="' . StringUtil::specialchars($GLOBALS['TL_LANG']['MSC']['backBTTitle']) . '" accesskey="b" data-action="contao--scroll-offset#discard">' . $GLOBALS['TL_LANG']['MSC']['backBT'] . '</a>' . $copyFallback . '
 </div>') . '
 <form id="' . $this->strTable . '" class="tl_form tl_edit_form" method="post" enctype="' . ($this->blnUploadable ? 'multipart/form-data' : 'application/x-www-form-urlencoded') . '"' . (!empty($this->onsubmit) ? ' onsubmit="' . implode(' ', $this->onsubmit) . '"' : '') . '>
 <div class="tl_formbody_edit">
@@ -639,6 +652,43 @@ class Driver extends DC_Table
 </div>';
 
 		return $return;
+	}
+
+	/**
+	 * Copy translatable fields from fallback to current language.
+	 */
+	public function copyFallback(): void
+	{
+		$arrDuplicate = array();
+
+		foreach (StringUtil::trimsplit('[;,]', $this->getPalette()) as $field)
+		{
+			$translatableFor = $GLOBALS['TL_DCA'][$this->strTable]['fields'][$field]['eval']['translatableFor'] ?? null;
+
+			if (null !== $translatableFor && ('*' === ($translatableFor[0] ?? null) || \in_array($this->currentLang, $translatableFor)))
+			{
+				$arrDuplicate[] = $field;
+			}
+		}
+
+		if (!empty($arrDuplicate))
+		{
+			$currentRecord = $this->getCurrentRecord();
+			$languageRecord = $this->loadCurrentLanguageRecord($currentRecord);
+
+			$objVersions = new Versions($this->strTable, $languageRecord['id']);
+			$objVersions->initialize();
+
+			Database::getInstance()
+				->prepare("UPDATE {$this->strTable} %s WHERE id=?")
+				->set(array_intersect_key($currentRecord, array_flip($arrDuplicate)))
+				->execute($languageRecord['id'])
+			;
+
+			$objVersions->create();
+		}
+
+		Controller::redirect(Backend::addToUrl('act=edit'));
 	}
 
 	/**
