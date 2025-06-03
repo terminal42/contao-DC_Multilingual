@@ -104,8 +104,6 @@ class Driver extends DC_Table
 	 */
 	public function __construct($strTable, $arrModule=[])
 	{
-		parent::__construct($strTable, $arrModule);
-
 		$dca = &$GLOBALS['TL_DCA'][$this->strTable];
 
 		// Languages array
@@ -121,7 +119,7 @@ class Driver extends DC_Table
 		}
 
 		// Session key
-		$this->sessionKey = 'dc_multilingual:' . $this->strTable . ':' . $this->intId;
+		$this->sessionKey = 'dc_multilingual:' . $strTable . ':' . Input::get('id');
 
 		// Column names
 		$this->pidColumnName = $dca['config']['langPid'] ?? 'langPid';
@@ -132,6 +130,8 @@ class Driver extends DC_Table
 
 		// Add CSS file to place the language dropdown
 		$GLOBALS['TL_CSS'][] = 'bundles/terminal42dcmultilingual/backend.css';
+
+        parent::__construct($strTable, $arrModule);
 	}
 
 	/**
