@@ -654,6 +654,21 @@ class Driver extends DC_Table
 		return $return;
 	}
 
+	public function cut($blnDoNotRedirect = false)
+	{
+		parent::cut(true);
+
+		Database::getInstance()
+			->prepare("UPDATE {$this->strTable} %s WHERE {$this->pidColumnName}=? AND {$this->langColumnName}!=''")
+			->set($this->set)
+			->execute($this->intId);
+
+		if (!$blnDoNotRedirect)
+		{
+			$this->redirect($this->getReferer());
+		}
+	}
+
 	/**
 	 * Copy translatable fields from fallback to current language.
 	 */
@@ -704,17 +719,16 @@ class Driver extends DC_Table
 		$insertId = parent::copy(true);
 
 		$time = time();
-		$objTranslations = Database::getInstance()->prepare("
-			SELECT *
-			FROM {$this->strTable}
-			WHERE {$this->pidColumnName}=? AND {$this->langColumnName}!=''
-		")->execute($this->intId);
+		$objTranslations = Database::getInstance()
+			->prepare("SELECT * FROM {$this->strTable} WHERE {$this->pidColumnName}=? AND {$this->langColumnName}!=''")
+			->execute($this->intId);
 
 		while ($objTranslations->next())
 		{
+			$row = $objTranslations->row();
 			$set = $this->set;
 
-			foreach ($objTranslations->row() as $k => $v)
+			foreach ($row as $k => $v)
 			{
 				if (\array_key_exists($k, $GLOBALS['TL_DCA'][$this->strTable]['fields']))
 				{
@@ -769,8 +783,19 @@ class Driver extends DC_Table
 
 			$set['tstamp'] = $time;
 			$set[$this->pidColumnName] = $insertId;
-			$set[$this->langColumnName] = $objTranslations->{$this->langColumnName};
+			$set[$this->langColumnName] = $row[$this->langColumnName];
 			unset($set['id']);
+
+			if (isset($row['pid']))
+			{
+				$newRecord = $this->getCurrentRecord($insertId);
+				$set['pid'] = $newRecord['pid'];
+
+				if (isset($row['ptable']))
+				{
+					$set['ptable'] = $newRecord['ptable'];
+				}
+			}
 
 			Database::getInstance()->prepare("INSERT INTO {$this->strTable} %s")->set($set)->execute();
 		}
