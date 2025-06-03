@@ -1536,40 +1536,43 @@ class Driver extends DC_Table
 
 		if (!$objRow->numRows)
 		{
-			// Preserve the "pid" field
-			if (Database::getInstance()->fieldExists('pid', $this->strTable))
-			{
-				$objCurrent = Database::getInstance()
-					->prepare("SELECT pid FROM " . $this->strTable . " WHERE id=?")
-					->limit(1)
-					->execute($this->intId);
+			$set = array(
+				$this->pidColumnName => $this->intId,
+				'tstamp' => time(),
+				$this->langColumnName => $language,
+			);
 
-				$intPid = ($objCurrent->numRows) ? $objCurrent->pid : 0;
+			// Preserve the "pid" field
+			if (isset($currentRecord['pid']))
+			{
+				$set['pid'] = $currentRecord['pid'];
 
 				if ($GLOBALS['TL_DCA'][$this->strTable]['config']['dynamicPtable'] ?? null)
 				{
-					$intId = Database::getInstance()
-						->prepare("INSERT INTO " . $this->strTable . " ({$this->pidColumnName},tstamp,{$this->langColumnName},pid,ptable) VALUES (?,?,?,?,?)")
-						->execute($this->intId, time(), $language, $intPid, $this->ptable)
-						->insertId;
+					$set['ptable'] = $currentRecord['ptable'];
 				}
-				else
-				{
-					$intId = Database::getInstance()
-						->prepare("INSERT INTO " . $this->strTable . " ({$this->pidColumnName},tstamp,{$this->langColumnName},pid) VALUES (?,?,?,?)")
-						->execute($this->intId, time(), $language, $intPid)
-						->insertId;
-				}
-			}
-			else
-			{
-				$intId = Database::getInstance()
-					->prepare("INSERT INTO " . $this->strTable . " ({$this->pidColumnName},tstamp,{$this->langColumnName}) VALUES (?,?,?)")
-					->execute($this->intId, time(), $language)
-					->insertId;
 			}
 
-			$objRow = Database::getInstance()->prepare("SELECT * FROM " . $this->strTable . " WHERE id=?")->execute($intId);
+			if ($GLOBALS['TL_DCA'][$this->strTable]['config']['copyFallback'] ?? false)
+			{
+				foreach (StringUtil::trimsplit('[;,]', $this->getPalette()) as $field)
+				{
+					$translatableFor = $GLOBALS['TL_DCA'][$this->strTable]['fields'][$field]['eval']['translatableFor'] ?? null;
+
+					if (null !== $translatableFor && ('*' === ($translatableFor[0] ?? null) || \in_array($this->currentLang, $translatableFor)))
+					{
+						$set[$field] = $currentRecord[$field];
+					}
+				}
+			}
+
+			$intId = Database::getInstance()
+				->prepare("INSERT INTO {$this->strTable} %s")
+				->set($set)
+				->execute()
+				->insertId;
+
+			$objRow = Database::getInstance()->prepare("SELECT * FROM {$this->strTable} WHERE id=?")->execute($intId);
 		}
 
 		$this->objActiveRecord = $objRow;
