@@ -125,12 +125,12 @@ class Driver extends DC_Table
 		$this->langColumnName = $dca['config']['langColumnName'] ?? 'language';
 
 		// Filter out translations
-        $dca['list']['sorting']['filter'][] = array($this->langColumnName.'=?', '');
+		$dca['list']['sorting']['filter'][] = array($this->langColumnName.'=?', '');
 
 		// Add CSS file to place the language dropdown
 		$GLOBALS['TL_CSS'][] = 'bundles/terminal42dcmultilingual/backend.css';
 
-        parent::__construct($strTable, $arrModule);
+		parent::__construct($strTable, $arrModule);
 	}
 
 	/**
@@ -169,8 +169,8 @@ class Driver extends DC_Table
 			$this->redirect($this->addToUrl('id=' . $currentRecord[$this->pidColumnName]));
 		}
 
-		// Redirect if there is no record with the given ID or a translated version is accessed
-		if (null === $currentRecord || $currentRecord[$this->pidColumnName] > 0)
+		// Redirect if there is no record with the given ID
+		if (null === $currentRecord)
 		{
 			throw new NotFoundException('Cannot load record "' . $this->strTable . '.id=' . $this->intId . '".');
 		}
@@ -189,8 +189,8 @@ class Driver extends DC_Table
 		// Load the language record
 		$currentRecord = $this->loadCurrentLanguageRecord($currentRecord);
 
-        // Handle language change or deletion
-        $this->handleLanguageOperation();
+		// Handle language change or deletion
+		$this->handleLanguageOperation();
 
 		$versionId = $currentRecord['id'];
 		$objVersions = new Versions($this->strTable, $versionId);
@@ -257,7 +257,6 @@ class Driver extends DC_Table
 				}
 			}
 
-			/** @var Session $objSessionBag */
 			$objSessionBag = System::getContainer()->get('request_stack')->getSession()->getBag('contao_backend');
 
 			$class = 'tl_tbox';
@@ -276,19 +275,28 @@ class Driver extends DC_Table
 				{
 					list($key, $cls) = explode(':', $legends[$k]) + array(null, null);
 
-					$legend = "\n" . '<legend data-toggle-fieldset="' . StringUtil::specialcharsAttribute(json_encode(array('id' => $key, 'table' => $this->strTable))) . '">' . ($GLOBALS['TL_LANG'][$this->strTable][$key] ?? $key) . '</legend>';
+					$legend = "\n" . '<legend><button type="button" data-action="contao--toggle-fieldset#toggle">' . ($GLOBALS['TL_LANG'][$this->strTable][$key] ?? $key) . '</button></legend>';
 				}
 
-				if (isset($fs[$this->strTable][$key]))
+				if ($legend)
 				{
-					$class .= ($fs[$this->strTable][$key] ? '' : ' collapsed');
-				}
-				else
-				{
-					$class .= (($cls && $legend) ? ' ' . $cls : '');
+					if (isset($fs[$this->strTable][$key]))
+					{
+						$class .= ($fs[$this->strTable][$key] ? '' : ' collapsed');
+					}
+					elseif ($cls)
+					{
+						// Convert the ":hide" suffix from the DCA
+						if ($cls == 'hide')
+						{
+							$cls = 'collapsed';
+						}
+
+						$class .= ' ' . $cls;
+					}
 				}
 
-				$return .= "\n\n" . '<fieldset' . ($key ? ' id="pal_' . $key . '"' : '') . ' class="' . $class . ($legend ? '' : ' nolegend') . '">' . $legend;
+				$return .= "\n\n" . '<fieldset class="' . $class . ($legend ? '' : ' nolegend') . '" data-controller="contao--toggle-fieldset" data-contao--toggle-fieldset-id-value="' . $key . '" data-contao--toggle-fieldset-table-value="' . $this->strTable . '" data-contao--toggle-fieldset-collapsed-class="collapsed" data-contao--jump-targets-target="section" data-contao--jump-targets-label-value="' . ($GLOBALS['TL_LANG'][$this->strTable][$key] ?? $key) . '" data-action="contao--jump-targets:scrollto->contao--toggle-fieldset#open">' . $legend;
 				$thisId = '';
 
 				// Build rows of the current box
@@ -350,8 +358,7 @@ class Driver extends DC_Table
 						{
 							if (\is_array($callback))
 							{
-								$this->import($callback[0]);
-								$this->varValue = $this->{$callback[0]}->{$callback[1]}($this->varValue, $this);
+								$this->varValue = System::importStatic($callback[0])->{$callback[1]}($this->varValue, $this);
 							}
 							elseif (\is_callable($callback))
 							{
@@ -364,7 +371,7 @@ class Driver extends DC_Table
 					$this->objActiveRecord->{$this->strField} = $this->varValue;
 
 					// Build the row and pass the current palette string (thanks to Tristan Lins)
-					$blnAjax ? $arrAjax[$thisId] .= $this->row($this->strPalette) : $return .= $this->row($this->strPalette);
+					$blnAjax ? $arrAjax[$thisId] .= $this->row() : $return .= $this->row();
 				}
 
 				$class = 'tl_box';
@@ -386,8 +393,8 @@ class Driver extends DC_Table
 				$objTemplate->theme = Backend::getTheme();
 				$objTemplate->charset = System::getContainer()->getParameter('kernel.charset');
 				$objTemplate->h1 = $GLOBALS['TL_LANG']['MSC']['versionConflict'];
-				$objTemplate->explain1 = sprintf($GLOBALS['TL_LANG']['MSC']['versionConflict1'], $intLatestVersion, Input::post('VERSION_NUMBER'));
-				$objTemplate->explain2 = sprintf($GLOBALS['TL_LANG']['MSC']['versionConflict2'], $intLatestVersion + 1, $intLatestVersion);
+				$objTemplate->explain1 = \sprintf($GLOBALS['TL_LANG']['MSC']['versionConflict1'], $intLatestVersion, Input::post('VERSION_NUMBER'));
+				$objTemplate->explain2 = \sprintf($GLOBALS['TL_LANG']['MSC']['versionConflict2'], $intLatestVersion + 1, $intLatestVersion);
 				$objTemplate->diff = $objVersions->compare(true);
 				$objTemplate->href = Environment::get('requestUri');
 				$objTemplate->button = $GLOBALS['TL_LANG']['MSC']['continue'];
@@ -446,7 +453,12 @@ class Driver extends DC_Table
 				// Parent view
 				elseif (($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] ?? null) == self::MODE_PARENT)
 				{
-					$strUrl .= $this->Database->fieldExists('sorting', $this->strTable) ? '&amp;act=create&amp;mode=1&amp;pid=' . $this->intId : '&amp;act=create&amp;mode=2&amp;pid=' . ($currentRecord['pid'] ?? null);
+					$strUrl .= Database::getInstance()->fieldExists('sorting', $this->strTable) ? '&amp;act=create&amp;mode=1&amp;pid=' . $this->intId : '&amp;act=create&amp;mode=2&amp;pid=' . ($currentRecord['pid'] ?? null);
+
+					if (($currentRecord['ptable'] ?? null) === $this->strTable)
+					{
+						$strUrl .= '&amp;ptable=' . $currentRecord['ptable'];
+					}
 				}
 
 				// List view
@@ -477,7 +489,12 @@ class Driver extends DC_Table
 				// Parent view
 				elseif (($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] ?? null) == self::MODE_PARENT)
 				{
-					$strUrl .= $this->Database->fieldExists('sorting', $this->strTable) ? '&amp;act=copy&amp;mode=1&amp;pid=' . $this->intId . '&amp;id=' . $this->intId : '&amp;act=copy&amp;mode=2&amp;pid=' . $this->intCurrentPid . '&amp;id=' . $this->intId;
+					$strUrl .= Database::getInstance()->fieldExists('sorting', $this->strTable) ? '&amp;act=copy&amp;mode=1&amp;pid=' . $this->intId . '&amp;id=' . $this->intId : '&amp;act=copy&amp;mode=2&amp;pid=' . $this->intCurrentPid . '&amp;id=' . $this->intId;
+
+					if (($currentRecord['ptable'] ?? null) === $this->strTable)
+					{
+						$strUrl .= '&amp;ptable=' . $currentRecord['ptable'];
+					}
 				}
 
 				// List view
@@ -511,28 +528,28 @@ class Driver extends DC_Table
 
 		if (!Input::get('nb'))
 		{
-			$arrButtons['saveNclose'] = '<button type="submit" name="saveNclose" id="saveNclose" class="tl_submit" accesskey="c">' . $GLOBALS['TL_LANG']['MSC']['saveNclose'] . '</button>';
+			$arrButtons['saveNclose'] = '<button type="submit" name="saveNclose" id="saveNclose" class="tl_submit" accesskey="c" data-action="contao--scroll-offset#discard">' . $GLOBALS['TL_LANG']['MSC']['saveNclose'] . '</button>';
 
 			if (!Input::get('nc'))
 			{
 				if (!$this->editLang && !($GLOBALS['TL_DCA'][$this->strTable]['config']['closed'] ?? null) && !($GLOBALS['TL_DCA'][$this->strTable]['config']['notCreatable'] ?? null) && $security->isGranted(ContaoCorePermissions::DC_PREFIX . $this->strTable, new CreateAction($this->strTable, $this->addDynamicPtable(array('pid' => $this->intCurrentPid)))))
 				{
-					$arrButtons['saveNcreate'] = '<button type="submit" name="saveNcreate" id="saveNcreate" class="tl_submit" accesskey="n">' . $GLOBALS['TL_LANG']['MSC']['saveNcreate'] . '</button>';
+					$arrButtons['saveNcreate'] = '<button type="submit" name="saveNcreate" id="saveNcreate" class="tl_submit" accesskey="n" data-action="contao--scroll-offset#discard">' . $GLOBALS['TL_LANG']['MSC']['saveNcreate'] . '</button>';
+				}
 
-					if (!($GLOBALS['TL_DCA'][$this->strTable]['config']['notCopyable'] ?? null))
-					{
-						$arrButtons['saveNduplicate'] = '<button type="submit" name="saveNduplicate" id="saveNduplicate" class="tl_submit" accesskey="d">' . $GLOBALS['TL_LANG']['MSC']['saveNduplicate'] . '</button>';
-					}
+				if (!$this->editLang && !($GLOBALS['TL_DCA'][$this->strTable]['config']['closed'] ?? null) && !($GLOBALS['TL_DCA'][$this->strTable]['config']['notCreatable'] ?? null) && !($GLOBALS['TL_DCA'][$this->strTable]['config']['notCopyable'] ?? null) && $security->isGranted(ContaoCorePermissions::DC_PREFIX . $this->strTable, new CreateAction($this->strTable, array_replace($currentRecord, array('id' => null, 'sorting' => null)))))
+				{
+					$arrButtons['saveNduplicate'] = '<button type="submit" name="saveNduplicate" id="saveNduplicate" class="tl_submit" accesskey="d" data-action="contao--scroll-offset#discard">' . $GLOBALS['TL_LANG']['MSC']['saveNduplicate'] . '</button>';
 				}
 
 				if ($GLOBALS['TL_DCA'][$this->strTable]['config']['switchToEdit'] ?? null)
 				{
-					$arrButtons['saveNedit'] = '<button type="submit" name="saveNedit" id="saveNedit" class="tl_submit" accesskey="e">' . $GLOBALS['TL_LANG']['MSC']['saveNedit'] . '</button>';
+					$arrButtons['saveNedit'] = '<button type="submit" name="saveNedit" id="saveNedit" class="tl_submit" accesskey="e" data-action="contao--scroll-offset#discard">' . $GLOBALS['TL_LANG']['MSC']['saveNedit'] . '</button>';
 				}
 
 				if ($this->ptable || ($GLOBALS['TL_DCA'][$this->strTable]['config']['switchToEdit'] ?? null) || ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] ?? null) == self::MODE_PARENT)
 				{
-					$arrButtons['saveNback'] = '<button type="submit" name="saveNback" id="saveNback" class="tl_submit" accesskey="g">' . $GLOBALS['TL_LANG']['MSC']['saveNback'] . '</button>';
+					$arrButtons['saveNback'] = '<button type="submit" name="saveNback" id="saveNback" class="tl_submit" accesskey="g" data-action="contao--scroll-offset#discard">' . $GLOBALS['TL_LANG']['MSC']['saveNback'] . '</button>';
 				}
 			}
 		}
@@ -544,8 +561,7 @@ class Driver extends DC_Table
 			{
 				if (\is_array($callback))
 				{
-					$this->import($callback[0]);
-					$arrButtons = $this->{$callback[0]}->{$callback[1]}($arrButtons, $this);
+					$arrButtons = System::importStatic($callback[0])->{$callback[1]}($arrButtons, $this);
 				}
 				elseif (\is_callable($callback))
 				{
@@ -605,15 +621,15 @@ class Driver extends DC_Table
 		}
 
 		// Begin the form (-> DO NOT CHANGE THIS ORDER -> this way the onsubmit attribute of the form can be changed by a field)
-		$return = $version . ($this->noReload ? '
-<p class="tl_error">' . $GLOBALS['TL_LANG']['ERR']['submit'] . '</p>' : '') . Message::generate() . (Input::get('nb') ? '' : '
+		$return = $version . Message::generate() . ($this->noReload ? '
+<p class="tl_error">' . $GLOBALS['TL_LANG']['ERR']['submit'] . '</p>' : '') . (Input::get('nb') ? '' : '
 <div id="tl_buttons">
-<a href="' . $strBackUrl . '" class="header_back" title="' . StringUtil::specialchars($GLOBALS['TL_LANG']['MSC']['backBTTitle']) . '" accesskey="b" onclick="Backend.getScrollOffset()">' . $GLOBALS['TL_LANG']['MSC']['backBT'] . '</a>
+<a href="' . $strBackUrl . '" class="header_back" title="' . StringUtil::specialchars($GLOBALS['TL_LANG']['MSC']['backBTTitle']) . '" accesskey="b" data-action="contao--scroll-offset#discard">' . $GLOBALS['TL_LANG']['MSC']['backBT'] . '</a>
 </div>') . '
 <form id="' . $this->strTable . '" class="tl_form tl_edit_form" method="post" enctype="' . ($this->blnUploadable ? 'multipart/form-data' : 'application/x-www-form-urlencoded') . '"' . (!empty($this->onsubmit) ? ' onsubmit="' . implode(' ', $this->onsubmit) . '"' : '') . '>
 <div class="tl_formbody_edit">
 <input type="hidden" name="FORM_SUBMIT" value="' . $this->strTable . '">
-<input type="hidden" name="REQUEST_TOKEN" value="' . htmlspecialchars(System::getContainer()->get('contao.csrf.token_manager')->getDefaultTokenValue()) . '">' . $strVersionField . $return;
+<input type="hidden" name="REQUEST_TOKEN" value="' . htmlspecialchars(System::getContainer()->get('contao.csrf.token_manager')->getDefaultTokenValue(), ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML5) . '">' . $strVersionField . $return;
 
 		// Set the focus if there is an error
 		if ($this->noReload)
@@ -627,9 +643,14 @@ class Driver extends DC_Table
 </script>';
 		}
 
+		$return = '
+<div data-controller="contao--jump-targets">
+	<div class="jump-targets"><div class="inner" data-contao--jump-targets-target="navigation"></div></div>
+	' . $return . '
+</div>';
+
 		return $return;
 	}
-
 
 	/**
 	 * Duplicate a particular record of the current table with all the
@@ -639,39 +660,53 @@ class Driver extends DC_Table
 	 *
 	 * @return int|bool
 	 */
-	public function copy($blnDoNotRedirect = false)
+	public function copy($blnDoNotRedirect=false)
 	{
 		$insertId = parent::copy(true);
-		$time = time();
-		$objTranslations = Database::getInstance()
-			->prepare(
-				"SELECT *
-				 FROM " . $this->strTable . "
-				 WHERE " . $this->pidColumnName . "=? AND " . $this->langColumnName . "!=''"
-			)
-			->execute($this->intId);
 
-		while ($objTranslations->next()) {
+		$time = time();
+		$objTranslations = Database::getInstance()->prepare("
+			SELECT *
+			FROM {$this->strTable}
+			WHERE {$this->pidColumnName}=? AND {$this->langColumnName}!=''
+		")->execute($this->intId);
+
+		while ($objTranslations->next())
+		{
 			$set = $this->set;
 
-			foreach ($objTranslations->row() as $k => $v) {
-				if (array_key_exists($k, $GLOBALS['TL_DCA'][$this->strTable]['fields'])) {
-					if (!($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['eval']['translatableFor'] ?? null)) {
-						if (isset($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['default'])) {
+			foreach ($objTranslations->row() as $k => $v)
+			{
+				if (array_key_exists($k, $GLOBALS['TL_DCA'][$this->strTable]['fields']))
+				{
+					if (!($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['eval']['translatableFor'] ?? null))
+					{
+						if (isset($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['default']))
+						{
 							$set[$k] = $GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['default'];
-						} else {
+						}
+						else
+						{
 							unset($set[$k]);
 						}
+
 						continue;
 					}
+
 					// Empty unique fields or add a unique identifier in copyAll mode
-					if ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['eval']['unique'] ?? false) {
-						if (Input::get('act') == 'copyAll') {
+					if ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['eval']['unique'] ?? false)
+					{
+						if (Input::get('act') == 'copyAll')
+						{
 							$v = $v . '-' . substr(md5(uniqid(mt_rand(), true)), 0, 8);
-						} else {
+						}
+						else
+						{
 							$v = '';
 						}
-					} // Reset doNotCopy and fallback fields to their default value
+					}
+
+					// Reset doNotCopy and fallback fields to their default value
 					elseif (
 						($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['eval']['doNotCopy'] ?? false)
 						|| ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['eval']['fallback'] ?? false)
@@ -679,7 +714,8 @@ class Driver extends DC_Table
 						$v = '';
 
 						// Use array_key_exists to allow NULL (see #5252)
-						if (array_key_exists('default', $GLOBALS['TL_DCA'][$this->strTable]['fields'][$k])) {
+						if (array_key_exists('default', $GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]))
+						{
 							$v = is_array(($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['default'] ?? null))
 								? serialize($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['default'])
 								: $GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['default']
@@ -708,7 +744,6 @@ class Driver extends DC_Table
 		return $insertId;
 	}
 
-
 	/**
 	 * Duplicate all child records of a duplicated record
 	 *
@@ -717,20 +752,25 @@ class Driver extends DC_Table
 	 * @param integer
 	 * @param integer
 	 */
-	protected function copyChilds($table, $insertID, $id, $parentId)
+	protected function copyChildren($table, $insertID, $id, $parentId)
 	{
-		parent::copyChilds($table, $insertID, $id, $parentId);
+		parent::copyChildren($table, $insertID, $id, $parentId);
 
 		$pidColumnName = $GLOBALS['TL_DCA'][$table]['config']['langPid'] ?? $this->pidColumnName;
 
-		$objLanguage = Database::getInstance()->prepare("SELECT id FROM " . $table . " WHERE " . $pidColumnName . "=? AND id>?")
+		$objLanguage = Database::getInstance()
+			->prepare("SELECT id FROM $table WHERE $pidColumnName=? AND id>?")
 			->limit(1)
-			->execute($id, $parentId);
+			->execute($id, $parentId)
+		;
 
 		// Update the language pid column
-		if ($objLanguage->numRows) {
-			Database::getInstance()->prepare("UPDATE " . $table . " SET " . $pidColumnName . "=? WHERE id=?")
-				->execute($insertID, $objLanguage->id);
+		if ($objLanguage->numRows)
+		{
+			Database::getInstance()
+				->prepare("UPDATE " . $table . " SET " . $pidColumnName . "=? WHERE id=?")
+				->execute($insertID, $objLanguage->id)
+			;
 		}
 	}
 
@@ -740,43 +780,47 @@ class Driver extends DC_Table
 	 *
 	 * @return string
 	 */
-	public function treeView()
+	protected function treeView()
 	{
 		$where = array();
 
 		// Child mode
-		if (($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] ?? null) == 6) {
+		if (($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] ?? null) == self::MODE_TREE_EXTENDED)
+		{
 			$table = $GLOBALS['TL_DCA'][$this->strTable]['config']['ptable'];
-			$drivers = ['Multilingual', __CLASS__, \DC_Multilingual::class];
+			$drivers = [__CLASS__, \DC_Multilingual::class];
 			$dataContainer = $GLOBALS['TL_DCA'][$table]['config']['dataContainer'] ?? null;
 
 			if (isset($dataContainer) && \in_array($dataContainer, $drivers, true)) {
 				$where[] = "$this->langColumnName=''";
 			}
-		} else {
+		}
+		else
+		{
 			$table = $this->strTable;
 			$where[] = "$this->langColumnName=''";
 		}
 
-		if (is_array($this->root) && count($this->root)) {
+		if (is_array($this->root) && count($this->root))
+		{
 			$where[] = 'id IN(' . implode(',', $this->root) . ')';
 		}
 
 		$orderBy = '';
 
-		if (Database::getInstance()->fieldExists('sorting', $table)) {
+		if (Database::getInstance()->fieldExists('sorting', $table))
+		{
 			$orderBy = " ORDER BY sorting";
 		}
 
 		$where = implode(' AND ', $where);
 
 		$this->root = Database::getInstance()
-			->query("SELECT id FROM $table WHERE " . $where . $orderBy)
+			->query("SELECT id FROM $table WHERE $where $orderBy")
 			->fetchEach('id');
 
 		return parent::treeView();
 	}
-
 
 	/**
 	 * Generate a particular subpart of the tree and return it as HTML string
@@ -814,16 +858,19 @@ class Driver extends DC_Table
 		if ($table == 'tl_page')
 		{
 			$objParent = PageModel::findWithDetails($id);
-			$blnProtected = $objParent->protected ? true : false;
+			$blnProtected = $objParent->protected;
 		}
 
-		$margin = ($level * 18);
-		$hasSorting = $this->Database->fieldExists('sorting', $table);
+		$margin = $level * 18;
 		$arrIds = array();
 
+		$db = Database::getInstance();
+		$hasSorting = $db->fieldExists('sorting', $table);
+
 		// Get records
-		$objRows = $this->Database->prepare("SELECT * FROM " . $table . " WHERE ({$this->pidColumnName}=0 OR {$this->pidColumnName} IS NULL) AND pid=?" . ($hasSorting ? " ORDER BY sorting, id" : ""))
-								  ->execute($id);
+		$objRows = $db
+			->prepare("SELECT * FROM " . $table . " WHERE ({$this->pidColumnName}=0 OR {$this->pidColumnName} IS NULL) AND pid=?" . ($hasSorting ? " ORDER BY sorting, id" : ""))
+			->execute($id);
 
 		while ($objRows->next())
 		{
@@ -833,7 +880,6 @@ class Driver extends DC_Table
 			$arrIds[] = $objRows->id;
 		}
 
-		/** @var Session $objSession */
 		$objSession = System::getContainer()->get('request_stack')->getSession();
 
 		$blnClipboard = false;
@@ -852,12 +898,11 @@ class Driver extends DC_Table
 
 		for ($i=0, $c=\count($arrIds); $i<$c; $i++)
 		{
-			$return .= ' ' . trim($this->generateTree($table, $arrIds[$i], array('p'=>($arrIds[$i - 1] ?? null), 'n'=>($arrIds[$i + 1] ?? null)), $hasSorting, $margin, $blnClipboard ? $arrClipboard : false, $arrClipboard !== null && ($id == $arrClipboard['id'] || (\is_array($arrClipboard['id']) && \in_array($id, $arrClipboard['id'])) || (!$blnPtable && !\is_array($arrClipboard['id']) && \in_array($id, $this->Database->getChildRecords($arrClipboard['id'], $table)))), $blnProtected));
+			$return .= ' ' . trim($this->generateTree($table, $arrIds[$i], array('p'=>($arrIds[$i - 1] ?? null), 'n'=>($arrIds[$i + 1] ?? null)), $hasSorting, $margin, $blnClipboard ? $arrClipboard : false, $arrClipboard !== null && ($id == $arrClipboard['id'] || (\is_array($arrClipboard['id']) && \in_array($id, $arrClipboard['id'])) || (!$blnPtable && !\is_array($arrClipboard['id']) && \in_array($id, $db->getChildRecords($arrClipboard['id'], $table)))), $blnProtected));
 		}
 
 		return $return;
 	}
-
 
 	/**
 	 * Recursively generate the tree and return it as HTML string
@@ -878,13 +923,14 @@ class Driver extends DC_Table
 	protected function generateTree($table, $id, $arrPrevNext, $blnHasSorting, $intMargin=0, $arrClipboard=null, $blnCircularReference=false, $protectedPage=false, $blnNoRecursion=false, $arrFound=array())
 	{
 		// Check whether there are child records
-		if (!$blnNoRecursion) {
+		if (!$blnNoRecursion)
+		{
 			Controller::loadDataContainer($table);
-			$drivers = ['Multilingual', __CLASS__, \DC_Multilingual::class];
+			$drivers = [__CLASS__, \DC_Multilingual::class];
 			$dataContainer = $GLOBALS['TL_DCA'][$table]['config']['dataContainer'] ?? null;
 
 			if (isset($dataContainer) && \in_array($dataContainer, $drivers, true)
-				&& ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] === 5 || $GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] === 6 || $this->strTable != $table)
+				&& ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] === self::MODE_TREE || $GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] === self::MODE_TREE_EXTENDED || $this->strTable != $table)
 			) {
 				$langColumn = $GLOBALS['TL_DCA'][$table]['config']['langColumnName'] ?? 'language';
 
@@ -895,7 +941,9 @@ class Driver extends DC_Table
 				$session = $objSessionBag->all();
 				$node = ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] == 6) ? $this->strTable . '_' . $table . '_tree' : $this->strTable . '_tree';
 				$blnIsOpen = (!empty($arrFound) || ($session[$node][$id] ?? null) == 1);
-				if ($blnIsOpen) {
+
+				if ($blnIsOpen)
+				{
 					$translationIds = Database::getInstance()->prepare(
 						"SELECT id FROM " . $table . " WHERE pid=? AND $langColumn=''")
 						->execute($id)
@@ -905,10 +953,12 @@ class Driver extends DC_Table
 				}
 
 				// Do not display the language records in the child list
-				if ($table === $this->strTable && $GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] === 6) {
+				if ($table === $this->strTable && $GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] === 6)
+				{
 					static $languageRecords;
 
-					if (!is_array($languageRecords)) {
+					if (!is_array($languageRecords))
+					{
 						$languageRecords = Database::getInstance()->execute("SELECT id FROM $table WHERE $langColumn=''")
 							->fetchEach('id');
 
@@ -916,7 +966,8 @@ class Driver extends DC_Table
 					}
 
 					// Return an empty string if the ID is a langauge record
-					if (!in_array((int)$id, $languageRecords, true)) {
+					if (!in_array((int)$id, $languageRecords, true))
+					{
 						return '';
 					}
 				}
@@ -936,8 +987,10 @@ class Driver extends DC_Table
 	 */
 	protected function getNewPosition($mode, $pid=null, $insertInto=false)
 	{
+		$db = Database::getInstance();
+
 		// If there is pid and sorting
-		if ($this->Database->fieldExists('pid', $this->strTable) && $this->Database->fieldExists('sorting', $this->strTable))
+		if ($db->fieldExists('pid', $this->strTable) && $db->fieldExists('sorting', $this->strTable))
 		{
 			// PID is not set - only valid for duplicated records, as they get the same parent ID as the original record!
 			if ($pid === null && $this->intId && $mode == 'copy')
@@ -952,7 +1005,6 @@ class Driver extends DC_Table
 				$newSorting = null;
 				$filter = ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] ?? null) == self::MODE_PARENT ? $this->strTable . '_' . $this->intCurrentPid : $this->strTable;
 
-				/** @var Session $objSession */
 				$objSession = System::getContainer()->get('request_stack')->getSession();
 				$session = $objSession->all();
 
@@ -963,9 +1015,10 @@ class Driver extends DC_Table
 
 					if ($limit > 0)
 					{
-						$objInsertAfter = $this->Database->prepare("SELECT id FROM " . $this->strTable . " WHERE " . ($pid ? 'pid=?' : '(pid=? OR pid IS NULL)') . " AND ({$this->pidColumnName}=0 OR {$this->pidColumnName} IS NULL) ORDER BY sorting, id")
-														 ->limit(1, $limit - 1)
-														 ->execute($pid);
+						$objInsertAfter = $db
+							->prepare("SELECT id FROM " . $this->strTable . " WHERE " . ($pid ? 'pid=?' : '(pid=? OR pid IS NULL)') . " AND ({$this->pidColumnName}=0 OR {$this->pidColumnName} IS NULL) ORDER BY sorting, id")
+							->limit(1, $limit - 1)
+							->execute($pid);
 
 						if ($objInsertAfter->numRows)
 						{
@@ -980,8 +1033,9 @@ class Driver extends DC_Table
 				{
 					$newPID = $pid;
 
-					$objSorting = $this->Database->prepare("SELECT MIN(sorting) AS sorting FROM " . $this->strTable . " WHERE " . ($pid ? 'pid=?' : '(pid=? OR pid IS NULL)') . " AND ({$this->pidColumnName}=0 OR {$this->pidColumnName} IS NULL)")
-												 ->execute($pid);
+					$objSorting = $db
+						->prepare("SELECT MIN(sorting) AS sorting FROM " . $this->strTable . " WHERE " . ($pid ? 'pid=?' : '(pid=? OR pid IS NULL)') . " AND ({$this->pidColumnName}=0 OR {$this->pidColumnName} IS NULL)")
+						->execute($pid);
 
 					// Select sorting value of the first record
 					if ($objSorting->numRows)
@@ -991,24 +1045,26 @@ class Driver extends DC_Table
 						// Resort if the new sorting value is not an integer or smaller than 1
 						if (($curSorting % 2) != 0 || $curSorting < 1)
 						{
-							$objNewSorting = $this->Database->prepare("SELECT id FROM " . $this->strTable . " WHERE " . ($pid ? 'pid=?' : '(pid=? OR pid IS NULL)') . " AND ({$this->pidColumnName}=0 OR {$this->pidColumnName} IS NULL) ORDER BY sorting, id")
-															->execute($pid);
+							$objNewSorting = $db
+								->prepare("SELECT id FROM " . $this->strTable . " WHERE " . ($pid ? 'pid=?' : '(pid=? OR pid IS NULL)') . " AND ({$this->pidColumnName}=0 OR {$this->pidColumnName} IS NULL) ORDER BY sorting, id")
+								->execute($pid);
 
 							$count = 2;
 							$newSorting = 128;
 
 							while ($objNewSorting->next())
 							{
-								$this->Database->prepare("UPDATE " . $this->strTable . " SET sorting=? WHERE id=?")
-											   ->limit(1)
-											   ->execute($count++ * 128, $objNewSorting->id);
+								$db
+									->prepare("UPDATE " . $this->strTable . " SET sorting=? WHERE id=?")
+									->limit(1)
+									->execute($count++ * 128, $objNewSorting->id);
 							}
 						}
 
 						// Else new sorting = (current sorting / 2)
 						else
 						{
-							$newSorting = ($curSorting / 2);
+							$newSorting = $curSorting / 2;
 						}
 					}
 
@@ -1022,9 +1078,10 @@ class Driver extends DC_Table
 				// Else insert the current record after the parent record
 				elseif ($pid > 0)
 				{
-					$objSorting = $this->Database->prepare("SELECT pid, sorting FROM " . $this->strTable . " WHERE id=? AND ({$this->pidColumnName}=0 OR {$this->pidColumnName} IS NULL)")
-												 ->limit(1)
-												 ->execute($pid);
+					$objSorting = $db
+						->prepare("SELECT pid, sorting FROM " . $this->strTable . " WHERE id=? AND ({$this->pidColumnName}=0 OR {$this->pidColumnName} IS NULL)")
+						->limit(1)
+						->execute($pid);
 
 					// Set parent ID of the current record as new parent ID
 					if ($objSorting->numRows)
@@ -1035,8 +1092,9 @@ class Driver extends DC_Table
 						// Do not proceed without a parent ID
 						if (is_numeric($newPID) || $newPID === null)
 						{
-							$objNextSorting = $this->Database->prepare("SELECT MIN(sorting) AS sorting FROM " . $this->strTable . " WHERE " . ($newPID ? 'pid=?' : '(pid=? OR pid IS NULL)') . " AND ({$this->pidColumnName}=0 OR {$this->pidColumnName} IS NULL) AND sorting>?")
-															 ->execute($newPID, $curSorting);
+							$objNextSorting = $db
+								->prepare("SELECT MIN(sorting) AS sorting FROM " . $this->strTable . " WHERE " . ($newPID ? 'pid=?' : '(pid=? OR pid IS NULL)') . " AND ({$this->pidColumnName}=0 OR {$this->pidColumnName} IS NULL) AND sorting>?")
+								->execute($newPID, $curSorting);
 
 							// Select sorting value of the next record
 							if ($objNextSorting->sorting !== null)
@@ -1048,17 +1106,19 @@ class Driver extends DC_Table
 								{
 									$count = 1;
 
-									$objNewSorting = $this->Database->prepare("SELECT id, sorting FROM " . $this->strTable . " WHERE " . ($newPID ? 'pid=?' : '(pid=? OR pid IS NULL)') . " AND ({$this->pidColumnName}=0 OR {$this->pidColumnName} IS NULL) ORDER BY sorting, id")
-																	->execute($newPID);
+									$objNewSorting = $db
+										->prepare("SELECT id, sorting FROM " . $this->strTable . " WHERE " . ($newPID ? 'pid=?' : '(pid=? OR pid IS NULL)') . " AND ({$this->pidColumnName}=0 OR {$this->pidColumnName} IS NULL) ORDER BY sorting, id")
+										->execute($newPID);
 
 									while ($objNewSorting->next())
 									{
-										$this->Database->prepare("UPDATE " . $this->strTable . " SET sorting=? WHERE id=?")
-													   ->execute($count++ * 128, $objNewSorting->id);
+										$db
+											->prepare("UPDATE " . $this->strTable . " SET sorting=? WHERE id=?")
+											->execute($count++ * 128, $objNewSorting->id);
 
 										if ($objNewSorting->sorting == $curSorting)
 										{
-											$newSorting = ($count++ * 128);
+											$newSorting = $count++ * 128;
 										}
 									}
 								}
@@ -1066,14 +1126,14 @@ class Driver extends DC_Table
 								// Else new sorting = (current sorting + next sorting) / 2
 								else
 								{
-									$newSorting = (($curSorting + $nxtSorting) / 2);
+									$newSorting = ($curSorting + $nxtSorting) / 2;
 								}
 							}
 
 							// Else new sorting = (current sorting + 128)
 							else
 							{
-								$newSorting = ($curSorting + 128);
+								$newSorting = $curSorting + 128;
 							}
 						}
 					}
@@ -1116,19 +1176,20 @@ class Driver extends DC_Table
 			return;
 		}
 
-		$data = $GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField];
+		$arrData = $GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField] ?? array();
 
-		if (!isset($data['eval']['isMultilingualAlias']))
+		if (!isset($arrData['eval']['isMultilingualAlias']))
 		{
 			parent::save($varValue);
 			return;
 		}
 
-		$fromField = $data['eval']['generateAliasFromField'] ?? 'title';
+		$fromField = $arrData['eval']['generateAliasFromField'] ?? 'title';
 		$autoAlias = false;
 
 		// Generate $varValue alias if there is none
-		if ('' === $varValue) {
+		if ('' === $varValue)
+		{
 			$autoAlias = true;
 			$varValue = StringUtil::generateAlias($this->objActiveRecord->{$fromField});
 		}
@@ -1140,9 +1201,12 @@ class Driver extends DC_Table
 
 		$excludedIds = $records->fetchEach('id');
 
-		if ($this->objActiveRecord->{$this->pidColumnName} > 0) {
+		if ($this->objActiveRecord->{$this->pidColumnName} > 0)
+		{
 			$excludedIds[] = $this->objActiveRecord->{$this->pidColumnName};
-		} else {
+		}
+		else
+		{
 			$excludedIds[] = $this->objActiveRecord->id;
 		}
 
@@ -1154,31 +1218,40 @@ class Driver extends DC_Table
 		$skipAliasValidation = false;
 
 		// Check whether the alias exists
-		if ($objAlias->numRows > 0) {
-			if (!$autoAlias) {
+		if ($objAlias->numRows > 0)
+		{
+			if (!$autoAlias)
+			{
 				throw new InvalidArgumentException(sprintf($GLOBALS['TL_LANG']['ERR']['aliasExists'], $varValue));
 			}
 
 			// For child record take the parent record alias
-			if ($this->objActiveRecord->{$this->pidColumnName} > 0) {
+			if ($this->objActiveRecord->{$this->pidColumnName} > 0)
+			{
 				$parent = Database::getInstance()
 					->prepare("SELECT {$this->strField} FROM {$this->strTable} WHERE id=?")
 					->execute($this->objActiveRecord->{$this->pidColumnName})
 				;
 
-				if ($parent->numRows) {
+				if ($parent->numRows)
+				{
 					$varValue = $parent->{$this->strField};
 					$skipAliasValidation = true;
 				}
-			} else {
+			}
+			else
+			{
 				$varValue .= '-' . $this->intId;
 			}
-		} else {
+		}
+		else
+		{
 			$skipAliasValidation = true;
 		}
 
 		// Skip the further alias validation
-		if ($skipAliasValidation) {
+		if ($skipAliasValidation)
+		{
 			$GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['eval']['unique'] = false;
 
 			// Avoid alias validation in callbacks as well
@@ -1188,7 +1261,6 @@ class Driver extends DC_Table
 		parent::save($varValue);
 	}
 
-
 	/**
 	 * Delete record and associated translations
 	 *
@@ -1196,12 +1268,12 @@ class Driver extends DC_Table
 	 */
 	public function delete($blnDoNotRedirect = false)
 	{
-		Database::getInstance()->prepare("DELETE FROM " . $this->strTable . " WHERE " . $this->pidColumnName . "=?")
+		Database::getInstance()
+			->prepare("DELETE FROM {$this->strTable} WHERE {$this->pidColumnName}=?")
 			->execute($this->intId);
 
 		parent::delete($blnDoNotRedirect);
 	}
-
 
 	/**
 	 * Recursively get all related table names and language records
@@ -1215,15 +1287,17 @@ class Driver extends DC_Table
 		parent::deleteChilds($table, $id, $delete);
 
 		// Do not delete record if it is not a multilingual dataContainer
-		$drivers = ['Multilingual', __CLASS__, \DC_Multilingual::class];
+		$drivers = [__CLASS__, \DC_Multilingual::class];
 		$dataContainer = $GLOBALS['TL_DCA'][$table]['config']['dataContainer'] ?? null;
 
-		if (!(isset($dataContainer) && \in_array($dataContainer, $drivers, true))) {
+		if (!(isset($dataContainer) && \in_array($dataContainer, $drivers, true)))
+		{
 			return;
 		}
 
 		// Do not delete record if there is no parent table
-		if (empty($GLOBALS['TL_DCA'][$table]['config']['ptable'])) {
+		if (empty($GLOBALS['TL_DCA'][$table]['config']['ptable']))
+		{
 			return;
 		}
 
@@ -1231,15 +1305,15 @@ class Driver extends DC_Table
 		// be a child table
 		$pidColumnName = $GLOBALS['TL_DCA'][$table]['config']['langPid'] ?? $this->pidColumnName;
 
-		$objLanguages = Database::getInstance()->prepare(
-			"SELECT id FROM " . $table . " WHERE " . $pidColumnName . " IN (SELECT id FROM " . $table . " WHERE pid=?)")
+		$objLanguages = Database::getInstance()
+			->prepare("SELECT id FROM $table WHERE $pidColumnName IN (SELECT id FROM $table WHERE pid=?)")
 			->execute($id);
 
-		while ($objLanguages->next()) {
+		while ($objLanguages->next())
+		{
 			$delete[$table][] = $objLanguages->id;
 		}
 	}
-
 
 	/**
 	 * Get translatable languages
@@ -1251,7 +1325,6 @@ class Driver extends DC_Table
 		return $this->translatableLangs;
 	}
 
-
 	/**
 	 * Get the fallback language
 	 *
@@ -1261,7 +1334,6 @@ class Driver extends DC_Table
 	{
 		return $this->fallbackLang;
 	}
-
 
 	/**
 	 * Get the current language
@@ -1273,7 +1345,6 @@ class Driver extends DC_Table
 		return $this->currentLang;
 	}
 
-
 	/**
 	 * Get the language column name
 	 *
@@ -1284,7 +1355,6 @@ class Driver extends DC_Table
 		return $this->langColumnName;
 	}
 
-
 	/**
 	 * Get the PID column name
 	 *
@@ -1294,7 +1364,6 @@ class Driver extends DC_Table
 	{
 		return $this->pidColumnName;
 	}
-
 
 	/**
 	 * Get the list of languages based on root pages
@@ -1334,39 +1403,48 @@ class Driver extends DC_Table
 		/** @var Request $request */
 		$request = $requestStack->getCurrentRequest();
 
-		if (0 !== count($this->translatableLangs)) {
+		if (0 !== count($this->translatableLangs))
+		{
 			$needsReload = false;
 
-			if ('tl_language' === $request->request->get('FORM_SUBMIT')) {
-				if ($request->request->has('deleteLanguage')) {
+			if ('tl_language' === $request->request->get('FORM_SUBMIT'))
+			{
+				if ($request->request->has('deleteLanguage'))
+				{
 					// Trigger the ondelete_callback
-					if (\is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['ondelete_callback'])) {
-						foreach ($GLOBALS['TL_DCA'][$this->strTable]['config']['ondelete_callback'] as $callback) {
-							if (\is_array($callback)) {
+					if (\is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['ondelete_callback']))
+					{
+						foreach ($GLOBALS['TL_DCA'][$this->strTable]['config']['ondelete_callback'] as $callback)
+						{
+							if (\is_array($callback))
+							{
 								$this->import($callback[0]);
 								$this->{$callback[0]}->{$callback[1]}($this, '');
-							} elseif (\is_callable($callback)) {
+							}
+							elseif (\is_callable($callback))
+							{
 								$callback($this, '');
 							}
 						}
 					}
 
-					Database::getInstance()->prepare(
-							"DELETE FROM " . $this->strTable . "
-							 WHERE {$this->pidColumnName}=? AND {$this->langColumnName}=?"
-						)->execute(
-							$this->intId,
-							$objSessionBag->get($this->sessionKey)
-						);
+					Database::getInstance()
+						->prepare("DELETE FROM {$this->strTable} WHERE {$this->pidColumnName}=? AND {$this->langColumnName}=?")
+						->execute($this->intId, $objSessionBag->get($this->sessionKey));
 
 					$objSessionBag->remove($this->sessionKey);
 					$needsReload = true;
-				} else {
+				}
+				else
+				{
 					$language = $request->request->get('language');
 
-					if (in_array($language, $this->translatableLangs)) {
+					if (in_array($language, $this->translatableLangs))
+					{
 						$objSessionBag->set($this->sessionKey, $language);
-					} else {
+					}
+					else
+					{
 						$objSessionBag->remove($this->sessionKey);
 					}
 
@@ -1374,7 +1452,8 @@ class Driver extends DC_Table
 				}
 			}
 
-			if ($needsReload) {
+			if ($needsReload)
+			{
 				$_SESSION['TL_INFO'] = '';
 				Message::reset();
 				Controller::reload();
@@ -1391,32 +1470,46 @@ class Driver extends DC_Table
 		$objSessionBag = System::getContainer()->get('request_stack')->getSession()->getBag('contao_backend');
 		$language = $objSessionBag->get($this->sessionKey);
 
-		if (null === $language || !in_array($language, $this->translatableLangs)) {
+		if (null === $language || !in_array($language, $this->translatableLangs))
+		{
 			return $currentRecord;
 		}
 
-		$objRow = Database::getInstance()->prepare("SELECT * FROM " . $this->strTable . " WHERE {$this->pidColumnName}=? AND {$this->langColumnName}=?")->execute($currentRecord['id'], $language);
+		$objRow = Database::getInstance()
+			->prepare("SELECT * FROM " . $this->strTable . " WHERE {$this->pidColumnName}=? AND {$this->langColumnName}=?")
+			->execute($currentRecord['id'], $language);
 
-		if (!$objRow->numRows) {
+		if (!$objRow->numRows)
+		{
 			// Preserve the "pid" field
-			if (Database::getInstance()->fieldExists('pid', $this->strTable)) {
-				$objCurrent = Database::getInstance()->prepare("SELECT pid FROM " . $this->strTable . " WHERE id=?")
+			if (Database::getInstance()->fieldExists('pid', $this->strTable))
+			{
+				$objCurrent = Database::getInstance()
+					->prepare("SELECT pid FROM " . $this->strTable . " WHERE id=?")
 					->limit(1)
 					->execute($this->intId);
 
 				$intPid = ($objCurrent->numRows) ? $objCurrent->pid : 0;
 
-				if ($GLOBALS['TL_DCA'][$this->strTable]['config']['dynamicPtable'] ?? null) {
-					$intId = Database::getInstance()->prepare("INSERT INTO " . $this->strTable . " ({$this->pidColumnName},tstamp,{$this->langColumnName},pid,ptable) VALUES (?,?,?,?,?)")
+				if ($GLOBALS['TL_DCA'][$this->strTable]['config']['dynamicPtable'] ?? null)
+				{
+					$intId = Database::getInstance()
+						->prepare("INSERT INTO " . $this->strTable . " ({$this->pidColumnName},tstamp,{$this->langColumnName},pid,ptable) VALUES (?,?,?,?,?)")
 						->execute($this->intId, time(), $language, $intPid, $this->ptable)
 						->insertId;
-				} else {
-					$intId = Database::getInstance()->prepare("INSERT INTO " . $this->strTable . " ({$this->pidColumnName},tstamp,{$this->langColumnName},pid) VALUES (?,?,?,?)")
+				}
+				else
+				{
+					$intId = Database::getInstance()
+						->prepare("INSERT INTO " . $this->strTable . " ({$this->pidColumnName},tstamp,{$this->langColumnName},pid) VALUES (?,?,?,?)")
 						->execute($this->intId, time(), $language, $intPid)
 						->insertId;
 				}
-			} else {
-				$intId = Database::getInstance()->prepare("INSERT INTO " . $this->strTable . " ({$this->pidColumnName},tstamp,{$this->langColumnName}) VALUES (?,?,?)")
+			}
+			else
+			{
+				$intId = Database::getInstance()
+					->prepare("INSERT INTO " . $this->strTable . " ({$this->pidColumnName},tstamp,{$this->langColumnName}) VALUES (?,?,?)")
 					->execute($this->intId, time(), $language)
 					->insertId;
 			}
@@ -1424,13 +1517,13 @@ class Driver extends DC_Table
 			$objRow = Database::getInstance()->prepare("SELECT * FROM " . $this->strTable . " WHERE id=?")->execute($intId);
 		}
 
-        $this->objActiveRecord = $objRow;
-        $this->procedure = [$this->pidColumnName.'=?', $this->langColumnName.'=?'];
-        $this->values = [$this->intId, $language];
-        $this->editLang = true;
-        $this->currentLang = $language;
+		$this->objActiveRecord = $objRow;
+		$this->procedure = [$this->pidColumnName.'=?', $this->langColumnName.'=?'];
+		$this->values = [$this->intId, $language];
+		$this->editLang = true;
+		$this->currentLang = $language;
 
-        return $objRow->row();
+		return $objRow->row();
 	}
 
 	/**
@@ -1443,34 +1536,41 @@ class Driver extends DC_Table
 	protected function addLanguageSwitchPanel($version)
 	{
 		// Check languages
-		if (!is_array($this->translatableLangs) || count($this->translatableLangs) <= 1) {
-
+		if (!is_array($this->translatableLangs) || count($this->translatableLangs) <= 1)
+		{
 			return $version;
 		}
 
 		// Make sure there's always a panel to replace
-		if ('' === $version) {
+		if ('' === $version)
+		{
 			$version = '<div class="tl_version_panel"></div>';
 		}
 
-		$availableLangs = Database::getInstance()->prepare("SELECT {$this->langColumnName} FROM " . $this->strTable . " WHERE {$this->pidColumnName}=?")
+		$availableLangs = Database::getInstance()
+			->prepare("SELECT {$this->langColumnName} FROM " . $this->strTable . " WHERE {$this->pidColumnName}=?")
 			->execute($this->intId)
 			->fetchEach($this->langColumnName);
+
 		$langLabels = System::getContainer()->get('contao.intl.locales')->getLocales(null, true);
 		$available = ($this->fallbackLang) ? '' : '<option value="">' . $GLOBALS['TL_LANG']['MSC']['defaultLanguage'] . '</option>';
 		$undefined = '';
 
-		foreach ($this->translatableLangs as $language) {
+		foreach ($this->translatableLangs as $language)
+		{
 			$value = ($this->fallbackLang == $language) ? '' : $language;
 			$label = ($this->fallbackLang == $language) ? (($langLabels[$language] ?? $language) . ' (' . $GLOBALS['TL_LANG']['MSC']['defaultLanguage'] . ')') : ($langLabels[$language] ?? $language);
 			$selected = $this->currentLang == $language || ($this->fallbackLang && $this->currentLang == '' && $this->fallbackLang == $language);
 
 			// Show the languages that are already translated (fallback is always "translated")
-			if (in_array($language, $availableLangs) || ($language == $this->fallbackLang)) {
-				$available .= sprintf('<option value="%s"%s>%s</option>',
+			if (in_array($language, $availableLangs) || ($language == $this->fallbackLang))
+			{
+				$available .= sprintf(
+					'<option value="%s"%s>%s</option>',
 					$value,
 					($selected) ? ' selected="selected"' : '',
-					$label);
+					$label
+				);
 
 				// Add translation hint
 				if ($selected
@@ -1482,11 +1582,11 @@ class Driver extends DC_Table
 					$_SESSION['TL_INFO'] = array($GLOBALS['TL_LANG']['MSC']['editingLanguage']);
 				}
 			}
-			else {
+			else
+			{
 				$undefined .= '<option value="' . $value . '">' . $label . ' ('.$GLOBALS['TL_LANG']['MSC']['undefinedLanguage'].')' . '</option>';
 			}
 		}
-
 
 		return str_replace(
 			'<div class="tl_version_panel">',
@@ -1521,13 +1621,13 @@ class Driver extends DC_Table
 
 		$legendChunks = StringUtil::trimsplit(';', $palette);
 
-		foreach ($legendChunks as $legendChunk) {
-
+		foreach ($legendChunks as $legendChunk)
+		{
 			$fieldChunks    = StringUtil::trimsplit(',', $legendChunk);
 			$newFieldChunks = [];
 
-			foreach ($fieldChunks as $fieldChunk) {
-
+			foreach ($fieldChunks as $fieldChunk)
+			{
 				// Do not handle any special stuff like legends
 				if (preg_match('/^\[.*\]$/', $fieldChunk)
 					|| preg_match('/^\{.*\}$/', $fieldChunk)
@@ -1542,20 +1642,23 @@ class Driver extends DC_Table
 
 				// If translatableFor is not set at all and we are
 				// editing a language, we don't add it to the palette
-				if (null === $translatableFor && $this->editLang) {
+				if (null === $translatableFor && $this->editLang)
+				{
 					continue;
 				}
 
 				// If editing the fallback or the field should be shown for all
 				// languages, we add it to the palette
-				if ('' === $this->currentLang || '*' === $translatableFor[0]) {
+				if ('' === $this->currentLang || '*' === $translatableFor[0])
+				{
 					$newFieldChunks[] = $fieldChunk;
 					continue;
 				}
 
 				// Also we don't add it if the current language is not in the
 				// translatableFor setting
-				if (!in_array($this->currentLang, $translatableFor)) {
+				if (!in_array($this->currentLang, $translatableFor))
+				{
 					continue;
 				}
 
@@ -1569,7 +1672,7 @@ class Driver extends DC_Table
 		return $modifiedPalette;
 	}
 
-    private function addDynamicPtable(array $data): array
+	private function addDynamicPtable(array $data): array
 	{
 		if (($GLOBALS['TL_DCA'][$this->strTable]['config']['dynamicPtable'] ?? false) && !isset($data['ptable']))
 		{
