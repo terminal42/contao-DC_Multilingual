@@ -24,7 +24,6 @@ use Contao\CoreBundle\Security\DataContainer\UpdateAction;
 use Contao\Database;
 use Contao\DataContainer;
 use Contao\DC_Table;
-use Contao\Encryption;
 use Contao\Environment;
 use Contao\Image;
 use Contao\Input;
@@ -685,11 +684,6 @@ class Driver extends DC_Table
 								? serialize($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['default'])
 								: $GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['default']
 							;
-						}
-
-						// Encrypt the default value (see #3740)
-						if ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['eval']['encrypt']) {
-							$v = Encryption::encrypt($v);
 						}
 					}
 
