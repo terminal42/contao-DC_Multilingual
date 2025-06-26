@@ -90,7 +90,7 @@ class Driver extends DC_Table
 	 */
 	public function __construct($strTable, $arrModule=array())
 	{
-		$dca = &$GLOBALS['TL_DCA'][$this->strTable];
+		$dca = &$GLOBALS['TL_DCA'][$strTable];
 
 		// Languages array
 		$this->translatableLangs = $dca['config']['languages'] ?? $this->getRootPageLanguages();
