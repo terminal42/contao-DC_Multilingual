@@ -1765,7 +1765,7 @@ class Driver extends DC_Table
 		return $modifiedPalette;
 	}
 
-	private function addDynamicPtable(array $data): array
+	protected function addDynamicPtable(array $data): array
 	{
 		if (($GLOBALS['TL_DCA'][$this->strTable]['config']['dynamicPtable'] ?? false) && !isset($data['ptable']))
 		{
