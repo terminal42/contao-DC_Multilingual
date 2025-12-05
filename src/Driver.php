@@ -1344,22 +1344,6 @@ class Driver extends DC_Table
 	}
 
 	/**
-	 * Delete record and associated translations
-	 *
-	 * @param boolean $blnDoNotRedirect
-	 *
-	 * @return void
-	 */
-	public function delete($blnDoNotRedirect = false)
-	{
-		Database::getInstance()
-			->prepare("DELETE FROM {$this->strTable} WHERE {$this->pidColumnName}=?")
-			->execute($this->intId);
-
-		parent::delete($blnDoNotRedirect);
-	}
-
-	/**
 	 * Recursively get all related table names and language records
 	 *
 	 * @param string  $table
@@ -1387,7 +1371,7 @@ class Driver extends DC_Table
 			return;
 		}
 
-		// Do not take the config of the current table because $table might
+		// Do not take the config of the current driver because $table might
 		// be a child table
 		$pidColumnName = $GLOBALS['TL_DCA'][$table]['config']['langPid'] ?? $this->pidColumnName;
 
