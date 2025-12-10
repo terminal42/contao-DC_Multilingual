@@ -404,24 +404,6 @@ class Driver extends DC_Table
 
 				$this->redirect($this->addToUrl($GLOBALS['TL_DCA'][$this->strTable]['list']['operations']['children']['href'] ?? '', false, array('s2e', 'act', 'mode', 'pid')));
 			}
-			elseif (Input::post('saveNback') !== null)
-			{
-				Message::reset();
-
-				if (!$this->ptable)
-				{
-					$this->redirect(System::getContainer()->get('router')->generate('contao_backend') . '?do=' . Input::get('do'));
-				}
-				// TODO: try to abstract this
-				elseif ($this->ptable == 'tl_page' && $this->strTable == 'tl_article')
-				{
-					$this->redirect($this->getReferer(false, $this->strTable));
-				}
-				else
-				{
-					$this->redirect($this->getReferer(false, $this->ptable));
-				}
-			}
 			elseif (Input::post('saveNcreate') !== null)
 			{
 				Message::reset();
@@ -534,11 +516,6 @@ class Driver extends DC_Table
 				if ($GLOBALS['TL_DCA'][$this->strTable]['config']['switchToEdit'] ?? null)
 				{
 					$arrButtons['saveNedit'] = '<button type="submit" name="saveNedit" id="saveNedit" class="tl_submit" accesskey="e" data-action="contao--scroll-offset#discard">' . $GLOBALS['TL_LANG']['MSC']['saveNedit'] . '</button>';
-				}
-
-				if ($this->ptable || ($GLOBALS['TL_DCA'][$this->strTable]['config']['switchToEdit'] ?? null) || ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] ?? null) == self::MODE_PARENT)
-				{
-					$arrButtons['saveNback'] = '<button type="submit" name="saveNback" id="saveNback" class="tl_submit" accesskey="g" data-action="contao--scroll-offset#discard">' . $GLOBALS['TL_LANG']['MSC']['saveNback'] . '</button>';
 				}
 			}
 		}
@@ -1527,7 +1504,6 @@ class Driver extends DC_Table
 
 			if ($needsReload)
 			{
-				$_SESSION['TL_INFO'] = '';
 				Message::reset();
 				Controller::reload();
 			}
@@ -1656,7 +1632,7 @@ class Driver extends DC_Table
 						|| (!$this->fallbackLang && $this->currentLang != '')
 					)
 				) {
-					$_SESSION['TL_INFO'] = array($GLOBALS['TL_LANG']['MSC']['editingLanguage']);
+					Message::addInfo($GLOBALS['TL_LANG']['MSC']['editingLanguage']);
 				}
 			}
 			else
