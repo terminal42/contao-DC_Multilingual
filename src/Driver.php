@@ -26,6 +26,7 @@ use Contao\System;
 use Contao\Versions;
 use Contao\Widget;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
 
 /**
@@ -195,7 +196,7 @@ class Driver extends DC_Table
 			// Restore a version
 			if (Input::post('FORM_SUBMIT') == 'tl_version' && Input::post('version'))
 			{
-				$objVersions->restore(Input::post('version'));
+				$objVersions->restore((int) Input::post('version'));
 
 				$this->invalidateCacheTags();
 
@@ -479,7 +480,7 @@ class Driver extends DC_Table
 		return $this->render('edit/single', $parameters);
 	}
 
-	public function cut($blnDoNotRedirect = false)
+	public function cut($blnDoNotRedirect = false): void
 	{
 		parent::cut(true);
 

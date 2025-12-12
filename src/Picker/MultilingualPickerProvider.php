@@ -36,6 +36,7 @@ final class MultilingualPickerProvider extends AbstractTablePickerProvider
      *
      * @param string $context
      */
+    #[\Override]
     public function supportsContext($context): bool
     {
         if (!str_starts_with((string) $context, self::PREFIX)) {
