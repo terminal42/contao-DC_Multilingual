@@ -30,21 +30,21 @@
         "forum": "https://community.contao.org"
     },
     "require": {
-        "php": "^8.1",
-        "contao/core-bundle": "~5.3.23 || ^5.4.11",
+        "php": "^8.3",
+        "contao/core-bundle": "^5.7",
         "doctrine/dbal": "^3.6",
         "knplabs/knp-menu": "^3.1",
-        "symfony/config": "^6.4 || ^7",
-        "symfony/dependency-injection": "^6.4 || ^7",
+        "symfony/config": "^7.4",
+        "symfony/dependency-injection": "^7.4",
         "symfony/deprecation-contracts": "^3",
-        "symfony/http-kernel": "^6.4 || ^7",
-        "symfony/routing": "^6.4 || ^7",
+        "symfony/http-kernel": "^7.4",
+        "symfony/routing": "^7.4",
         "symfony/translation-contracts": "^3"
     },
     "require-dev": {
         "contao/manager-plugin": "^2.0",
         "terminal42/contao-build-tools": "dev-main",
-        "contao/contao": "5.3.*"
+        "contao/contao": "5.x-dev as 5.7.0"
     },
     "conflict": {
         "contao/manager-plugin": "<2.0 || >=3.0"

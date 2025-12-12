@@ -5,6 +5,7 @@ namespace Terminal42\DcMultilingualBundle;
 use Contao\Backend;
 use Contao\BackendTemplate;
 use Contao\Controller;
+use Contao\CoreBundle\DataContainer\DataContainerGlobalOperationsBuilder;
 use Contao\CoreBundle\Exception\AccessDeniedException;
 use Contao\CoreBundle\Exception\InternalServerErrorException;
 use Contao\CoreBundle\Exception\NotFoundException;
@@ -12,8 +13,8 @@ use Contao\CoreBundle\Exception\ResponseException;
 use Contao\CoreBundle\Security\ContaoCorePermissions;
 use Contao\CoreBundle\Security\DataContainer\CreateAction;
 use Contao\CoreBundle\Security\DataContainer\UpdateAction;
+use Contao\CoreBundle\Util\ArrayTree;
 use Contao\Database;
-use Contao\DataContainer;
 use Contao\DC_Table;
 use Contao\Environment;
 use Contao\Image;
@@ -169,7 +170,6 @@ class Driver extends DC_Table
 		// Store the active record (backwards compatibility)
 		$this->objActiveRecord = (object) $currentRecord;
 
-		$return = '';
 		$this->values[] = $this->intId;
 		$this->procedure[] = 'id=?';
 		$this->arrSubmit = array();
@@ -195,7 +195,7 @@ class Driver extends DC_Table
 			// Restore a version
 			if (Input::post('FORM_SUBMIT') == 'tl_version' && Input::post('version'))
 			{
-				$objVersions->restore((int) Input::post('version'));
+				$objVersions->restore(Input::post('version'));
 
 				$this->invalidateCacheTags();
 
@@ -206,116 +206,38 @@ class Driver extends DC_Table
 		$objVersions->initialize();
 		$intLatestVersion = $objVersions->getLatestVersion();
 
-		$security = System::getContainer()->get('security.helper');
-
-		// Build an array from boxes and rows
 		$this->strPalette = $this->getPalette();
-		$boxes = StringUtil::trimsplit(';', $this->strPalette);
-		$legends = array();
+		$boxes = System::getContainer()->get('contao.data_container.palette_builder')->getBoxes($this->strPalette, $this->strTable);
+
+		$parameters = array(
+			'version_number' => $intLatestVersion,
+			'boxes' => array(),
+		);
 
 		if (!empty($boxes))
 		{
-			foreach ($boxes as $k=>$v)
+			foreach ($boxes as $box)
 			{
-				$eCount = 1;
-				$boxes[$k] = StringUtil::trimsplit(',', $v);
-
-				foreach ($boxes[$k] as $kk=>$vv)
-				{
-					if (preg_match('/^\[.*]$/', $vv))
-					{
-						++$eCount;
-						continue;
-					}
-
-					if (preg_match('/^{.*}$/', $vv))
-					{
-						$legends[$k] = substr($vv, 1, -1);
-						unset($boxes[$k][$kk]);
-					}
-					elseif (!\is_array($GLOBALS['TL_DCA'][$this->strTable]['fields'][$vv] ?? null) || (DataContainer::isFieldExcluded($this->strTable, $vv) && !$security->isGranted(ContaoCorePermissions::USER_CAN_EDIT_FIELD_OF_TABLE, $this->strTable . '::' . $vv)))
-					{
-						unset($boxes[$k][$kk]);
-					}
-				}
-
-				// Unset a box if it does not contain any fields
-				if (\count($boxes[$k]) < $eCount)
-				{
-					unset($boxes[$k]);
-				}
-			}
-
-			$objSessionBag = System::getContainer()->get('request_stack')->getSession()->getBag('contao_backend');
-
-			$class = 'tl_tbox';
-			$fs = $objSessionBag->get('fieldset_states');
-
-			// Render boxes
-			foreach ($boxes as $k=>$v)
-			{
-				$arrAjax = array();
-				$blnAjax = false;
-				$key = '';
-				$cls = '';
-				$legend = '';
-
-				if (isset($legends[$k]))
-				{
-					list($key, $cls) = explode(':', $legends[$k]) + array(null, null);
-
-					$legend = "\n" . '<legend><button type="button" data-action="contao--toggle-fieldset#toggle">' . ($GLOBALS['TL_LANG'][$this->strTable][$key] ?? $key) . '</button></legend>';
-				}
-
-				if ($legend)
-				{
-					if (isset($fs[$this->strTable][$key]))
-					{
-						$class .= ($fs[$this->strTable][$key] ? '' : ' collapsed');
-					}
-					elseif ($cls)
-					{
-						// Convert the ":hide" suffix from the DCA
-						if ($cls == 'hide')
-						{
-							$cls = 'collapsed';
-						}
-
-						$class .= ' ' . $cls;
-					}
-				}
-
-				$return .= "\n\n" . '<fieldset class="' . $class . ($legend ? '' : ' nolegend') . '" data-controller="contao--toggle-fieldset" data-contao--toggle-fieldset-id-value="' . $key . '" data-contao--toggle-fieldset-table-value="' . $this->strTable . '" data-contao--toggle-fieldset-collapsed-class="collapsed" data-contao--jump-targets-target="section" data-contao--jump-targets-label-value="' . ($GLOBALS['TL_LANG'][$this->strTable][$key] ?? $key) . '" data-action="contao--jump-targets:scrollto->contao--toggle-fieldset#open">' . $legend;
 				$thisId = '';
 
-				// Build rows of the current box
-				foreach ($v as $vv)
+				// Generate the box's tree of widget groups. When edit() was called in
+				// AJAX mode, we return early and only render the matching subtree.
+				$widgetGroupTree = new ArrayTree();
+				$ajaxWidgetGroupTree = null;
+
+				foreach ($box['fields'] as $vv)
 				{
 					if ($vv == '[EOF]')
 					{
-						if ($blnAjax && Environment::get('isAjaxRequest'))
+						if ($ajaxWidgetGroupTree && $ajaxId == $thisId)
 						{
-							if ($ajaxId == $thisId)
-							{
-								if (($intLatestVersion = $objVersions->getLatestVersion()) !== null)
-								{
-									$arrAjax[$thisId] .= '<input type="hidden" name="VERSION_NUMBER" value="' . $intLatestVersion . '">';
-								}
-
-								return $arrAjax[$thisId];
-							}
-
-							if (\count($arrAjax) > 1)
-							{
-								$current = "\n" . '<div id="' . $thisId . '" class="subpal cf">' . $arrAjax[$thisId] . '</div>';
-								unset($arrAjax[$thisId]);
-								end($arrAjax);
-								$thisId = key($arrAjax);
-								$arrAjax[$thisId] .= $current;
-							}
+							return $this->render('edit/ajax', array(
+								'version_number' => $intLatestVersion,
+								'widget_groups_tree' => $ajaxWidgetGroupTree,
+							));
 						}
 
-						$return .= "\n" . '</div>';
+						$widgetGroupTree->up();
 
 						continue;
 					}
@@ -323,9 +245,14 @@ class Driver extends DC_Table
 					if (preg_match('/^\[.*]$/', $vv))
 					{
 						$thisId = 'sub_' . substr($vv, 1, -1);
-						$arrAjax[$thisId] = '';
-						$blnAjax = ($ajaxId == $thisId && Environment::get('isAjaxRequest')) ? true : $blnAjax;
-						$return .= "\n" . '<div id="' . $thisId . '" class="subpal cf">';
+
+						$widgetGroupTree->enterChildNode($thisId);
+
+						if ($ajaxId == $thisId && Environment::get('isAjaxRequest'))
+						{
+							// We only need to output the current subtree in AJAX mode, so we store a reference here
+							$ajaxWidgetGroupTree = $widgetGroupTree->current();
+						}
 
 						continue;
 					}
@@ -359,12 +286,15 @@ class Driver extends DC_Table
 					// Re-set the current value
 					$this->objActiveRecord->{$this->strField} = $this->varValue;
 
-					// Build the row and pass the current palette string (thanks to Tristan Lins)
-					$blnAjax ? $arrAjax[$thisId] .= $this->row() : $return .= $this->row();
+					$widgetGroupTree->addContentNode($this->row());
 				}
 
-				$class = 'tl_box';
-				$return .= "\n" . '</fieldset>';
+				$parameters['boxes'][] = array(
+					'id' => $box['key'],
+					'class' => $box['class'],
+					'label' => $GLOBALS['TL_LANG'][$this->strTable][$box['key']] ??  $box['key'],
+					'widget_groups_tree' => $widgetGroupTree,
+				);
 			}
 
 			$this->submit();
@@ -374,11 +304,12 @@ class Driver extends DC_Table
 		if (!$this->noReload && Input::post('FORM_SUBMIT') == $this->strTable)
 		{
 			// Show a warning if the record has been saved by another user (see #8412)
-			if ($intLatestVersion !== null && Input::post('VERSION_NUMBER') !== null && $intLatestVersion > (int) Input::post('VERSION_NUMBER'))
+			if ($intLatestVersion !== null && Input::post('VERSION_NUMBER') !== null && $intLatestVersion > Input::post('VERSION_NUMBER'))
 			{
 				$objTemplate = new BackendTemplate('be_conflict');
 				$objTemplate->language = $GLOBALS['TL_LANGUAGE'];
 				$objTemplate->title = StringUtil::specialchars($GLOBALS['TL_LANG']['MSC']['versionConflict']);
+				$objTemplate->host = Backend::getDecodedHostname();
 				$objTemplate->theme = Backend::getTheme();
 				$objTemplate->charset = System::getContainer()->getParameter('kernel.charset');
 				$objTemplate->h1 = $GLOBALS['TL_LANG']['MSC']['versionConflict'];
@@ -388,7 +319,11 @@ class Driver extends DC_Table
 				$objTemplate->href = Environment::get('requestUri');
 				$objTemplate->button = $GLOBALS['TL_LANG']['MSC']['continue'];
 
-				throw new ResponseException($objTemplate->getResponse());
+				// We need to set the status code to either 4xx or 5xx in order for Turbo to render this response.
+				$response = $objTemplate->getResponse();
+				$response->setStatusCode(Response::HTTP_CONFLICT);
+
+				throw new ResponseException($response);
 			}
 
 			// Redirect
@@ -483,152 +418,65 @@ class Driver extends DC_Table
 		// Versions overview
 		if (($GLOBALS['TL_DCA'][$this->strTable]['config']['enableVersioning'] ?? null) && !($GLOBALS['TL_DCA'][$this->strTable]['config']['hideVersionMenu'] ?? null))
 		{
-			$version = $objVersions->renderDropdown();
+			$parameters['version_dropdown'] = $objVersions->renderDropdown();
 		}
 		else
 		{
-			$version = '';
+			$parameters['version_dropdown'] = '';
 		}
 
 		// Add language switch panel
-		$version = $this->addLanguageSwitchPanel($version);
+		$parameters['version_dropdown'] = $this->addLanguageSwitchPanel($parameters['version_dropdown']);
 
-		// Submit buttons
-		$arrButtons = array();
-		$arrButtons['save'] = '<button type="submit" name="save" id="save" class="tl_submit" accesskey="s">' . $GLOBALS['TL_LANG']['MSC']['save'] . '</button>';
+		$security = System::getContainer()->get('security.helper');
 
-		if (!Input::get('nb'))
-		{
-			$arrButtons['saveNclose'] = '<button type="submit" name="saveNclose" id="saveNclose" class="tl_submit" accesskey="c" data-action="contao--scroll-offset#discard">' . $GLOBALS['TL_LANG']['MSC']['saveNclose'] . '</button>';
+		// Form settings and buttons
+		$parameters['form_buttons'] = System::getContainer()
+			->get('contao.data_container.buttons_builder')
+			->generateEditButtons(
+				$this->strTable,
+				(bool) $this->ptable,
+				$security->isGranted(ContaoCorePermissions::DC_PREFIX . $this->strTable, new CreateAction($this->strTable, $this->addDynamicPtable(array('pid' => $this->intCurrentPid)))),
+				$security->isGranted(ContaoCorePermissions::DC_PREFIX . $this->strTable, new CreateAction($this->strTable, array_replace($currentRecord, array('id' => null, 'sorting' => null)))),
+				$this
+			)
+		;
 
-			if (!Input::get('nc'))
-			{
-				if (!$this->editLang && !($GLOBALS['TL_DCA'][$this->strTable]['config']['closed'] ?? null) && !($GLOBALS['TL_DCA'][$this->strTable]['config']['notCreatable'] ?? null) && $security->isGranted(ContaoCorePermissions::DC_PREFIX . $this->strTable, new CreateAction($this->strTable, $this->addDynamicPtable(array('pid' => $this->intCurrentPid)))))
-				{
-					$arrButtons['saveNcreate'] = '<button type="submit" name="saveNcreate" id="saveNcreate" class="tl_submit" accesskey="n" data-action="contao--scroll-offset#discard">' . $GLOBALS['TL_LANG']['MSC']['saveNcreate'] . '</button>';
-				}
-
-				if (!$this->editLang && !($GLOBALS['TL_DCA'][$this->strTable]['config']['closed'] ?? null) && !($GLOBALS['TL_DCA'][$this->strTable]['config']['notCreatable'] ?? null) && !($GLOBALS['TL_DCA'][$this->strTable]['config']['notCopyable'] ?? null) && $security->isGranted(ContaoCorePermissions::DC_PREFIX . $this->strTable, new CreateAction($this->strTable, array_replace($currentRecord, array('id' => null, 'sorting' => null)))))
-				{
-					$arrButtons['saveNduplicate'] = '<button type="submit" name="saveNduplicate" id="saveNduplicate" class="tl_submit" accesskey="d" data-action="contao--scroll-offset#discard">' . $GLOBALS['TL_LANG']['MSC']['saveNduplicate'] . '</button>';
-				}
-
-				if ($GLOBALS['TL_DCA'][$this->strTable]['config']['switchToEdit'] ?? null)
-				{
-					$arrButtons['saveNedit'] = '<button type="submit" name="saveNedit" id="saveNedit" class="tl_submit" accesskey="e" data-action="contao--scroll-offset#discard">' . $GLOBALS['TL_LANG']['MSC']['saveNedit'] . '</button>';
-				}
-			}
-		}
-
-		// Call the buttons_callback (see #4691)
-		if (\is_array($GLOBALS['TL_DCA'][$this->strTable]['edit']['buttons_callback'] ?? null))
-		{
-			foreach ($GLOBALS['TL_DCA'][$this->strTable]['edit']['buttons_callback'] as $callback)
-			{
-				if (\is_array($callback))
-				{
-					$arrButtons = System::importStatic($callback[0])->{$callback[1]}($arrButtons, $this);
-				}
-				elseif (\is_callable($callback))
-				{
-					$arrButtons = $callback($arrButtons, $this);
-				}
-			}
-		}
-
-		if (\count($arrButtons) < 3)
-		{
-			$strButtons = implode(' ', $arrButtons);
-		}
-		else
-		{
-			$strButtons = array_shift($arrButtons) . ' ';
-			$strButtons .= '<div class="split-button">';
-			$strButtons .= array_shift($arrButtons) . '<button type="button" id="sbtog">' . Image::getHtml('navcol.svg') . '</button> <ul class="invisible">';
-
-			foreach ($arrButtons as $strButton)
-			{
-				$strButtons .= '<li>' . $strButton . '</li>';
-			}
-
-			$strButtons .= '</ul></div>';
-		}
-
-		// Add the buttons and end the form
-		$return .= '
-</div>
-<div class="tl_formbody_submit">
-<div class="tl_submit_container">
-  ' . $strButtons . '
-</div>
-</div>
-</form>';
-
-		$strVersionField = '';
-
-		// Store the current version number (see #8412)
-		if ($intLatestVersion !== null)
-		{
-			$strVersionField = '
-<input type="hidden" name="VERSION_NUMBER" value="' . $intLatestVersion . '">';
-		}
-
+		// Back button
 		$strBackUrl = $this->getReferer(true);
 
 		if ((string) $currentRecord['tstamp'] === '0')
 		{
 			$strBackUrl = preg_replace('/&(?:amp;)?revise=[^&]+|$/', '&amp;revise=' . $this->strTable . '.' . ((int) $this->intId), $strBackUrl, 1);
-
-			$return .= '
-<script>
-  history.pushState({}, "");
-  window.addEventListener("popstate", () => fetch(document.querySelector(".header_back").href).then(() => history.back()));
-</script>';
 		}
 
-		$copyFallback = '';
+        /** @var DataContainerGlobalOperationsBuilder $operations */
+		$operations = System::getContainer()
+				->get('contao.data_container.global_operations_builder')
+				->initialize($this->strTable)
+		;
+
+		if (!Input::get('nb'))
+		{
+			$operations->addBackButton($strBackUrl);
+		}
 
 		if ($this->editLang)
 		{
-			$copyFallback = \sprintf(
-				'&nbsp;&nbsp;::&nbsp;&nbsp;<a href="%s" class="header_icon" style="background-image:url(\'%s\')" title="%s" accesskey="d" data-action="contao--scroll-offset#discard">%s</a>',
-				Backend::addToUrl('act=copyFallback'),
-				Controller::addAssetsUrlTo(Image::getPath('copy.svg')),
-				StringUtil::specialchars($GLOBALS['TL_LANG']['MSC']['copyFallback'] ?? ''),
-				$GLOBALS['TL_LANG']['MSC']['copyFallback'] ?? 'copyFallback',
-			);
+			$operations->append([
+				'href' => Backend::addToUrl('act=copyFallback'),
+				'icon' => Controller::addAssetsUrlTo(Image::getPath('copy.svg')),
+				'label' => $GLOBALS['TL_LANG']['MSC']['copyFallback'] ?? 'copyFallback',
+				'title' => $GLOBALS['TL_LANG']['MSC']['copyFallback'] ?? '',
+			]);
 		}
 
-		// Begin the form (-> DO NOT CHANGE THIS ORDER -> this way the onsubmit attribute of the form can be changed by a field)
-		$return = $version . Message::generate() . ($this->noReload ? '
-<p class="tl_error">' . $GLOBALS['TL_LANG']['ERR']['submit'] . '</p>' : '') . (Input::get('nb') ? '' : '
-<div id="tl_buttons">
-<a href="' . $strBackUrl . '" class="header_back" title="' . StringUtil::specialchars($GLOBALS['TL_LANG']['MSC']['backBTTitle']) . '" accesskey="b" data-action="contao--scroll-offset#discard">' . $GLOBALS['TL_LANG']['MSC']['backBT'] . '</a>' . $copyFallback . '
-</div>') . '
-<form id="' . $this->strTable . '" class="tl_form tl_edit_form" method="post" enctype="' . ($this->blnUploadable ? 'multipart/form-data' : 'application/x-www-form-urlencoded') . '"' . (!empty($this->onsubmit) ? ' onsubmit="' . implode(' ', $this->onsubmit) . '"' : '') . '>
-<div class="tl_formbody_edit">
-<input type="hidden" name="FORM_SUBMIT" value="' . $this->strTable . '">
-<input type="hidden" name="REQUEST_TOKEN" value="' . htmlspecialchars(System::getContainer()->get('contao.csrf.token_manager')->getDefaultTokenValue(), ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML5) . '">' . $strVersionField . $return;
+		$parameters['global_operations'] = $operations;
 
-		// Set the focus if there is an error
-		if ($this->noReload)
-		{
-			$return .= '
-<script>
-  window.addEvent(\'domready\', function() {
-	var error = $(\'' . $this->strTable . '\').getElement(\'label.error\');
-	if (error) Backend.vScrollTo((error.getPosition().y - 20));
-  });
-</script>';
-		}
+		// Messages
+		$parameters['message'] = Message::generate();
 
-		$return = '
-<div data-controller="contao--jump-targets">
-	<div class="jump-targets"><div class="inner" data-contao--jump-targets-target="navigation"></div></div>
-	' . $return . '
-</div>';
-
-		return $return;
+		return $this->render('edit/single', $parameters);
 	}
 
 	public function cut($blnDoNotRedirect = false)
@@ -915,7 +763,7 @@ class Driver extends DC_Table
 			$blnProtected = $objParent->protected;
 		}
 
-		$margin = $level * 18;
+		$margin = $level * 16;
 		$arrIds = array();
 
 		$db = Database::getInstance();
@@ -934,25 +782,13 @@ class Driver extends DC_Table
 			$arrIds[] = $objRows->id;
 		}
 
-		$objSession = System::getContainer()->get('request_stack')->getSession();
-
-		$blnClipboard = false;
-		$arrClipboard = $objSession->get('CLIPBOARD');
-
-		// Check clipboard
-		if (!empty($arrClipboard[$this->strTable]))
-		{
-			$blnClipboard = true;
-			$arrClipboard = $arrClipboard[$this->strTable];
-		}
-		else
-		{
-			$arrClipboard = null;
-		}
+		$clipboardManager = System::getContainer()->get('contao.data_container.clipboard_manager');
+		$arrClipboard = $clipboardManager->get($this->strTable);
+		$blnClipboard = null !== $arrClipboard;
 
 		for ($i=0, $c=\count($arrIds); $i<$c; $i++)
 		{
-			$return .= ' ' . trim($this->generateTree($table, $arrIds[$i], array('p'=>($arrIds[$i - 1] ?? null), 'n'=>($arrIds[$i + 1] ?? null)), $hasSorting, $margin, $blnClipboard ? $arrClipboard : false, $arrClipboard !== null && ($id == $arrClipboard['id'] || (\is_array($arrClipboard['id']) && \in_array($id, $arrClipboard['id'])) || (!$blnPtable && !\is_array($arrClipboard['id']) && \in_array($id, $db->getChildRecords($arrClipboard['id'], $table)))), $blnProtected));
+			$return .= ' ' . trim($this->generateTree($table, $arrIds[$i], array('p'=>($arrIds[$i - 1] ?? null), 'n'=>($arrIds[$i + 1] ?? null)), $hasSorting, $margin, $blnClipboard ? $arrClipboard : false, $clipboardManager->isCircularReference($this->strTable, $arrIds[$i], !$blnPtable), $blnProtected));
 		}
 
 		return $return;
@@ -1723,15 +1559,5 @@ class Driver extends DC_Table
 		}
 
 		return $modifiedPalette;
-	}
-
-	protected function addDynamicPtable(array $data): array
-	{
-		if (($GLOBALS['TL_DCA'][$this->strTable]['config']['dynamicPtable'] ?? false) && !isset($data['ptable']))
-		{
-			$data['ptable'] = $this->ptable;
-		}
-
-		return $data;
 	}
 }
