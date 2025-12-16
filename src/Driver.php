@@ -1668,7 +1668,7 @@ class Driver extends DC_Table
 		return str_replace(
 			'<div class="tl_version_panel">',
 			'<div class="tl_version_panel language_panel">
-<form action="' . StringUtil::ampersand(Environment::get('request'), true) . '" id="tl_language" class="tl_form" method="post">
+<form id="tl_language" class="tl_form" method="post">
 <div class="tl_formbody">
 <input type="hidden" name="FORM_SUBMIT" value="tl_language">
 <input type="hidden" name="REQUEST_TOKEN" value="' . System::getContainer()->get('contao.csrf.token_manager')->getDefaultTokenValue() . '">
