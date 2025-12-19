@@ -30,7 +30,7 @@ class MultilingualQueryBuilder implements MultilingualQueryBuilderInterface
      */
     public function buildQueryBuilderForCount(): QueryBuilder
     {
-        $this->qb->resetQueryParts();
+        $this->qb->resetWhere();
         $this->qb->addSelect("COUNT({$this->table}.id) AS count")
             ->from($this->table, $this->table)
             ->where("{$this->table}.{$this->pidColumnName}=0")
@@ -44,7 +44,7 @@ class MultilingualQueryBuilder implements MultilingualQueryBuilderInterface
      */
     public function buildQueryBuilderForCountWithSubQuery(QueryBuilder $queryBuilder): QueryBuilder
     {
-        $this->qb->resetQueryParts();
+        $this->qb->resetWhere();
         $this->qb->addSelect('COUNT(t1.id) AS count')
             ->from($this->table, 't1')
             ->join('t1', \sprintf('(%s)', $queryBuilder->getSQL()), 't3', 't1.id = t3.id')
@@ -60,7 +60,7 @@ class MultilingualQueryBuilder implements MultilingualQueryBuilderInterface
      */
     public function buildQueryBuilderForFind($language): QueryBuilder
     {
-        $this->qb->resetQueryParts();
+        $this->qb->resetWhere();
 
         // Always translate system columns
         $systemColumns = ['id', $this->langColumnName, $this->pidColumnName];
@@ -80,17 +80,11 @@ class MultilingualQueryBuilder implements MultilingualQueryBuilderInterface
         }
 
         $this->qb->from($this->table, $this->table);
-        $this->qb->add(
-            'join',
-            [
-                $this->table => [
-                    'joinType' => 'left outer',
-                    'joinTable' => $this->table,
-                    'joinAlias' => 'translation',
-                    'joinCondition' => "{$this->table}.id=translation.{$this->pidColumnName} AND translation.{$this->langColumnName}='$language'",
-                ],
-            ],
-            true,
+        $this->qb->leftJoin(
+            $this->table,
+            $this->table,
+            'translation',
+            "{$this->table}.id=translation.{$this->pidColumnName} AND translation.{$this->langColumnName}='$language'",
         );
 
         $this->qb->where("{$this->table}.{$this->pidColumnName}=0");

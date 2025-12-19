@@ -267,7 +267,7 @@ trait MultilingualTrait
 
         // Order by
         if (!empty($options['order'])) {
-            $qb->add('orderBy', $options['order']);
+            $qb->orderBy($options['order']);
         }
     }
 

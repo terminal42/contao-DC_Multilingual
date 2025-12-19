@@ -32,7 +32,7 @@
     "require": {
         "php": "^8.3",
         "contao/core-bundle": "^5.7",
-        "doctrine/dbal": "^3.6",
+        "doctrine/dbal": "^3.7 || ^4.3",
         "knplabs/knp-menu": "^3.1",
         "symfony/config": "^7.4",
         "symfony/dependency-injection": "^7.4",
