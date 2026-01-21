@@ -57,7 +57,7 @@ class MultilingualAliasListener
 
     private function generateAlias(string $table, string $field, string $fromField, array $values, Driver $dc): array
     {
-        $currentRecord = array_merge($dc->getCurrentRecord(), $values);
+        $currentRecord = array_merge($dc->loadCurrentLanguageRecord($dc->getCurrentRecord()), $values);
 
         // Alias already exists and is not empty
         if ('' !== $currentRecord[$field]) {

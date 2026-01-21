@@ -1248,7 +1248,7 @@ class Driver extends DC_Table
 	/**
 	 * Load the current language record if available.
 	 */
-	protected function loadCurrentLanguageRecord(array $currentRecord): array
+	public function loadCurrentLanguageRecord(array $currentRecord): array
 	{
 		/** @var SessionInterface $objSessionBag */
 		$objSessionBag = System::getContainer()->get('request_stack')->getSession()->getBag('contao_backend');
