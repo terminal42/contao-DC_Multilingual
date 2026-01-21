@@ -16,4 +16,13 @@ services:
         tags:
             - contao.picker_provider
 
+    terminal42.dc_multilingual.alias_listener:
+        class: Terminal42\DcMultilingualBundle\EventListener\MultilingualAliasListener
+        arguments:
+            - '@contao.slug'
+            - '@translator'
+            - '@database_connection'
+        tags:
+            - { name: contao.hook, hook: 'loadDataContainer' }
+
     Terminal42\DcMultilingualBundle\QueryBuilder\MultilingualQueryBuilderFactoryInterface: '@terminal42.dc_multilingual.querybuilder_factory'
