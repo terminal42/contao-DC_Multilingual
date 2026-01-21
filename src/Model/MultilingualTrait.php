@@ -122,6 +122,39 @@ trait MultilingualTrait
     }
 
     /**
+     * Find a model by its alias or ID when using multilingal aliases.
+     *
+     * @param string $alias
+     * @param string $aliasColumnName
+     * @param array  $options
+     *
+     * @return self
+     */
+    public static function findByMultilingualAliasOrId($alias, $aliasColumnName = 'alias', $options = [])
+    {
+        $isAlias = !preg_match('/^[1-9]\d*$/', $alias);
+
+        // Try to load from the registry
+        if (!$isAlias && empty($options))
+        {
+            return static::findById($alias, $options);
+        }
+
+        $table = static::getTable();
+        $options = array_merge(
+            [
+                'limit' => 1,
+                'column' => $isAlias ? ["(CAST($table.$aliasColumnName AS BINARY) = ? OR CAST(translation.$aliasColumnName AS BINARY) = ?)"] : ["$table.id = ?"],
+                'value' => $isAlias ? [$alias, $alias] : [$alias],
+                'return' => 'Model',
+            ],
+            $options,
+        );
+
+        return static::find($options);
+    }
+
+    /**
      * Get the language column.
      *
      * @return string
