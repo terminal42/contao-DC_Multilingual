@@ -21,7 +21,7 @@ class MultilingualAliasListener
 
     public function __invoke(string $table): void
     {
-        if (!\is_a(($GLOBALS['TL_DCA'][$table]['config']['dataContainer'] ?? null), Driver::class, true)) {
+        if (!is_a($GLOBALS['TL_DCA'][$table]['config']['dataContainer'] ?? null, Driver::class, true)) {
             return;
         }
 

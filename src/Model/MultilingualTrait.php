@@ -135,8 +135,7 @@ trait MultilingualTrait
         $isAlias = !preg_match('/^[1-9]\d*$/', $alias);
 
         // Try to load from the registry
-        if (!$isAlias && empty($options))
-        {
+        if (!$isAlias && empty($options)) {
             return static::findById($alias, $options);
         }
 

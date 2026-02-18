@@ -451,7 +451,7 @@ class Driver extends DC_Table
 			$strBackUrl = preg_replace('/&(?:amp;)?revise=[^&]+|$/', '&amp;revise=' . $this->strTable . '.' . ((int) $this->intId), $strBackUrl, 1);
 		}
 
-        /** @var DataContainerGlobalOperationsBuilder $operations */
+		/** @var DataContainerGlobalOperationsBuilder $operations */
 		$operations = System::getContainer()
 				->get('contao.data_container.global_operations_builder')
 				->initialize($this->strTable)
@@ -464,12 +464,12 @@ class Driver extends DC_Table
 
 		if ($this->editLang)
 		{
-			$operations->append([
+			$operations->append(array(
 				'href' => Backend::addToUrl('act=copyFallback'),
 				'icon' => Controller::addAssetsUrlTo(Image::getPath('copy.svg')),
 				'label' => $GLOBALS['TL_LANG']['MSC']['copyFallback'] ?? 'copyFallback',
 				'title' => $GLOBALS['TL_LANG']['MSC']['copyFallback'] ?? '',
-			]);
+			));
 		}
 
 		$parameters['global_operations'] = $operations;
