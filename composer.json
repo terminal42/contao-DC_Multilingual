@@ -44,8 +44,7 @@
     },
     "require-dev": {
         "contao/manager-plugin": "^2.0",
-        "terminal42/contao-build-tools": "dev-main",
-        "contao/contao": "5.x-dev as 5.7.0"
+        "terminal42/contao-build-tools": "dev-main"
     },
     "conflict": {
         "contao/manager-plugin": "<2.0 || >=3.0"
