@@ -44,7 +44,7 @@ class MultilingualAliasListener
             return $value;
         }
 
-        if (preg_match('/^[1-9]\d*$/', $value)) {
+        if (preg_match('/^[1-9]\d*$/', (string) $value)) {
             throw new \RuntimeException($this->translator->trans('ERR.aliasNumeric', [$value], 'contao_default'));
         }
 

@@ -56,6 +56,7 @@ final class MultilingualPickerProvider extends AbstractTablePickerProvider
             && 0 !== \count($this->getModulesForTable($table));
     }
 
+    #[\Override]
     public function getDcaAttributes(PickerConfig $config): array
     {
         $attributes = parent::getDcaAttributes($config);
