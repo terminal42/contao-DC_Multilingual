@@ -6,6 +6,7 @@ namespace Terminal42\DcMultilingualBundle\Picker;
 
 use Contao\CoreBundle\Framework\ContaoFramework;
 use Contao\CoreBundle\Picker\AbstractTablePickerProvider;
+use Contao\CoreBundle\Picker\PickerConfig;
 use Contao\DcaLoader;
 use Doctrine\DBAL\Connection;
 use Knp\Menu\FactoryInterface;
@@ -53,6 +54,17 @@ final class MultilingualPickerProvider extends AbstractTablePickerProvider
         return isset($GLOBALS['TL_DCA'][$table]['config']['dataContainer'])
             && \in_array($GLOBALS['TL_DCA'][$table]['config']['dataContainer'], $drivers, true)
             && 0 !== \count($this->getModulesForTable($table));
+    }
+
+    public function getDcaAttributes(PickerConfig $config): array
+    {
+        $attributes = parent::getDcaAttributes($config);
+
+        if (\is_array($rootNodes = $config->getExtra('rootNodes'))) {
+            $attributes['rootNodes'] = $rootNodes;
+        }
+
+        return $attributes;
     }
 
     protected function getDataContainer(): string
