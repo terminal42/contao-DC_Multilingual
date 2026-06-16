@@ -375,9 +375,7 @@ trait MultilingualTrait
      */
     protected static function ensureDataContainerIsLoaded(): void
     {
-        if (!isset($GLOBALS['TL_DCA'][static::getTable()])) {
-            $loader = new DcaLoader(static::getTable());
-            $loader->load();
-        }
+        $loader = new DcaLoader(static::getTable());
+        $loader->load();
     }
 }
