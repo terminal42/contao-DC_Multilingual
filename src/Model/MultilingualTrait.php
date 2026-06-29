@@ -347,7 +347,7 @@ trait MultilingualTrait
         $fields = [];
         $tableColumns = Database::getInstance()->getFieldNames(static::getTable());
 
-        foreach ($GLOBALS['TL_DCA'][static::getTable()]['fields'] as $field => $data) {
+        foreach ($GLOBALS['TL_DCA'][static::getTable()]['fields'] ?? [] as $field => $data) {
             if (!isset($data['eval']['translatableFor']) || !\in_array($field, $tableColumns, true)) {
                 continue;
             }
