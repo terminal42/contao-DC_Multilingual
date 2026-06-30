@@ -87,9 +87,16 @@ class MultilingualAliasListener
 
     private function aliasExists(string $table, string $field, string $alias, string $pidColumn, string $langColumn, int $currentId, string $currentLanguage): bool
     {
-        $field = $this->connection->quoteSingleIdentifier($field);
-        $pidColumn = $this->connection->quoteSingleIdentifier($pidColumn);
-        $langColumn = $this->connection->quoteSingleIdentifier($langColumn);
+        if (method_exists($this->connection, 'quoteSingleIdentifier')) {
+            $field = $this->connection->quoteSingleIdentifier($field);
+            $pidColumn = $this->connection->quoteSingleIdentifier($pidColumn);
+            $langColumn = $this->connection->quoteSingleIdentifier($langColumn);
+        } else {
+            // TODO: drop with doctrine/dbal 5.0
+            $field = $this->connection->quoteIdentifier($field);
+            $pidColumn = $this->connection->quoteIdentifier($pidColumn);
+            $langColumn = $this->connection->quoteIdentifier($langColumn);
+        }
 
         return $this->connection->fetchOne(
             "SELECT COUNT(*) FROM $table WHERE $field=? AND id NOT IN (SELECT id FROM $table WHERE $pidColumn=?) AND id!=? AND $langColumn=?",
