@@ -4,6 +4,7 @@ parameters:
 
     ignoreErrors:
         - '#no value type specified in iterable type#'
+        - '#Call to function method_exists\(\) with Doctrine\\DBAL\\Connection and ''quoteSingleIdentifi…'' will always evaluate to true#'
         -
             message: '#Unsafe usage of new static#'
             path: 'src/Model/MultilingualTrait.php'
