@@ -33,7 +33,7 @@ class MultilingualQueryBuilder implements MultilingualQueryBuilderInterface
         $this->qb->resetWhere();
         $this->qb->addSelect("COUNT({$this->table}.id) AS count")
             ->from($this->table, $this->table)
-            ->where("{$this->table}.{$this->pidColumnName}=0")
+            ->where("({$this->table}.{$this->pidColumnName}=0 OR {$this->table}.{$this->pidColumnName} IS NULL)")
         ;
 
         return $this->qb;
@@ -87,7 +87,7 @@ class MultilingualQueryBuilder implements MultilingualQueryBuilderInterface
             "{$this->table}.id=translation.{$this->pidColumnName} AND translation.{$this->langColumnName}='$language'",
         );
 
-        $this->qb->where("{$this->table}.{$this->pidColumnName}=0");
+        $this->qb->where("({$this->table}.{$this->pidColumnName}=0 OR {$this->table}.{$this->pidColumnName} IS NULL)");
 
         return $this->qb;
     }
