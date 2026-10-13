@@ -299,7 +299,12 @@ trait MultilingualTrait
 
         // Order by
         if (!empty($options['order'])) {
-            $qb->orderBy($options['order']);
+            // DBAL 3 appends "ASC" if no direction is given, DBAL 4 does not
+            if (method_exists($qb, 'add')) {
+                $qb->add('orderBy', $options['order']);
+            } else {
+                $qb->orderBy($options['order']);
+            }
         }
     }
 
